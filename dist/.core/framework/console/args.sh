@@ -3,17 +3,23 @@
 dot::use framework.console.output framework.helpers.text
 
 framework.console.args::require_value() {
-  [ $# -ge 2 ] || framework.console.args::invalid "$1 requires a value."
+  [ $# -ge 2 ] || framework.console.args::invalid "$1 needs a value."
 }
 
+# <message>, then the command's first usage line as an example, and where
+# its full help is.
 framework.console.args::invalid() {
+  local example=""
   framework.console.output::error "$1"
-  framework.console.output::detail "Run bash dot ${DOT_COMMAND:-} --help for its usage." >&2
+  ! declare -F usage >/dev/null \
+    || example=$(usage 2>/dev/null | awk 'found && NF { sub(/^ +/, ""); print; exit } /^Usage:/ { found = 1 }')
+  [ -z "$example" ] || framework.console.output::detail "Usage: $example" >&2
+  framework.console.output::next "For more, run: bash dot ${DOT_COMMAND:-} --help" >&2
   exit 1
 }
 
 framework.console.args::unexpected() {
-  framework.console.args::invalid "Unexpected argument: $1"
+  framework.console.args::invalid "Unknown argument: $1"
 }
 
 framework.console.args::is_number() {

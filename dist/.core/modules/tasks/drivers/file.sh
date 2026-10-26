@@ -9,12 +9,12 @@ TASK_FALLBACK_SLUG="task"
 
 core.modules.tasks.drivers.file::file() {
   local number matches=() file
-  number=$(framework.helpers.record::normalize "$1") || dot::abort "Invalid task id: $1"
+  number=$(framework.helpers.record::normalize "$1") || dot::abort "\"$1\" isn't a task id (like t004)."
   for file in "$TASKS_DIR/$TASK_PREFIX$number$RECORD_SEPARATOR"*"$RECORD_EXTENSION"; do
     [ -f "$file" ] && matches+=("$file")
   done
-  [ ${#matches[@]} -gt 0 ] || dot::abort "No task $TASK_PREFIX$number in $(dot::relative "$TASKS_DIR")/."
-  [ ${#matches[@]} -eq 1 ] || dot::abort "More than one file for task $TASK_PREFIX$number in $(dot::relative "$TASKS_DIR")/."
+  [ ${#matches[@]} -gt 0 ] || dot::abort "There's no task $TASK_PREFIX$number." "See them all: bash dot tasks:list"
+  [ ${#matches[@]} -eq 1 ] || dot::abort "Found more than one file for task $TASK_PREFIX$number in $(dot::relative "$TASKS_DIR")/; please keep one."
   printf '%s\n' "${matches[0]}"
 }
 
@@ -45,14 +45,14 @@ core.modules.tasks.drivers.file::rewrite() {
 }
 
 core.modules.tasks.drivers.file::configure() {
-  mkdir -p -- "$TASKS_DIR" || dot::abort "Could not create $(dot::relative "$TASKS_DIR")/."
+  mkdir -p -- "$TASKS_DIR" || dot::abort "Couldn't create $(dot::relative "$TASKS_DIR")/."
 }
 
 core.modules.tasks.drivers.file::create() {
   local title="$1" status="$2" body="$3" slug path stamp
   slug=$(framework.helpers.text::slug "$title" "$TASK_SLUG_LIMIT")
   path=$(framework.helpers.record::next_path "$TASKS_DIR" "$TASK_PREFIX" "${slug:-$TASK_FALLBACK_SLUG}") \
-    || dot::abort "Could not pick a file for the task in $(dot::relative "$TASKS_DIR")/; try again."
+    || dot::abort "Couldn't create the task file in $(dot::relative "$TASKS_DIR")/; please try again."
   stamp=$(framework.helpers.date::now)
   core.modules.tasks.drivers.file::write "$path" "$title" "$status" "$stamp" "$stamp" "$body"
   framework.helpers.record::id "$TASK_PREFIX" "$path"

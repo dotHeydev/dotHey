@@ -50,15 +50,15 @@ EOF
 
 handle() {
   local name="" has_name=false sections_dir key slug path
-  [ -f "$FEATURE_TEMPLATE" ] || framework.console.output::fail "Template not found: $(dot::relative "$FEATURE_TEMPLATE")"
-  [ $# -gt 0 ] || framework.console.args::invalid "Missing --name and --description."
-  framework.helpers.fs::make_temp_dir sections_dir || framework.console.output::fail "Could not create a temp directory."
+  [ -f "$FEATURE_TEMPLATE" ] || framework.console.output::fail "The template $(dot::relative "$FEATURE_TEMPLATE") is missing." "bash dot update restores it."
+  [ $# -gt 0 ] || framework.console.args::invalid "A feature needs --name and --description."
+  framework.helpers.fs::make_temp_dir sections_dir || framework.console.output::fail "Couldn't create a temporary directory; please check free space and \$TMPDIR."
   while [ $# -gt 0 ]; do
     case "$1" in
       --name) framework.console.args::require_value "$@"; name="$2"; has_name=true; shift 2 ;;
       --*)
         key="${1#--}"
-        framework.helpers.template::has_key "$FEATURE_TEMPLATE" "$key" || framework.console.args::invalid "Unknown flag --$key."
+        framework.helpers.template::has_key "$FEATURE_TEMPLATE" "$key" || framework.console.args::invalid "--$key isn't a feature section."
         framework.console.args::require_value "$@"
         printf '%s' "$2" > "$sections_dir/$key"
         shift 2
@@ -66,11 +66,11 @@ handle() {
       *) framework.console.args::unexpected "$1" ;;
     esac
   done
-  $has_name || framework.console.args::invalid "Missing required --name."
-  [ -e "$sections_dir/$FEATURE_DESCRIPTION_KEY" ] || framework.console.args::invalid "Missing required --$FEATURE_DESCRIPTION_KEY."
+  $has_name || framework.console.args::invalid "A feature needs --name."
+  [ -e "$sections_dir/$FEATURE_DESCRIPTION_KEY" ] || framework.console.args::invalid "A feature needs --$FEATURE_DESCRIPTION_KEY."
   slug=$(framework.helpers.text::slug "$name")
-  [ -n "$slug" ] || framework.console.args::invalid "--name must contain at least one letter or number."
-  path=$(core.modules.features.service::create "$slug" "$sections_dir") || framework.console.output::fail "Could not create the feature; try again."
-  framework.console.output::success "Feature $(framework.helpers.record::number "$(basename -- "$path")") documented"
+  [ -n "$slug" ] || framework.console.args::invalid "--name needs at least one letter or digit."
+  path=$(core.modules.features.service::create "$slug" "$sections_dir") || framework.console.output::fail "Couldn't create the feature; please try again."
+  framework.console.output::success "Documented feature $(framework.helpers.record::number "$(basename -- "$path")")."
   framework.console.output::detail "$(dot::relative "$path")"
 }

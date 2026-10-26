@@ -39,19 +39,19 @@ framework.integrations.github.internal.route::reason() {
 framework.integrations.github.internal.route::advice() {
   local reason="$1" token="$2" installed="$3" logged_in="$4"
   if [ -z "$token" ] && ! $installed; then
-    printf 'Install gh (https://cli.github.com) and run gh auth login, or set %s in .env.' "$GITHUB_TOKEN_KEY"
+    printf 'Please install gh (https://cli.github.com) and run gh auth login, or set %s in .env.' "$GITHUB_TOKEN_KEY"
     return
   fi
   if [ -z "$token" ] && ! $logged_in; then
-    printf 'Run gh auth login, or set %s in .env.' "$GITHUB_TOKEN_KEY"
+    printf 'Please run gh auth login, or set %s in .env.' "$GITHUB_TOKEN_KEY"
     return
   fi
   case "$reason" in
-    rate-limited*) printf 'Wait for the rate limit to reset, then try again.' ;;
-    "not authorized"*) [ -n "$token" ] && printf 'Renew %s in .env.' "$GITHUB_TOKEN_KEY" || printf 'Run gh auth login again.' ;;
-    forbidden* | "not found"*) printf 'Check that the repo exists and that the account can read it (a token needs that scope).' ;;
-    "no connection"*) printf 'Check the network connection.' ;;
-    *) printf 'Try again; if it keeps failing, run it with gh directly to see why.' ;;
+    rate-limited*) printf 'Please wait for the rate limit to reset, then try again.' ;;
+    "not authorized"*) [ -n "$token" ] && printf 'Please renew %s in .env.' "$GITHUB_TOKEN_KEY" || printf 'Please run gh auth login again.' ;;
+    forbidden* | "not found"*) printf 'Please check that the repo exists and that the account can read it (a token needs that scope).' ;;
+    "no connection"*) printf 'Please check the network connection.' ;;
+    *) printf 'Please try again; if it keeps failing, run it with gh directly to see why.' ;;
   esac
 }
 
@@ -93,5 +93,5 @@ framework.integrations.github.internal.route::run() {
     attempts="$attempts; API: no $GITHUB_TOKEN_KEY set"
   fi
   rm -f -- "$errors"
-  dot::raise "Could not $what. Tried $attempts. $(framework.integrations.github.internal.route::advice "$reason" "$token" "$installed" "$logged_in")"
+  dot::raise "Couldn't $what." "   Tried ${attempts//; /$'\n'   Tried }" "$(framework.integrations.github.internal.route::advice "$reason" "$token" "$installed" "$logged_in")"
 }

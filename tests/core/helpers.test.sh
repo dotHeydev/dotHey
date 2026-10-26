@@ -105,10 +105,10 @@ acme/repo"
   sandbox::settings '"tasks": {"service": ""}'
   core "dot::setting tasks.service"
   assert_failure
-  assert_contains "$ERRORS" 'Setting tasks.service is not set: set it in .dot/dot.json (or to "@env:<KEY>" to read it from .env)'
+  assert_contains "$ERRORS" 'The setting tasks.service isn'"'"'t set yet.'
   core "dot::setting TASKS_SERVICE"
   assert_failure
-  assert_contains "$ERRORS" "Invalid setting path: TASKS_SERVICE"
+  assert_contains "$ERRORS" '"TASKS_SERVICE" isn'"'"'t a valid setting path.'
 }
 
 # Adds members to the sandbox's dotdot defaults, e.g. '"flag": false' under general.
@@ -149,7 +149,7 @@ test_env_references_resolve_inside_objects_and_lists() {
   sandbox::settings '"release": {"exclude": ["@env:DOT_GH_TOKEN"]}'
   core "dot::setting release.exclude"
   assert_failure
-  assert_contains "$ERRORS" 'Invalid .env reference for release.exclude[0]: the key DOT_GH_TOKEN is reserved, use a different one.'
+  assert_contains "$ERRORS" 'DOT_GH_TOKEN is reserved by dotdot; please pick another .env key for release.exclude[0].'
 }
 
 test_env_references_never_name_a_secret_or_a_json_only_setting() {
@@ -159,22 +159,22 @@ test_env_references_never_name_a_secret_or_a_json_only_setting() {
     sandbox::settings "\"general\": {\"timezone\": \"@env:$key\"}"
     core "dot::setting general.timezone"
     assert_failure "$key must be refused"
-    assert_contains "$ERRORS" "Invalid .env reference for general.timezone: the key $key is reserved, use a different one."
+    assert_contains "$ERRORS" "$key is reserved by dotdot; please pick another .env key for general.timezone."
     assert_not_contains "$OUTPUT$ERRORS" "secret"
   done
   sandbox::settings '"state": {"version": "@env:MY_STATE", "migrations": []}, "tasks": {}'
   core "dot::setting state.version ''"
   assert_failure
-  assert_contains "$ERRORS" "Invalid .env reference for state.version: it is set in JSON only."
+  assert_contains "$ERRORS" "state.version can't come from .env."
   sandbox::settings '"state": {"migrations": ["@env:MY_STATE"]}'
   core "dot::setting state.migrations '[]'"
   assert_failure
-  assert_contains "$ERRORS" "Invalid .env reference for state.migrations: it is set in JSON only."
+  assert_contains "$ERRORS" "state.migrations can't come from .env."
   with_defaults general.timezone '"@env:MY_STATE"'
   sandbox::settings
   core "dot::setting general.timezone"
   assert_failure
-  assert_contains "$ERRORS" "only .dot/dot.json may refer to .env"
+  assert_contains "$ERRORS" "only .dot/dot.json may."
   core "dot::save_setting general.timezone '\"@env:MY_STATE\"'"
   assert_failure
   assert_contains "$ERRORS" "by hand only"
@@ -184,7 +184,7 @@ test_a_broken_settings_file_stops_rather_than_falls_back() {
   printf '{"tasks": {"service": "github",}\n' > "$DOTDOT/dot.json"
   core "dot::setting tasks.service"
   assert_failure
-  assert_contains "$ERRORS" ".dot/dot.json is not valid JSON"
+  assert_contains "$ERRORS" ".dot/dot.json isn't valid JSON"
 }
 
 test_env_files_read_as_dotenv_libraries_do() {
@@ -294,14 +294,14 @@ test_secrets_come_only_from_the_env_file() {
   assert_equal "$OUTPUT" "from-env-file"
   core "dot::secret GH_TOKEN"
   assert_failure
-  assert_contains "$ERRORS" "Invalid secret name: GH_TOKEN"
+  assert_contains "$ERRORS" "\"GH_TOKEN\" isn't a valid secret name."
 }
 
 test_secrets_are_saved_privately_and_only_while_git_ignores_them() {
   git -C "$SANDBOX" init -q
   core "export GIT_CONFIG_GLOBAL=/dev/null XDG_CONFIG_HOME='$SANDBOX/none'; dot::save_secret DOT_RELEASE_TOKEN_SAMPLE value"
   assert_failure
-  assert_contains "$ERRORS" ".env is not git-ignored"
+  assert_contains "$ERRORS" ".env isn't git-ignored"
   assert_no_file "$SANDBOX/.env"
   printf '.env\n' > "$SANDBOX/.gitignore"
   core "export GIT_CONFIG_GLOBAL=/dev/null XDG_CONFIG_HOME='$SANDBOX/none'; dot::save_secret DOT_RELEASE_TOKEN_SAMPLE 'a value' && dot::secret DOT_RELEASE_TOKEN_SAMPLE"
@@ -345,7 +345,7 @@ test_the_timezone_setting_applies_once_dates_load() {
   printf 'MY_TIMEZONE=Nowhere/Land\n' > "$SANDBOX/.env"
   core 'unset TZ; dot::use framework.helpers.date; printf "%s" "${TZ-unset}"'
   assert_equal "$OUTPUT" "unset"
-  assert_contains "$ERRORS" "Ignoring unknown timezone in general.timezone: Nowhere/Land"
+  assert_contains "$ERRORS" "Unknown timezone \"Nowhere/Land\" in .dot/dot.json settings (general.timezone)"
 }
 
 json_document='{"model":{"name":"Opus \"4\" é 😀"},"n":12.5,"t":true,"f":false,"z":null,"items":[1,{"x":"y"},[2,3]],"empty":{},"deep":{"a":{"b":[{"c":"found"}]}},"esc":"a\\b\/c\td\u0001\u007f","dup":{"b":1,"a":2,"b":3},"nums":[1e2,-3e2,0.0000001,10e-1,0e5,-0.0,.5,1.,+1,1.000e-3,Infinity,nan],"bad":"x\udc00y","sp" : [ ] , "a b":{"c":[1,2,3]}}'
@@ -484,4 +484,11 @@ test_json_keep_format_edits_only_the_member() {
   "b": {"x": 1},
   "c": {}
 }'
+}
+
+test_output_highlights_commands_paths_and_values_only_at_a_terminal() {
+  core "dot::use framework.console.output; printf '%s\n' 'Run bash dot link:activate acme/widgets, then edit .dot/dot.json for \"x\".' | awk -f \"\$OUTPUT_HIGHLIGHTER\""
+  assert_equal "$OUTPUT" $'Run \033[1;36mbash dot link:activate acme/widgets\033[22;39m, then edit \033[90m.dot/dot.json\033[39m for \033[3m"x"\033[23m.'
+  core "dot::use framework.console.output; framework.console.output::line 'Run bash dot link.'"
+  assert_equal "$OUTPUT" "Run bash dot link."
 }

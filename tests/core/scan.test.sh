@@ -10,5 +10,5 @@ test_scan_frontmatter_stays_inside_dotdot() {
   ln -s / "$DOTDOT/escape"
   dot scan:frontmatter escape
   assert_failure
-  assert_contains "$ERRORS" "outside the dotdot directory"
+  assert_contains "$ERRORS" "is outside .dot/."
 }

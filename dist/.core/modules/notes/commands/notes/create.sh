@@ -38,8 +38,8 @@ handle() {
     esac
   done
   slug=$(framework.helpers.text::slug "$name")
-  [ -n "$slug" ] || framework.console.args::invalid "--slug must contain at least one letter or number."
-  path=$(core.modules.notes.service::create "$slug") || framework.console.output::fail "Could not create the note; try again."
-  framework.console.output::success "Note $(framework.helpers.record::number "$(basename -- "$path")") created"
+  [ -n "$slug" ] || framework.console.args::invalid "--slug needs at least one letter or digit."
+  path=$(core.modules.notes.service::create "$slug") || framework.console.output::fail "Couldn't create the note; please try again."
+  framework.console.output::success "Created note $(framework.helpers.record::number "$(basename -- "$path")")."
   framework.console.output::detail "$(dot::relative "$path")"
 }

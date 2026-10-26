@@ -16,5 +16,5 @@ test_feature_requires_name_and_description() {
   assert_contains "$ERRORS" "--description"
   dot features:create --name "Bad" --description "x" --not-a-section "y"
   assert_failure
-  assert_contains "$ERRORS" "Unknown flag"
+  assert_contains "$ERRORS" "isn't a feature section"
 }

@@ -27,13 +27,13 @@ core.modules.tasks.drivers.github::repository() {
   local repository
   repository=$(dot::setting "$TASK_REPOSITORY_SETTING") || return 1
   framework.integrations.github.service::is_repository "$repository" \
-    || dot::abort "Invalid setting $TASK_REPOSITORY_SETTING: $repository"
+    || dot::abort "$TASK_REPOSITORY_SETTING \"$repository\" isn't an <owner>/<name> repo."
   printf '%s\n' "$repository"
 }
 
 core.modules.tasks.drivers.github::number() {
   local number="${1#\#}"
-  [[ "$number" =~ ^[0-9]+$ ]] || dot::abort "Invalid GitHub task id: $1 (use the issue number, e.g. #12)"
+  [[ "$number" =~ ^[0-9]+$ ]] || dot::abort "\"$1\" isn't an issue number (like #12)."
   printf '%s\n' "$number"
 }
 
@@ -61,7 +61,7 @@ core.modules.tasks.drivers.github::task_issue() {
   row=$(framework.integrations.github.service::issue "$repository" "$number") || return 1
   labels=$(printf '%s' "$row" | cut -f3)
   [[ ",$labels," == *",$TASK_LABEL,"* ]] \
-    || dot::abort "Issue #$number is not a task (no \"$TASK_LABEL\" label); it was left alone."
+    || dot::abort "Issue #$number isn't a task (it has no \"$TASK_LABEL\" label), so it was left alone."
   printf '%s\n' "$row"
 }
 
@@ -108,7 +108,7 @@ core.modules.tasks.drivers.github::detected_repository() {
 }
 
 core.modules.tasks.drivers.github::check_repository() {
-  framework.integrations.github.service::is_repository "$1" || dot::abort "Not an owner/name repository: ${1:-(empty)}"
+  framework.integrations.github.service::is_repository "$1" || dot::abort "\"${1:-}\" isn't an <owner>/<name> repo."
   framework.integrations.github.service::can_reach "$1"
 }
 
@@ -134,7 +134,7 @@ core.modules.tasks.drivers.github::create() {
   local title="$1" status="$2" body="$3" repository number row
   repository=$(core.modules.tasks.drivers.github::repository) || return 1
   number=$(framework.integrations.github.service::create_issue "$repository" "$title" "$body" "$TASK_LABEL") || return 1
-  [[ "$number" =~ ^[0-9]+$ ]] || dot::abort "Unexpected reply from GitHub creating the issue: $number"
+  [[ "$number" =~ ^[0-9]+$ ]] || dot::abort "GitHub answered unexpectedly while creating the issue."
   row=$(framework.integrations.github.service::issue "$repository" "$number") || return 1
   core.modules.tasks.drivers.github::apply_status "$repository" "$number" "$status" "$row" || return 1
   printf '#%s\n' "$number"

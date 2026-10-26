@@ -15,7 +15,7 @@ TASK_CREATED_COLUMN=3
 TASK_UPDATED_COLUMN=4
 
 core.modules.tasks.service::require_template() {
-  [ -f "$TASK_TEMPLATE" ] || dot::abort "Template not found: $(dot::relative "$TASK_TEMPLATE")"
+  [ -f "$TASK_TEMPLATE" ] || dot::abort "The template $(dot::relative "$TASK_TEMPLATE") is missing." "bash dot update restores it."
 }
 
 core.modules.tasks.service::statuses() {
@@ -61,8 +61,8 @@ core.modules.tasks.service::select_service() {
 
 core.modules.tasks.service::load_service() {
   local service="$1"
-  [[ "$service" =~ $TASK_SERVICE_PATTERN ]] || dot::abort "Invalid task service: $service"
-  [ -f "$TASK_DRIVERS_DIR/$service.sh" ] || dot::abort "Task service \"$service\" is not installed."
+  [[ "$service" =~ $TASK_SERVICE_PATTERN ]] || dot::abort "tasks.service \"$service\" isn't a task service dotdot has."
+  [ -f "$TASK_DRIVERS_DIR/$service.sh" ] || dot::abort "tasks.service \"$service\" isn't a task service dotdot has."
   dot::use "core.modules.tasks.drivers.$service"
   TASKS_SERVICE="$service"
 }
@@ -72,13 +72,13 @@ core.modules.tasks.service::driver() {
 }
 
 core.modules.tasks.service::check_title() {
-  [ -n "$1" ] || dot::abort "The title can't be empty."
-  framework.helpers.text::is_one_line "$1" || dot::abort "The title must be one line."
+  [ -n "$1" ] || dot::abort "The task needs a title."
+  framework.helpers.text::is_one_line "$1" || dot::abort "The title must fit on one line."
 }
 
 core.modules.tasks.service::check_id() {
-  [ -n "${1-}" ] || dot::abort "Missing the task id. Run bash dot tasks:list to see them."
-  [[ "$1" =~ $TASK_ID_PATTERN ]] || dot::abort "Invalid task id: $1"
+  [ -n "${1-}" ] || dot::abort "Which task? Please give its id, e.g. t004." "See them all: bash dot tasks:list"
+  [[ "$1" =~ $TASK_ID_PATTERN ]] || dot::abort "\"$1\" isn't a task id (like t004)."
 }
 
 core.modules.tasks.service::set_section() {
@@ -100,8 +100,8 @@ core.modules.tasks.service::read_body_file() {
     cat > "$destination"
     return
   fi
-  path=$(framework.helpers.fs::within "$source" "$BASE") || dot::abort "--body-file must be inside the project: $source"
-  [ -f "$path" ] || dot::abort "--body-file not found: $source"
+  path=$(framework.helpers.fs::within "$source" "$BASE") || dot::abort "--body-file must be a file in the project (got $source)."
+  [ -f "$path" ] || dot::abort "There's no file at $source."
   cat -- "$path" > "$destination"
 }
 

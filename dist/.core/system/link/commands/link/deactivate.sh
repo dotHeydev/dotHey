@@ -30,9 +30,10 @@ handle() {
     esac
     shift
   done
-  [ -n "$plugin" ] || framework.console.args::invalid "A plugin is required, as <owner>/<name>."
-  guards::plugin_id "$plugin" || framework.console.args::invalid "A plugin is <owner>/<name>: $plugin"
+  [ -n "$plugin" ] || framework.console.args::invalid "Which plugin? Please give it as <owner>/<name>."
+  guards::plugin_id "$plugin" || framework.console.args::invalid "\"$plugin\" isn't a plugin name; please use <owner>/<name>."
   core.system.link.service::move_group "$plugin" inactive "$replace"
   [ "$LINK_FAILURES" -eq 0 ] || framework.console.output::fail "${LINK_ERRORS[0]}"
-  framework.console.output::success "Deactivated $plugin's links in $(dot::relative "$SETTINGS_FILE")."
+  framework.console.output::success "Deactivated the links of $plugin."
+  framework.console.output::detail "What it already linked stays until you remove it."
 }

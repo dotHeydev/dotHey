@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-dot::use framework.console.args core.modules.release.service framework.console.output framework.console.prompt
+dot::use framework.console.args core.modules.release.service framework.console.output framework.console.prompt framework.helpers.text
 
 core.modules.release.console::parse_push_option() {
   case "$1" in
@@ -8,10 +8,10 @@ core.modules.release.console::parse_push_option() {
     --force) RELEASE_FORCE=true ;;
     --cache-pat=*)
       RELEASE_CACHE_MINUTES="${1#*=}"
-      [[ "$RELEASE_CACHE_MINUTES" =~ $RELEASE_CACHE_MINUTES_PATTERN ]] || framework.console.args::invalid "--cache-pat takes whole minutes, e.g. --cache-pat=15"
+      [[ "$RELEASE_CACHE_MINUTES" =~ $RELEASE_CACHE_MINUTES_PATTERN ]] || framework.console.args::invalid "--cache-pat takes whole minutes, e.g. --cache-pat=15."
       ;;
     --*)
-      [[ "${1#--}" =~ $RELEASE_REMOTE_NAME_PATTERN ]] || framework.console.args::invalid "Unexpected option: $1"
+      [[ "${1#--}" =~ $RELEASE_REMOTE_NAME_PATTERN ]] || framework.console.args::invalid "Unknown argument: $1"
       RELEASE_PUSH_TO+=("${1#--}")
       ;;
     *) return 1 ;;
@@ -21,7 +21,7 @@ core.modules.release.console::parse_push_option() {
 core.modules.release.console::wants_push() {
   local name="$1" tag="$2"
   core.modules.release.service::is_targeted "$name" && return 0
-  framework.console.prompt::confirm "Push $tag to $name?"
+  framework.console.prompt::confirm "Do you want to push $tag to $name?"
 }
 
 core.modules.release.console::push() {
@@ -32,19 +32,20 @@ core.modules.release.console::push() {
   for index in "${!RELEASE_REMOTES[@]}"; do
     name="${RELEASE_REMOTES[$index]}"
     if ! core.modules.release.console::wants_push "$name" "$tag"; then
-      framework.console.output::line "Not pushed to $name. Later: bash dot release:push --$name${force:+ --force}"
+      framework.console.output::line "Skipped $name."
+      framework.console.output::next "Push later with: bash dot release:push --$name${force:+ --force}"
       continue
     fi
-    [ "$(core.modules.release.service::token_store)" != gpg ] || framework.console.output::info "Pushing to $name: if asked, enter the passphrase of this remote's token."
+    [ "$(core.modules.release.service::token_store)" != gpg ] || framework.console.output::info "Pushing to $name… please enter the token's passphrase if asked."
     if core.modules.release.service::push_with_token "$RELEASE_DESTINATION" "$name" "${RELEASE_REMOTE_URLS[$index]}" -q --atomic ${force:+"$force"} "refs/heads/$branch" --tags; then
       framework.console.output::success "Pushed to $name."
     else
-      framework.console.output::error "Push to $name failed. Retry: bash dot release:push --$name${force:+ --force}"
+      framework.console.output::error "Couldn't push to $name." "Retry with: bash dot release:push --$name${force:+ --force}"
       failures=$((failures + 1))
     fi
   done
   framework.console.output::newline
-  [ "$failures" -eq 0 ] || framework.console.output::fail "$failures push(es) failed; the release commit and tag are kept."
+  [ "$failures" -eq 0 ] || framework.console.output::fail "$(framework.helpers.text::plural "$failures" push) didn't go through; the release commit and tag are kept."
 }
 
 core.modules.release.console::print_warnings() {

@@ -55,11 +55,12 @@ handle() {
       *) [ -z "$plugin" ] || framework.console.args::unexpected "$1"; plugin="$1"; shift ;;
     esac
   done
-  [ -n "$plugin" ] || framework.console.args::invalid "A plugin is required, as <owner>/<name>."
+  [ -n "$plugin" ] || framework.console.args::invalid "Which plugin? Please give it as <owner>/<name>."
   plugin=$(core.system.plugins.console::plugin "$plugin")
-  target=$(framework.helpers.fs::within "${path:-${plugin#*/}}" "$BASE") || framework.console.output::fail "The plugin must be created inside the project."
-  [ ! -e "$target" ] || framework.console.output::fail "$(dot::relative "$target") already exists."
-  core.system.plugins.service::scaffold "$plugin" "$target" || framework.console.output::fail "Could not create the plugin in $(dot::relative "$target")."
-  framework.console.output::success "Plugin $plugin scaffolded"
+  target=$(framework.helpers.fs::within "${path:-${plugin#*/}}" "$BASE") || framework.console.output::fail "Plugins are created inside the project; please pick a --path in it."
+  [ ! -e "$target" ] || framework.console.output::fail "$(dot::relative "$target") already exists; please pick another --path."
+  core.system.plugins.service::scaffold "$plugin" "$target" || framework.console.output::fail "Couldn't create the plugin in $(dot::relative "$target")."
+  framework.console.output::success "Created plugin $plugin."
   framework.console.output::detail "$(dot::relative "$target")"
+  framework.console.output::next "Try it: bash dot plugins:add $plugin --from ./$(dot::relative "$target")"
 }

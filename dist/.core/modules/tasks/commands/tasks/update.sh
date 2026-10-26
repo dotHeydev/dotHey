@@ -43,7 +43,7 @@ handle() {
   core.modules.tasks.service::check_id "${1-}"
   id="$1"
   shift
-  framework.helpers.fs::make_temp_dir work || framework.console.output::fail "Could not create a temp directory."
+  framework.helpers.fs::make_temp_dir work || framework.console.output::fail "Couldn't create a temporary directory; please check free space and \$TMPDIR."
   body="$work/body"
   sections="$work/sections"
   mkdir -p -- "$sections"
@@ -56,13 +56,13 @@ handle() {
       --no-editor) editor=no; shift ;;
       --*)
         if core.modules.tasks.service::is_status "${1#--}"; then
-          [ -z "$status" ] || framework.console.args::invalid "Give one status at most."
+          [ -z "$status" ] || framework.console.args::invalid "Please give one status at a time."
           status="${1#--}"
           shift
           continue
         fi
         framework.console.args::require_value "$@"
-        core.modules.tasks.service::set_section "$sections" "${1#--}" "$2" || framework.console.args::invalid "Unknown flag $1."
+        core.modules.tasks.service::set_section "$sections" "${1#--}" "$2" || framework.console.args::invalid "$1 isn't a task section."
         shift 2
         ;;
       *) framework.console.args::unexpected "$1" ;;
@@ -71,7 +71,7 @@ handle() {
   has_changes=$has_body
   [ -z "$title$status$(core.modules.tasks.service::given_sections "$sections")" ] || has_changes=true
   editor=$(core.modules.tasks.console::editor_mode "$editor" "$has_changes")
-  [ "$editor" = yes ] || $has_changes || framework.console.args::invalid "Nothing to update: give --title, content, or a status flag."
+  [ "$editor" = yes ] || $has_changes || framework.console.args::invalid "Nothing to change: please give a --title, a section, or a status."
   if $has_body || [ -n "$(core.modules.tasks.service::given_sections "$sections")" ] || [ "$editor" = yes ]; then
     if ! $has_body; then
       core.modules.tasks.console::call show "$id" > "$work/show" || exit 1
@@ -85,6 +85,6 @@ handle() {
     core.modules.tasks.console::call update "$id" "$title" "$body_argument" || exit 1
   fi
   [ -z "$status" ] || core.modules.tasks.console::call status "$id" "$status" || exit 1
-  framework.console.output::success "Task $id updated${status:+ (now $status)}"
+  framework.console.output::success "Updated task $id${status:+ (now $status)}."
   core.modules.tasks.console::print_location "$id"
 }

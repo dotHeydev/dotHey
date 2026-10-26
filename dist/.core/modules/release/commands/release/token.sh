@@ -42,25 +42,25 @@ handle() {
   while [ $# -gt 0 ]; do
     case "$1" in
       --remove) remove=true; shift ;;
-      -*) framework.console.args::invalid "Unexpected option: $1" ;;
+      -*) framework.console.args::invalid "Unknown argument: $1" ;;
       *) [ -z "$name" ] || framework.console.args::unexpected "$1"; name="$1"; shift ;;
     esac
   done
-  [ -n "$name" ] || framework.console.args::invalid "A remote name is required."
-  cd "$RELEASE_PROJECT" || framework.console.output::fail "Cannot enter the project: $RELEASE_PROJECT"
+  [ -n "$name" ] || framework.console.args::invalid "Which remote? Please give its name from release.remotes."
+  cd "$RELEASE_PROJECT" || framework.console.output::fail "Can't open the project at $RELEASE_PROJECT."
   core.modules.release.service::load_remotes
   url=$(core.modules.release.service::remote_url "$name")
   if $remove; then
-    core.modules.release.service::remove_token "$url" || framework.console.output::fail "No token stored for $name."
-    framework.console.output::success "Removed the token for $name"
+    core.modules.release.service::remove_token "$url" || framework.console.output::fail "There's no saved token for $name."
+    framework.console.output::success "Removed the $name token."
     return 0
   fi
-  framework.console.prompt::can_ask || framework.console.output::fail "The token is asked for at a terminal; run this one yourself."
+  framework.console.prompt::can_ask || framework.console.output::fail "Tokens are only entered in a terminal." "$OUTPUT_MANUAL_RUN bash dot release:token $name"
   token=$(framework.console.prompt::secret "Token for $name ($url)")
-  [ -n "$token" ] || framework.console.output::fail "No token given; nothing stored."
+  [ -n "$token" ] || framework.console.output::fail "No token entered, so nothing was saved."
   [ "$(core.modules.release.service::token_store)" != gpg ] \
-    || framework.console.output::info "Choose a passphrase to encrypt the token for $name, then repeat it; pushes ask for it."
-  core.modules.release.service::save_token "$url" "$token" || framework.console.output::fail "Could not store the token for $name."
+    || framework.console.output::info "Please choose a passphrase for the $name token, then repeat it; pushes will ask for it."
+  core.modules.release.service::save_token "$url" "$token" || framework.console.output::fail "Couldn't save the token for $name."
   token=""
-  framework.console.output::success "Token for $name stored in the $(core.modules.release.service::token_store) store"
+  framework.console.output::success "Saved the $name token in $(core.modules.release.service::token_store)."
 }

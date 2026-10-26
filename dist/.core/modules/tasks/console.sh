@@ -13,10 +13,10 @@ core.modules.tasks.console::ensure_service() {
   local service
   core.modules.tasks.service::require_template
   if ! service=$(core.modules.tasks.service::selected_service); then
-    framework.console.prompt::is_interactive || framework.console.output::fail "Tasks are not set up yet. Ask the user to run bash dot tasks:initialize in a terminal."
-    framework.console.output::warn "Tasks are not set up yet."
+    framework.console.prompt::is_interactive || framework.console.output::fail "Tasks aren't set up yet." "$OUTPUT_MANUAL_RUN bash dot tasks:initialize"
+    framework.console.output::warn "Tasks aren't set up yet."
     dot::call tasks:initialize || exit 1
-    service=$(core.modules.tasks.service::selected_service) || framework.console.output::fail "No task service selected."
+    service=$(core.modules.tasks.service::selected_service) || framework.console.output::fail "No task service chosen, so nothing changed."
   fi
   core.modules.tasks.service::load_service "$service"
 }
@@ -49,8 +49,8 @@ core.modules.tasks.console::edit_body() {
   draft="$body.edit"
   cp -- "$body" "$draft"
   core.modules.tasks.service::add_guidance "$draft"
-  framework.console.terminal::edit "$draft" || framework.console.output::fail "The editor exited with an error — nothing saved."
-  ! core.modules.tasks.service::is_blank "$draft" || framework.console.output::fail "The task was left empty — nothing saved."
+  framework.console.terminal::edit "$draft" || framework.console.output::fail "The editor exited with an error, so nothing was saved."
+  ! core.modules.tasks.service::is_blank "$draft" || framework.console.output::fail "Cancelled — the task was left empty, so nothing was saved."
   core.modules.tasks.service::strip_guidance "$draft"
   mv -f -- "$draft" "$body"
 }
@@ -72,6 +72,6 @@ USAGE
 core.modules.tasks.console::move() {
   local status="$1"
   shift
-  [ $# -eq 1 ] || framework.console.args::invalid "tasks:$status takes one task id (see bash dot tasks:list)."
+  [ $# -eq 1 ] || framework.console.args::invalid "Which task? Please give one task id, e.g. t004."
   dot::call tasks:update "$1" "--$status"
 }

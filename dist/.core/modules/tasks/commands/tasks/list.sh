@@ -47,10 +47,10 @@ handle() {
         framework.console.args::require_value "$@"
         statuses=""
         while IFS= read -r status; do
-          core.modules.tasks.service::is_status "$status" || framework.console.args::invalid "Unknown status: $status"
+          core.modules.tasks.service::is_status "$status" || framework.console.args::invalid "\"$status\" isn't a task status."
           statuses="$statuses $status"
         done < <(framework.console.args::split "$2")
-        [ -n "$statuses" ] || framework.console.args::invalid "--status requires a value."
+        [ -n "$statuses" ] || framework.console.args::invalid "--status needs a value."
         statuses="$statuses "
         shift 2
         ;;
@@ -71,12 +71,12 @@ handle() {
       *) framework.console.args::unexpected "$1" ;;
     esac
   done
-  framework.helpers.fs::make_temp_dir work || framework.console.output::fail "Could not create a temp directory."
+  framework.helpers.fs::make_temp_dir work || framework.console.output::fail "Couldn't create a temporary directory; please check free space and \$TMPDIR."
   core.modules.tasks.console::call list > "$work/list" || exit 1
   core.modules.tasks.service::sort_rows "$work/list" "$statuses" "$sort" "$order" > "$work/rows"
   if [ ! -s "$work/rows" ]; then
     statuses=$(framework.helpers.text::trim "$statuses")
-    framework.console.output::line "No tasks${statuses:+ with status ${statuses// /, }}."
+    framework.console.output::line "No tasks${statuses:+ with status ${statuses// /, }} yet."
     return 0
   fi
   total=$(wc -l < "$work/rows" | tr -d ' ')
@@ -84,7 +84,7 @@ handle() {
   [ "$size" -gt 0 ] || size=$total
   pages=$(( (total + size - 1) / size ))
   if [ "$page" -gt "$pages" ]; then
-    framework.console.output::warn "Nothing on page $page: $(framework.helpers.text::plural "$total" task) fit on $(framework.helpers.text::plural "$pages" page) of $size. The last page is --page $pages."
+    framework.console.output::warn "There's no page $page; the last one is --page $pages."
     return 0
   fi
   first=$(( (page - 1) * size + 1 ))
@@ -92,5 +92,5 @@ handle() {
   print_rows "$work/rows" "$first" "$last"
   [ "$pages" -gt 1 ] || return 0
   [ "$page" -ge "$pages" ] || next=" · next: --page $((page + 1))"
-  framework.console.output::line "$(framework.console.output::paint cyan "Showing $first-$last of $total · Page $page/$pages")$next"
+  framework.console.output::line "$(framework.console.output::paint gray "Showing $first–$last of $total • page $page of $pages")$next"
 }

@@ -44,7 +44,7 @@ USAGE
 handle() {
   local work body sections title="" has_title=false status has_body=false editor=auto has_content id
   core.modules.tasks.console::ensure_service
-  framework.helpers.fs::make_temp_dir work || framework.console.output::fail "Could not create a temp directory."
+  framework.helpers.fs::make_temp_dir work || framework.console.output::fail "Couldn't create a temporary directory; please check free space and \$TMPDIR."
   body="$work/body"
   sections="$work/sections"
   mkdir -p -- "$sections"
@@ -59,15 +59,15 @@ handle() {
       --no-editor) editor=no; shift ;;
       --*)
         framework.console.args::require_value "$@"
-        core.modules.tasks.service::set_section "$sections" "${1#--}" "$2" || framework.console.args::invalid "Unknown flag $1."
+        core.modules.tasks.service::set_section "$sections" "${1#--}" "$2" || framework.console.args::invalid "$1 isn't a task section."
         shift 2
         ;;
       *) framework.console.args::unexpected "$1" ;;
     esac
   done
-  core.modules.tasks.service::is_status "$status" || framework.console.args::invalid "Unknown status: $status"
+  core.modules.tasks.service::is_status "$status" || framework.console.args::invalid "\"$status\" isn't a task status."
   if ! $has_title; then
-    framework.console.prompt::is_interactive || framework.console.args::invalid "Missing --title."
+    framework.console.prompt::is_interactive || framework.console.args::invalid "The task needs a title."
     title=$(framework.console.prompt::ask "Title")
   fi
   core.modules.tasks.service::check_title "$title"
@@ -77,6 +77,6 @@ handle() {
   [ -z "$(core.modules.tasks.service::given_sections "$sections")" ] || has_content=true
   [ "$(core.modules.tasks.console::editor_mode "$editor" "$has_content")" = no ] || core.modules.tasks.console::edit_body "$body"
   id=$(core.modules.tasks.console::call create "$title" "$status" "$body") || exit 1
-  framework.console.output::success "Task $id created ($status): $title"
+  framework.console.output::success "Created task $id • $title ($status)"
   core.modules.tasks.console::print_location "$id"
 }

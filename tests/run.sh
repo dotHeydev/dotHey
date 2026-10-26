@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 
 set -uo pipefail
+# Agent mode (AI_AGENT, CLAUDECODE) changes the output; tests ask for it
+# themselves.
+unset AI_AGENT CLAUDECODE
 
 . "$(dirname -- "$0")/lib.sh"
 

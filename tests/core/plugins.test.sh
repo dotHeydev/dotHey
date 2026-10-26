@@ -52,7 +52,7 @@ test_repos_without_a_dotdot_folder_are_refused() {
   mkdir -p "$SANDBOX/plain"
   core "dot::use core.system.plugins.service; core.system.plugins.service::fetch acme/plain '' plain"
   assert_failure
-  assert_contains "$ERRORS" "no dotdot/ folder"
+  assert_contains "$ERRORS" "no dotdot/ directory"
 }
 
 test_plugin_must_target_this_api() {
@@ -73,7 +73,7 @@ test_plugin_commands_follow_the_layout() {
     core.system.plugins.service::fetch acme/widgets '' widgets
     core.system.plugins.manifest::validate \"\$PLUGIN_SOURCE\" acme/widgets"
   assert_failure
-  assert_contains "$ERRORS" "levels deep"
+  assert_contains "$ERRORS" "directories deep"
 }
 
 validate_plugin() {
@@ -99,7 +99,7 @@ test_local_plugin_repos_install_as_committed_and_record_their_commit() {
   rm -rf "$SANDBOX/widgets/.git"
   core "dot::use core.system.plugins.service; core.system.plugins.service::fetch acme/widgets main widgets"
   assert_failure
-  assert_contains "$ERRORS" "is not a git repo of its own, so it has no ref"
+  assert_contains "$ERRORS" "isn't a git repo of its own, so @"
 }
 
 test_taken_commands_are_refused() {
@@ -108,14 +108,14 @@ test_taken_commands_are_refused() {
   add_plugin acme/widgets widgets
   validate_plugin acme/gadgets gadgets
   assert_failure
-  assert_contains "$ERRORS" "already taken: acme:hello"
+  assert_contains "$ERRORS" "clash with ones already installed: acme:hello"
 }
 
 test_owner_may_not_be_a_core_command_name() {
   scaffold_plugin tasks/widgets
   validate_plugin tasks/widgets widgets
   assert_failure
-  assert_contains "$ERRORS" "dotdot's own command names"
+  assert_contains "$ERRORS" "is also a dotdot command name"
 }
 
 test_linked_entries_may_have_any_name_and_a_clash_is_reported() {
@@ -124,7 +124,7 @@ test_linked_entries_may_have_any_name_and_a_clash_is_reported() {
   : > "$SANDBOX/widgets/dotdot/skills/review/SKILL.md"
   validate_plugin acme/widgets widgets
   assert_success
-  assert_contains "$ERRORS" "acme/widgets's skills/dot-onboard has the name of .dot/.core/modules/onboarding's"
+  assert_contains "$ERRORS" "acme/widgets's skills/dot-onboard has the same name as one in .dot/.core/modules/onboarding"
   assert_not_contains "$ERRORS" "skills/review"
 }
 
@@ -136,14 +136,14 @@ test_linked_entries_that_clash_between_plugins_are_reported_and_the_first_wins()
   rm -f "$SANDBOX/other/dotdot/commands/hello.sh"
   validate_plugin other/widgets other
   assert_success "a clashing skill is only reported"
-  assert_contains "$ERRORS" "other/widgets's skills/widgets-example has the name of .dot/.plugins/acme/widgets's"
+  assert_contains "$ERRORS" "other/widgets's skills/widgets-example has the same name as one in .dot/.plugins/acme/widgets"
   add_plugin other/widgets other
   dot link:activate acme/widgets
   dot link:activate other/widgets
   dot link -y
   assert_success
   assert_link_to "$SANDBOX/.agents/skills/widgets-example" "$DOTDOT/.plugins/acme/widgets/skills/widgets-example"
-  assert_contains "$ERRORS" "Skipped the link to .agents/skills/widgets-example from .dot/.plugins/other/widgets/skills/widgets-example: an earlier entry already links it to .dot/.plugins/acme/widgets/skills/widgets-example, and the first declared wins."
+  assert_contains "$ERRORS" "Skipped .dot/.plugins/other/widgets/skills/widgets-example → .agents/skills/widgets-example: an earlier entry already links it to .dot/.plugins/acme/widgets/skills/widgets-example."
 }
 
 test_link_never_lets_a_plugin_replace_a_core_link() {
@@ -155,9 +155,9 @@ test_link_never_lets_a_plugin_replace_a_core_link() {
     "link:@pluginsSkills->.claude/skills" "link:@plugin:acme.widgets:plugin.json->AGENTS.md" "link:@dot:SECURITY.md->.claude/rules/RULES.md"
   dot link -y
   assert_success
-  assert_contains "$ERRORS" "Skipped the link to .claude/skills/dot-onboard from .dot/.plugins/acme/widgets/skills/dot-onboard: an earlier entry already links it"
-  assert_contains "$ERRORS" "Skipped the link to AGENTS.md from .dot/.plugins/acme/widgets/plugin.json"
-  assert_contains "$ERRORS" "Skipped the link to .claude/rules/RULES.md from .dot/SECURITY.md"
+  assert_contains "$ERRORS" "Skipped .dot/.plugins/acme/widgets/skills/dot-onboard → .claude/skills/dot-onboard: an earlier entry already links it"
+  assert_contains "$ERRORS" "Skipped .dot/.plugins/acme/widgets/plugin.json → AGENTS.md"
+  assert_contains "$ERRORS" "Skipped .dot/SECURITY.md → .claude/rules/RULES.md"
   assert_link_to "$SANDBOX/AGENTS.md" "$DOTDOT/AGENTS.md"
   assert_link_to "$SANDBOX/.claude/skills/dot-onboard" "$DOTDOT/.core/modules/onboarding/skills/dot-onboard"
   assert_link_to "$SANDBOX/.claude/rules/RULES.md" "$DOTDOT/RULES.md"
@@ -172,16 +172,16 @@ test_link_never_links_secrets_or_into_git() {
   dot link -y
   assert_failure
   assert_no_file "$SANDBOX/leak"
-  assert_contains "$ERRORS" "climbs out with '..'"
+  assert_contains "$ERRORS" "which dotdot doesn't follow"
   assert_no_file "$SANDBOX/leak2"
   assert_no_file "$SANDBOX/.git/hooks/pre-commit"
   [ ! -L "$DOTDOT/AGENTS.md" ] || fail "a plugin linked into dotdot"
   assert_no_file "$SANDBOX/leak3"
-  assert_contains "$ERRORS" "Append origin '@dot:../.env' is not a file"
+  assert_contains "$ERRORS" "Skipped appending @dot:../.env: it isn't a file"
   assert_no_file "$DOTDOT/x.conf"
   assert_no_file "$SANDBOX/.git/config"
   assert_no_file "$DOTDOT/Notes/x.md"
-  assert_contains "$ERRORS" "Append destination '.git/config' must be"
+  assert_contains "$ERRORS" "Skipped appending to .git/config: appends go to project files"
 }
 
 test_plugin_links_are_validated_when_added() {
@@ -204,13 +204,13 @@ link:plugin.json->../outside|must be a project path outside
 link:plugin.json->@dot:x|must be a project path outside
 link:plugin.json->dot|must be a project path outside
 link:plugin.json->.env|must be a project path outside
-link:missing.conf->x|is not in the plugin
+link:missing.conf->x|isn't in the plugin
 append:../x->y|must be a path in the plugin
-append:commands->y|must be a file in the plugin
-append:plugin.json->@dot:Notes/x.md|must be a project file outside .git/
-append:plugin.json->.git/config|must be a project file outside .git/
-append:plugin.json->.env|must be a project file outside .git/ other than .env
-append:plugin.json->@dot:dot.json|must be a project file outside .git/ other than .env
+append:commands->y|isn't a file in the plugin
+append:plugin.json->@dot:Notes/x.md|must be a project file (not in .git/, not .env)
+append:plugin.json->.git/config|must be a project file (not in .git/, not .env)
+append:plugin.json->.env|must be a project file (not in .git/, not .env)
+append:plugin.json->@dot:dot.json|must be a project file (not in .git/, not .env)
 CASES
   manifest "$SANDBOX/widgets" "append:plugin.json->@dot:STANDARDS.md->AGENTS.md" "link:skills/*->x" "link:@dot:RULES.md->rules.md" "link:@plugin:acme.widgets:commands->cmd" "link:@dotdotSkills->.h/skills"
   validate_plugin acme/widgets widgets
@@ -221,7 +221,7 @@ CASES
   printf '{"description": "d", "link": {"plugin.json": "x"}}\n' > "$SANDBOX/widgets/dotdot/plugin.json"
   validate_plugin acme/widgets widgets
   assert_failure
-  assert_contains "$ERRORS" "link and append are {origin: [destinations]}"
+  assert_contains "$ERRORS" "link and append take {\"<origin>\": [\"<destination>\"]}"
 }
 
 test_plugin_link_destinations_that_clash_are_reported() {
@@ -232,7 +232,7 @@ test_plugin_link_destinations_that_clash_are_reported() {
   manifest "$SANDBOX/gadgets" "link:plugin.json->widgets.conf"
   validate_plugin other/gadgets gadgets
   assert_success "a destination another plugin suggests too is only reported"
-  assert_contains "$ERRORS" "other/gadgets suggests linking widgets.conf, which .dot/.plugins/acme/widgets suggests too"
+  assert_contains "$ERRORS" "other/gadgets and .dot/.plugins/acme/widgets both want to link widgets.conf"
 }
 
 test_lock_keeps_plugin_names_apart() {
@@ -268,16 +268,16 @@ test_plugin_remove_takes_back_its_links_and_appends_and_keeps_project_records() 
   printf 'kept\n' > "$DOTDOT/Widgets/w001.md"
   dot plugins:remove acme/widgets
   assert_failure
-  assert_contains "$ERRORS" "Confirmation needs a terminal"
+  assert_contains "$ERRORS" "This needs your confirmation in a terminal"
   core "dot::use core.system.plugins.service core.system.plugins.manifest
     core.system.plugins.service::uninstall acme/widgets
     core.system.plugins.manifest::unlock acme/widgets"
   dot link --sweep -y
   assert_success
-  assert_contains "$OUTPUT" "remove acme/widgets's links"
-  assert_contains "$OUTPUT" ".agents/skills/widgets-example (broken dotdot link; will remove)"
-  assert_contains "$OUTPUT" ".claude/skills/widgets-example (broken dotdot link; will remove)"
-  assert_contains "$OUTPUT" "2 removed, 0 appended, 1 taken back"
+  assert_contains "$OUTPUT" "remove the links of acme/widgets"
+  assert_contains "$OUTPUT" ".agents/skills/widgets-example broken; remove"
+  assert_contains "$OUTPUT" ".claude/skills/widgets-example broken; remove"
+  assert_contains "$OUTPUT" ".dot/STANDARDS.md take back the section of acme/widgets"
   assert_file "$DOTDOT/Widgets/w001.md"
   assert_no_file "$DOTDOT/.plugins/acme"
   assert_no_file "$SANDBOX/.agents/skills/widgets-example"
@@ -286,7 +286,7 @@ test_plugin_remove_takes_back_its_links_and_appends_and_keeps_project_records() 
   assert_not_contains "$(cat "$DOTDOT/dot.json")" "acme/widgets"
   dot link -y
   assert_success
-  assert_contains "$OUTPUT" "Nothing to do."
+  assert_contains "$OUTPUT" "Everything is already linked."
 }
 
 test_plugin_remove_without_links_sweeps_nothing() {
@@ -299,7 +299,7 @@ test_plugin_remove_without_links_sweeps_nothing() {
     core.system.plugins.manifest::unlock acme/widgets"
   dot link --sweep -y
   assert_success
-  assert_contains "$OUTPUT" "Nothing to do."
+  assert_equal "$OUTPUT" ""
   assert_contains "$(cat "$DOTDOT/STANDARDS.md")" "kept"
   assert_not_contains "$(cat "$DOTDOT/dot.json")" "links"
 }
@@ -329,7 +329,7 @@ theirs
   assert_equal "$(cat "$SANDBOX/settings.json")" '{"theirs": true}'
   assert_equal "$(cat "$SANDBOX/mine.json")" '{"mine": true}'
   dot link -y
-  assert_contains "$OUTPUT" "Nothing to do."
+  assert_contains "$OUTPUT" "Everything is already linked."
   add_entry remove "@plugin:acme.widgets:stubs" widgets.conf
   add_entry remove "@plugin:acme.widgets:stubs" conf/fresh.conf
   add_entry remove "@plugin:acme.widgets:stubs" settings.json
@@ -349,7 +349,7 @@ test_plugin_settings_are_written_into_dot_json_and_read_from_there_only() {
   printf '{"requires": 3, "settings": {"url": "@env:URL"}}\n' > "$SANDBOX/widgets/dotdot/plugin.json"
   validate_plugin acme/widgets widgets
   assert_failure
-  assert_contains "$ERRORS" "setting defaults may not refer to .env"
+  assert_contains "$ERRORS" "setting defaults can't read from .env"
   sandbox::settings '"plugins": {"acme/widgets": {"mode": "mine"}}'
   printf '{"requires": 3, "description": "d", "settings": {"mode": "fast", "apiUrl": "https://a.test", "strict": false}}\n' > "$SANDBOX/widgets/dotdot/plugin.json"
   add_plugin acme/widgets widgets
@@ -366,16 +366,16 @@ test_plugin_settings_are_written_into_dot_json_and_read_from_there_only() {
   assert_equal "$OUTPUT" "https://env.test"
   dot acme:probe dot::plugin_setting mode
   assert_failure "plugin.json is never read for a setting"
-  assert_contains "$ERRORS" 'Setting plugins["acme/widgets"].mode is not set'
+  assert_contains "$ERRORS" 'The setting plugins["acme/widgets"].mode isn'"'"'t set yet.'
   dot acme:probe dot::setting tasks.service
   assert_success "a plugin reads dotdot's settings"
   assert_equal "$OUTPUT" "github"
   dot acme:probe dot::save_setting tasks.service
   assert_failure
-  assert_contains "$ERRORS" "A plugin saves its own settings only"
+  assert_contains "$ERRORS" "A plugin only saves its own settings"
   core "dot::plugin_setting mode"
   assert_failure
-  assert_contains "$ERRORS" "Plugin settings are read and saved from a plugin's own code only."
+  assert_contains "$ERRORS" "dot::plugin_setting and dot::save_plugin_setting only work from a plugin's own code."
 }
 
 test_plugin_secrets_carry_the_plugin_prefix() {
@@ -388,7 +388,7 @@ test_plugin_secrets_carry_the_plugin_prefix() {
   assert_equal "$OUTPUT" "own"
   dot acme:probe DOT_GH_TOKEN
   assert_failure
-  assert_contains "$ERRORS" "acme/widgets's secrets must start with DOT_ACME_WIDGETS__: DOT_GH_TOKEN"
+  assert_contains "$ERRORS" "acme/widgets's secrets must start with DOT_ACME_WIDGETS__ (got DOT_GH_TOKEN)."
 }
 
 test_plugins_get_no_paths_outside_their_folder() {
@@ -413,7 +413,7 @@ test_plugin_stubs_may_not_seed_git() {
     core.system.plugins.service::fetch acme/widgets '' widgets
     core.system.plugins.manifest::validate \"\$PLUGIN_SOURCE\" acme/widgets"
   assert_failure
-  assert_contains "$ERRORS" "may not seed git"
+  assert_contains "$ERRORS" "which plugins can't touch"
 }
 
 test_plugin_owner_may_start_with_a_digit() {
@@ -465,11 +465,11 @@ test_core_modules_keep_to_themselves() {
   printf '#!/usr/bin/env bash\ndot::use core.modules.tasks.service\n' > "$DOTDOT/.core/modules/notes/probe.sh"
   core ". '$DOTDOT/.core/modules/notes/probe.sh'"
   assert_failure
-  assert_contains "$ERRORS" "may not use the dotdot module core.modules.tasks.service"
+  assert_contains "$ERRORS" "may not use core.modules.tasks.service"
   printf '#!/usr/bin/env bash\ndot::use core.system.plugins.service\n' > "$DOTDOT/.core/system/link/probe.sh"
   core ". '$DOTDOT/.core/system/link/probe.sh'"
   assert_failure
-  assert_contains "$ERRORS" "may not use the dotdot module core.system.plugins.service"
+  assert_contains "$ERRORS" "may not use core.system.plugins.service"
   printf '#!/usr/bin/env bash\ndot::use framework.integrations.github.internal.route\n' > "$DOTDOT/.core/framework/helpers/probe.sh"
   core ". '$DOTDOT/.core/framework/helpers/probe.sh'"
   assert_failure
@@ -548,7 +548,7 @@ test_plugin_manifests_need_only_a_description() {
   printf '{"requires": 3}\n' > "$SANDBOX/widgets/dotdot/plugin.json"
   validate_plugin acme/widgets widgets
   assert_failure
-  assert_contains "$ERRORS" 'needs a "description", the one key it must have'
+  assert_contains "$ERRORS" 'with at least a "description"'
 }
 
 test_plugin_manifests_must_be_json_objects_with_lists() {

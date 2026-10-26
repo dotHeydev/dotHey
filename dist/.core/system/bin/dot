@@ -18,7 +18,18 @@ while [ -L "$dot_self" ] && [ "$dot_hops" -lt 40 ]; do
   esac
 done
 
+# --agent, anywhere, says an AI agent runs this (as AI_AGENT does).
+dot_arguments=()
+for dot_argument in "$@"; do
+  if [ "$dot_argument" = --agent ]; then
+    export AI_AGENT="${AI_AGENT:-dotdot}"
+  else
+    dot_arguments+=("$dot_argument")
+  fi
+done
+set -- ${dot_arguments[@]+"${dot_arguments[@]}"}
+
 . "$(dirname -- "$dot_self")/../boot.sh"
-unset dot_self dot_hops dot_link
+unset dot_self dot_hops dot_link dot_arguments dot_argument
 
 kernel::handle "$@"; exit

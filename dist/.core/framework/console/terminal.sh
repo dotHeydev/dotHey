@@ -32,7 +32,7 @@ framework.console.terminal::editor() {
 
 framework.console.terminal::edit() {
   local file="$1" editor
-  framework.console.prompt::is_interactive || framework.console.output::fail "Editing needs a terminal."
-  editor=$(framework.console.terminal::editor) || framework.console.output::fail "No editor found; set \$EDITOR."
+  framework.console.prompt::is_interactive || framework.console.output::fail "Editing needs a terminal." "Please pass the content as flags instead (see --help)."
+  editor=$(framework.console.terminal::editor) || framework.console.output::fail "No editor found." "Please set \$EDITOR, e.g. export EDITOR=nano"
   sh -c "$editor \"\$1\"" sh "$file" </dev/tty >/dev/tty
 }

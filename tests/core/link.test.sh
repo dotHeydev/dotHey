@@ -15,13 +15,13 @@ test_link_is_idempotent() {
   dot link -y
   dot link -y
   assert_success
-  assert_contains "$OUTPUT" "Nothing to do."
+  assert_contains "$OUTPUT" "Everything is already linked."
 }
 
 test_link_needs_confirmation_without_yes() {
   dot link
   assert_failure
-  assert_contains "$ERRORS" "Confirmation needs a terminal"
+  assert_contains "$ERRORS" "This needs your confirmation in a terminal"
   assert_no_file "$SANDBOX/AGENTS.md"
 }
 
@@ -79,22 +79,22 @@ test_link_refuses_a_map_outside_its_structure() {
   sandbox::settings '"links": {"@dot:RULES.md": "rules.md", "link": {"@dot:AGENTS.md": ["AGENTS.md"]}}'
   dot link -y
   assert_failure
-  assert_contains "$ERRORS" "have an entry outside its structure"
+  assert_contains "$ERRORS" "doesn't fit their shape"
   assert_no_file "$SANDBOX/rules.md"
   sandbox::settings '"links": {"@dot:RULES.md": ["rules.md"],}'
   cp "$DOTDOT/dot.json" "$SANDBOX/links.before"
   dot link -y
   assert_failure
-  assert_contains "$ERRORS" "is not valid JSON"
+  assert_contains "$ERRORS" "can't be read (invalid JSON"
   assert_equal "$(cat "$DOTDOT/dot.json")" "$(cat "$SANDBOX/links.before")"
   sandbox::settings '"links": ["@dot:RULES.md"]'
   dot link -y
   assert_failure
-  assert_contains "$ERRORS" "its links is not an object"
+  assert_contains "$ERRORS" "\"links\" isn't an object"
   sandbox::settings '"links": {"@dot:RULES.md": ["@env:MY_PATH"]}'
   dot link -y
   assert_failure
-  assert_contains "$ERRORS" "Invalid .env reference for links: it is set in JSON only."
+  assert_contains "$ERRORS" "The links can't come from .env"
 }
 
 test_link_never_writes_suggestions_back_once_taken() {
@@ -124,7 +124,7 @@ test_plugin_links_the_user_already_has_never_block_it() {
     core.system.plugins.service::fetch acme/widgets '' widgets
     core.system.plugins.manifest::validate \"\$PLUGIN_SOURCE\" acme/widgets"
   assert_success "a destination the user links elsewhere is only reported"
-  assert_contains "$ERRORS" "acme/widgets suggests linking widgets.conf, which .dot/dot.json already links elsewhere"
+  assert_contains "$ERRORS" "acme/widgets wants to link widgets.conf, which you already link elsewhere"
 }
 
 test_plugins_get_suggestions_in_the_map_that_the_user_can_take() {
@@ -218,7 +218,7 @@ description: Widget rules.
 widgets rule
 <!-- /acme/widgets -->"
   dot link -y
-  assert_contains "$OUTPUT" "Nothing to do."
+  assert_contains "$OUTPUT" "Everything is already linked."
   dot link -y --refresh acme/widgets
   assert_success
   assert_contains "$(cat "$DOTDOT/STANDARDS.md")" "widgets rule"
@@ -235,7 +235,7 @@ test_plugin_commands_only_write_the_map() {
   assert_no_file "$SANDBOX/AGENTS.md"
   dot link --map-only
   assert_success
-  assert_contains "$OUTPUT" "Nothing to do."
+  assert_contains "$OUTPUT" "The links are up to date."
 }
 
 test_link_keeps_origins_inside_dotdot() {
@@ -308,7 +308,7 @@ acme/widgets
 inactive" "the group lands right before inactive"
   dot link:activate acme/widgets
   assert_failure
-  assert_contains "$ERRORS" "acme/widgets has no inactive links"
+  assert_contains "$ERRORS" "acme/widgets has no links waiting under"
   dot link:deactivate acme/widgets
   assert_success
   assert_equal "$(map_value '.inactive["acme/widgets"]["@plugin:acme.widgets:plugin.json"]')" '["widgets.conf","rules.md"]'
@@ -321,7 +321,7 @@ inactive" "the group lands right before inactive"
   assert_success
   assert_link_to "$SANDBOX/widgets.conf" "$DOTDOT/.plugins/acme/widgets/plugin.json"
   assert_link_to "$SANDBOX/rules.md" "$DOTDOT/RULES.md"
-  assert_contains "$ERRORS" "Skipped acme/widgets's link to rules.md: the general links already link it to .dot/RULES.md, and they win; append to it instead if both are needed."
+  assert_contains "$ERRORS" "Skipped acme/widgets's link to rules.md: your own links already link it to .dot/RULES.md."
   assert_contains "$(cat "$SANDBOX/notes.md")" "<!-- dotdot"
   assert_contains "$(cat "$SANDBOX/notes.md")" "<!-- acme/widgets -->"
 }
@@ -329,8 +329,8 @@ inactive" "the group lands right before inactive"
 test_keys_defined_twice_in_the_links_are_reported() {
   sandbox::settings '"links": {"@dot:AGENTS.md": ["AGENTS.md"], "@dot:AGENTS.md": ["agents.md"], "acme/widgets": {"@dot:RULES.md": ["a.md"], "@dot:RULES.md": ["b.md"]}}'
   dot link -y
-  assert_contains "$ERRORS" '"@dot:AGENTS.md" is defined twice in the links of .dot/dot.json, so only its last destinations apply. To keep both, merge them into one list: "@dot:AGENTS.md": ["<first>", "<second>"].'
-  assert_contains "$ERRORS" '"@dot:RULES.md" is defined twice in the links of .dot/dot.json under "acme/widgets", so only its last destinations apply.'
+  assert_contains "$ERRORS" '"@dot:AGENTS.md" appears twice in the links of .dot/dot.json, so only the last one counts. Please merge them into one list: "@dot:AGENTS.md": ["<first>", "<second>"]'
+  assert_contains "$ERRORS" '"@dot:RULES.md" appears twice in the links of .dot/dot.json under "acme/widgets", so only the last one counts.'
   assert_link_to "$SANDBOX/agents.md" "$DOTDOT/AGENTS.md"
 }
 
@@ -392,7 +392,7 @@ test_an_origin_links_and_appends_to_several_destinations() {
   manifest "$SANDBOX/widgets" "link:plugin.json->ok.json->.git/config"
   validate_chain acme/widgets widgets
   assert_failure
-  assert_contains "$ERRORS" "destination .git/config must be a project path outside"
+  assert_contains "$ERRORS" "link destination \".git/config\" must be a project path outside"
 }
 
 validate_chain() {

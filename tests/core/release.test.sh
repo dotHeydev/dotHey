@@ -3,10 +3,10 @@
 test_release_validates_its_arguments() {
   dot release:create
   assert_failure
-  assert_contains "$ERRORS" "A version is required"
+  assert_contains "$ERRORS" "Which version?"
   dot release:create not-a-version
   assert_failure
-  assert_contains "$ERRORS" "Not a semantic version"
+  assert_contains "$ERRORS" "isn't a version like 1.2.0"
   dot release:create 1.0.0 --cache-pat=soon
   assert_failure
   assert_contains "$ERRORS" "--cache-pat"
@@ -16,21 +16,21 @@ test_release_settings_are_required() {
   git -C "$SANDBOX" init -q
   dot release:create 1.0.0
   assert_failure
-  assert_contains "$ERRORS" "Setting release.signingKey is not set: set it in .dot/dot.json"
+  assert_contains "$ERRORS" "The setting release.signingKey isn't set yet."
 }
 
 test_release_remotes_must_be_set_and_https_without_credentials() {
   dot release:token github
   assert_failure
-  assert_contains "$ERRORS" "No remote in release.remotes of .dot/dot.json"
+  assert_contains "$ERRORS" "release.remotes in .dot/dot.json needs at least one real remote"
   sandbox::settings '"release": {"remotes": {"example": "https://github.com/_USER_/_REPO_.git"}}'
   dot release:token example
   assert_failure "an example remote is never used"
-  assert_contains "$ERRORS" "No remote in release.remotes"
+  assert_contains "$ERRORS" "needs at least one real remote"
   sandbox::settings '"release": {"remotes": {"github": "https://user:secret@github.com/acme/repo.git"}}'
   dot release:token github
   assert_failure
-  assert_contains "$ERRORS" "release.remotes.github must be an https:// url without credentials"
+  assert_contains "$ERRORS" "release.remotes.github must be an https:// url with no credentials"
 }
 
 release_repository() {
@@ -92,7 +92,7 @@ test_release_warns_only_of_exclusions_that_match_nothing() {
   sandbox::settings '"release": {"exclude": ["tracked.txt", "build", ".env", "typo.txt"]}'
   core "cd '$SANDBOX'; dot::use core.modules.release.service; core.modules.release.service::read_exclusions; printf '%s\n' \"\${RELEASE_WARNINGS[@]}\""
   assert_success
-  assert_equal "$OUTPUT" "Excluded path is neither in HEAD nor git-ignored, nothing to leave out: typo.txt"
+  assert_equal "$OUTPUT" "release.exclude lists typo.txt, which is neither committed nor git-ignored; nothing to leave out."
 }
 
 test_release_export_refuses_secrets() {
@@ -101,7 +101,7 @@ test_release_export_refuses_secrets() {
   printf 'token=ghp_%s\n' "$(fake_secret 9)" > "$destination/config.txt"
   core "dot::use core.modules.release.service; RELEASE_DESTINATION='$destination'; core.modules.release.service::scan_secrets"
   assert_failure
-  assert_contains "$ERRORS" "Possible secrets in export"
+  assert_contains "$ERRORS" "Found what look like secrets"
   assert_contains "$ERRORS" "config.txt"
   printf 'nothing to see\n' > "$destination/config.txt"
   core "dot::use core.modules.release.service; RELEASE_DESTINATION='$destination'; core.modules.release.service::scan_secrets"

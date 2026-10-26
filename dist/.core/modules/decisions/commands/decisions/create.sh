@@ -81,16 +81,16 @@ EOF
 handle() {
   local name="" statement="" has_name=false has_statement=false has_elaboration=false
   local status="$DECISION_DEFAULT_STATUS" status_flag="" superseder="" sections_dir key kind link slug path
-  [ -f "$DECISION_TEMPLATE" ] || framework.console.output::fail "Template not found: $(dot::relative "$DECISION_TEMPLATE")"
-  [ $# -gt 0 ] || framework.console.args::invalid "Missing --name, --statement, and --elaboration."
-  framework.helpers.fs::make_temp_dir sections_dir || framework.console.output::fail "Could not create a temp directory."
+  [ -f "$DECISION_TEMPLATE" ] || framework.console.output::fail "The template $(dot::relative "$DECISION_TEMPLATE") is missing." "bash dot update restores it."
+  [ $# -gt 0 ] || framework.console.args::invalid "A decision needs --name, --statement and --elaboration."
+  framework.helpers.fs::make_temp_dir sections_dir || framework.console.output::fail "Couldn't create a temporary directory; please check free space and \$TMPDIR."
   while [ $# -gt 0 ]; do
     case "$1" in
       --name) framework.console.args::require_value "$@"; name="$2"; has_name=true; shift 2 ;;
       --statement) framework.console.args::require_value "$@"; statement="$2"; has_statement=true; shift 2 ;;
       --elaboration) framework.console.args::require_value "$@"; printf '%s' "$2" > "$sections_dir/.elaboration"; has_elaboration=true; shift 2 ;;
       "--$DECISION_SUPERSEDED_FLAG")
-        [ $# -ge 2 ] || framework.console.args::invalid "--$DECISION_SUPERSEDED_FLAG requires the decision that replaces this one (e.g. --$DECISION_SUPERSEDED_FLAG 007)."
+        [ $# -ge 2 ] || framework.console.args::invalid "--$DECISION_SUPERSEDED_FLAG needs the decision that replaces this one, e.g. --$DECISION_SUPERSEDED_FLAG 007."
         status_flag=$(core.modules.decisions.console::choose_status "$status_flag" "$DECISION_SUPERSEDED_FLAG")
         superseder="$2"
         shift 2
@@ -103,13 +103,13 @@ handle() {
           shift
           continue
         fi
-        framework.helpers.template::has_key "$DECISION_TEMPLATE" "$key" || framework.console.args::invalid "Unknown flag --$key."
+        framework.helpers.template::has_key "$DECISION_TEMPLATE" "$key" || framework.console.args::invalid "--$key isn't a decision section."
         framework.console.args::require_value "$@"
         kind=$(core.modules.decisions.service::kind "$key")
         if [ "$kind" = text ]; then
           core.modules.decisions.service::append_section "$sections_dir/$key" "$2"
         else
-          link=$(core.modules.decisions.service::reference_link "$kind" "$2") || framework.console.args::invalid "--$key '$2' matches no $kind in dotdot."
+          link=$(core.modules.decisions.service::reference_link "$kind" "$2") || framework.console.args::invalid "No $kind matches \"$2\" (--$key)."
           core.modules.decisions.service::append_section "$sections_dir/$key" "$link"
         fi
         shift 2
@@ -117,16 +117,16 @@ handle() {
       *) framework.console.args::unexpected "$1" ;;
     esac
   done
-  $has_name || framework.console.args::invalid "Missing required --name."
-  $has_statement || framework.console.args::invalid "Missing required --statement."
-  $has_elaboration || framework.console.args::invalid "Missing required --elaboration."
+  $has_name || framework.console.args::invalid "A decision needs --name."
+  $has_statement || framework.console.args::invalid "A decision needs --statement."
+  $has_elaboration || framework.console.args::invalid "A decision needs --elaboration."
   if [ "$status_flag" = "$DECISION_SUPERSEDED_FLAG" ]; then
     status=$(core.modules.decisions.service::superseded_status "$superseder") \
-      || framework.console.args::invalid "--$DECISION_SUPERSEDED_FLAG '$superseder' matches no decision in Decisions/."
+      || framework.console.args::invalid "No decision matches \"$superseder\" (--$DECISION_SUPERSEDED_FLAG)."
   fi
   slug=$(framework.helpers.text::slug "$name")
-  [ -n "$slug" ] || framework.console.args::invalid "--name must contain at least one letter or number."
-  path=$(core.modules.decisions.service::create "$slug" "$status" "$statement" "$sections_dir") || framework.console.output::fail "Could not create the decision; try again."
-  framework.console.output::success "Decision $(framework.helpers.record::number "$(basename -- "$path")") documented"
+  [ -n "$slug" ] || framework.console.args::invalid "--name needs at least one letter or digit."
+  path=$(core.modules.decisions.service::create "$slug" "$status" "$statement" "$sections_dir") || framework.console.output::fail "Couldn't create the decision; please try again."
+  framework.console.output::success "Documented decision $(framework.helpers.record::number "$(basename -- "$path")")."
   framework.console.output::detail "$(dot::relative "$path")"
 }

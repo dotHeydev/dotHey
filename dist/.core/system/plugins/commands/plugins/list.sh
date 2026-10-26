@@ -23,5 +23,5 @@ handle() {
     read -r origin ref commit <<< "$(core.system.plugins.manifest::lock_entry "$plugin")"
     framework.console.output::line "  $plugin  $origin  $ref@${commit:0:7}"
   done < <(core.system.plugins.manifest::installed)
-  $found || framework.console.output::line "No plugins installed."
+  $found || framework.console.output::line "No plugins installed yet."
 }

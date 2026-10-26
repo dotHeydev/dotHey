@@ -43,45 +43,43 @@ EOF
 
 handle() {
   local reference="" status="" status_flag="" superseder="" file path previous
-  [ $# -gt 0 ] || framework.console.args::invalid "Missing the decision and a status flag."
+  [ $# -gt 0 ] || framework.console.args::invalid "Which decision, and which status?"
   while [ $# -gt 0 ]; do
     case "$1" in
       "--$DECISION_SUPERSEDED_FLAG")
-        [ $# -ge 2 ] || framework.console.args::invalid "--$DECISION_SUPERSEDED_FLAG requires the decision that replaces this one (e.g. --$DECISION_SUPERSEDED_FLAG 007)."
+        [ $# -ge 2 ] || framework.console.args::invalid "--$DECISION_SUPERSEDED_FLAG needs the decision that replaces this one, e.g. --$DECISION_SUPERSEDED_FLAG 007."
         status_flag=$(core.modules.decisions.console::choose_status "$status_flag" "$DECISION_SUPERSEDED_FLAG")
         superseder="$2"
         shift 2
         ;;
       --*)
         core.modules.decisions.service::is_status "${1#--}" \
-          || framework.console.args::invalid "Unknown flag $1 (expected one of: $(core.modules.decisions.service::statuses | paste -sd ' ' -), or --$DECISION_SUPERSEDED_FLAG <ref>)."
+          || framework.console.args::invalid "$1 isn't a status; please use one of $(core.modules.decisions.service::statuses | sed 's/^/--/' | paste -sd ' ' -), or --$DECISION_SUPERSEDED_FLAG <ref>."
         status_flag=$(core.modules.decisions.console::choose_status "$status_flag" "${1#--}")
         status="${1#--}"
         shift
         ;;
       *)
-        [ -z "$reference" ] || framework.console.args::invalid "Expected a single decision reference, got a second: $1"
+        [ -z "$reference" ] || framework.console.args::invalid "Please give one decision at a time (got a second: $1)."
         reference="$1"
         shift
         ;;
     esac
   done
-  [ -n "$reference" ] || framework.console.args::invalid "Missing the decision to update (e.g. 002)."
-  [ -n "$status_flag" ] || framework.console.args::invalid "Missing a status flag (e.g. --accepted, or --$DECISION_SUPERSEDED_FLAG 007)."
-  file=$(core.modules.decisions.service::find "$reference") || framework.console.output::fail "No decision matching '$reference' in Decisions/."
+  [ -n "$reference" ] || framework.console.args::invalid "Which decision? Please give its number, e.g. 002."
+  [ -n "$status_flag" ] || framework.console.args::invalid "Which status? e.g. --accepted, or --$DECISION_SUPERSEDED_FLAG 007."
+  file=$(core.modules.decisions.service::find "$reference") || framework.console.output::fail "No decision matches \"$reference\"." "See them all: bash dot scan:frontmatter Decisions"
   path="$DECISIONS_DIR/$file"
   if [ "$status_flag" = "$DECISION_SUPERSEDED_FLAG" ]; then
     status=$(core.modules.decisions.service::superseded_status "$superseder") \
-      || framework.console.output::fail "--$DECISION_SUPERSEDED_FLAG '$superseder' matches no decision in Decisions/."
+      || framework.console.output::fail "No decision matches \"$superseder\" (--$DECISION_SUPERSEDED_FLAG)."
   fi
   case "$status" in
-    *"]($file)"*) framework.console.output::fail "A decision cannot supersede itself ($file)." ;;
+    *"]($file)"*) framework.console.output::fail "A decision can't supersede itself." ;;
   esac
-  framework.helpers.frontmatter::exists "$path" || framework.console.output::fail "$file has no frontmatter block to update."
+  framework.helpers.frontmatter::exists "$path" || framework.console.output::fail "$file has no frontmatter to update."
   previous=$(framework.helpers.frontmatter::field "$path" status)
-  core.modules.decisions.service::update_status "$path" "$status" || framework.console.output::fail "$file is missing a status: or modified: key in its frontmatter."
-  framework.console.output::success "Decision $(framework.helpers.record::number "$file") updated"
-  framework.console.output::detail "status:   ${previous:-(unset)} → $status"
-  framework.console.output::detail "modified: $(framework.helpers.frontmatter::field "$path" modified)"
+  core.modules.decisions.service::update_status "$path" "$status" || framework.console.output::fail "$file's frontmatter needs status: and modified:."
+  framework.console.output::success "Decision $(framework.helpers.record::number "$file") is now $status (was ${previous:-unset})."
   framework.console.output::detail "$(dot::relative "$path")"
 }

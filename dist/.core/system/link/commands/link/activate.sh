@@ -31,10 +31,10 @@ handle() {
     esac
     shift
   done
-  [ -n "$plugin" ] || framework.console.args::invalid "A plugin is required, as <owner>/<name>."
-  guards::plugin_id "$plugin" || framework.console.args::invalid "A plugin is <owner>/<name>: $plugin"
+  [ -n "$plugin" ] || framework.console.args::invalid "Which plugin? Please give it as <owner>/<name>."
+  guards::plugin_id "$plugin" || framework.console.args::invalid "\"$plugin\" isn't a plugin name; please use <owner>/<name>."
   core.system.link.service::move_group "$plugin" active "$replace"
   [ "$LINK_FAILURES" -eq 0 ] || framework.console.output::fail "${LINK_ERRORS[0]}"
-  framework.console.output::success "Activated $plugin's links in $(dot::relative "$SETTINGS_FILE")."
-  framework.console.output::detail "Run bash dot link to apply them."
+  framework.console.output::success "Activated the links of $plugin."
+  framework.console.output::next "Apply them: bash dot link"
 }

@@ -256,20 +256,20 @@ core.system.link.service::sweep() {
 # are written back only when the run is applied.
 core.system.link.service::prepare_map() {
   local refresh=" $1 " map_only="${2:-false}" rows group kind origin destination id plugin kept installed
-  framework.helpers.fs::make_temp_dir LINK_WORK || { core.system.link.service::fail "Could not create a temp directory."; return; }
+  framework.helpers.fs::make_temp_dir LINK_WORK || { core.system.link.service::fail "Couldn't create a temporary directory; please check free space and \$TMPDIR."; return; }
   if ! rows=$(core.system.link.service::read_map); then
-    core.system.link.service::fail "$(dot::relative "$SETTINGS_FILE") is not valid JSON, or its links is not an object; fix it, then run bash dot link again."
+    core.system.link.service::fail "The links in $(dot::relative "$SETTINGS_FILE") can't be read (invalid JSON, or \"links\" isn't an object). Please fix it, then run bash dot link again."
     return 0
   elif core.system.link.service::has_map; then
     [[ "$(framework.helpers.json::encoded "$(cat -- "$SETTINGS_FILE")" .links)" != *'"@env:'* ]] \
-      || { core.system.link.service::fail "Invalid .env reference for links: it is set in JSON only."; return 0; }
+      || { core.system.link.service::fail "The links can't come from .env; please set them in $(dot::relative "$SETTINGS_FILE") instead."; return 0; }
     core.system.link.service::note_duplicates
     LINK_EDIT_IN_PLACE=true
   else
-    LINK_MAP_NOTES+=("add links to $(dot::relative "$SETTINGS_FILE") from dotdot's default")
+    LINK_MAP_NOTES+=("add dotdot's default links")
   fi
   while IFS="$LINK_TAB" read -r group kind; do
-    [ "$group" = "!" ] && core.system.link.service::fail "Links in $(dot::relative "$SETTINGS_FILE") have an entry outside its structure (\"<origin>\": [destinations], \"append\" and \"remove\": {origin: [destinations]}, \"<owner>/<name>\": the same for a plugin, \"inactive\": {<owner>/<name>: …}): ${kind//$LINK_TAB/ }"
+    [ "$group" = "!" ] && core.system.link.service::fail "This entry in the links of $(dot::relative "$SETTINGS_FILE") doesn't fit their shape (see bash dot link --help): ${kind//$LINK_TAB/ }"
   done <<< "$rows"
   [ "$LINK_FAILURES" -eq 0 ] || return 0
   installed=" $(paths::plugins | sed "s|^$PLUGINS_DIR/||" | tr '\n' ' ') "
@@ -294,7 +294,7 @@ core.system.link.service::prepare_map() {
           ;;
         *) core.system.link.service::add_edit "delete|.inactive[$(framework.helpers.json::string "$group")]" ;;
       esac
-      [[ "$LINK_DROPPED" == *" $plugin "* ]] || { LINK_DROPPED="$LINK_DROPPED$plugin "; LINK_MAP_NOTES+=("remove $plugin's links and what was taken from it, no longer installed"); }
+      [[ "$LINK_DROPPED" == *" $plugin "* ]] || { LINK_DROPPED="$LINK_DROPPED$plugin "; LINK_MAP_NOTES+=("remove the links of $plugin, no longer installed"); }
       continue
     fi
     if [ "$group" = "$plugin" ] && [[ "$refresh" == *" $group "* ]]; then
@@ -309,7 +309,7 @@ core.system.link.service::prepare_map() {
     [ -n "$rows" ] || continue
     kept="$kept$rows"$'\n'
     core.system.link.service::add_edit "set|$id"
-    LINK_MAP_NOTES+=("write $id's links, under inactive")
+    LINK_MAP_NOTES+=("write the links of $id, under \"inactive\"")
   done
   printf '%s' "$kept" > "$LINK_WORK/rows"
   LINK_EFFECTIVE_MAP="$LINK_WORK/rows"
@@ -326,7 +326,7 @@ core.system.link.service::note_duplicates() {
     where=""
     [ "$key" = "$steps" ] || where=" under \"${steps%$LINK_TAB*}\""
     where="${where//$LINK_TAB/\" → \"}"
-    LINK_NOTICES+=("\"$key\" is defined twice in the links of $(dot::relative "$SETTINGS_FILE")$where, so only its last destinations apply. To keep both, merge them into one list: \"$key\": [\"<first>\", \"<second>\"].")
+    LINK_NOTICES+=("\"$key\" appears twice in the links of $(dot::relative "$SETTINGS_FILE")$where, so only the last one counts. Please merge them into one list: \"$key\": [\"<first>\", \"<second>\"]")
   done < <(framework.helpers.json::duplicate_keys "$(cat -- "$SETTINGS_FILE")")
 }
 
@@ -515,7 +515,7 @@ core.system.link.service::is_denied() {
     return 1
   fi
   [ "$kind" = append ] && kind="append to" || kind="link to"
-  LINK_DENIAL="Skipped ${group#+}'s $kind $destination from $origin: $setting protects it."
+  LINK_DENIAL="Skipped ${group#+}'s $kind $destination: $setting protects it."
 }
 
 # The paths plugins.denyLinkOrigin and plugins.denyLinkDestination protect,
@@ -610,9 +610,9 @@ core.system.link.service::plan_link() {
   if core.system.link.service::planned_origin "$2"; then
     [ "$LINK_PLANNED" != "$1" ] || return 0
     if [ "$LINK_PLANNED_GROUP" = . ] && [ "$LINK_GROUP" != . ]; then
-      LINK_NOTICES+=("Skipped ${LINK_GROUP#+}'s link to $3: the general links already link it to $(dot::relative "$LINK_PLANNED"), and they win; append to it instead if both are needed.")
+      LINK_NOTICES+=("Skipped ${LINK_GROUP#+}'s link to $3: your own links already link it to $(dot::relative "$LINK_PLANNED").")
     else
-      LINK_NOTICES+=("Skipped the link to $3 from $(dot::relative "$1"): an earlier entry already links it to $(dot::relative "$LINK_PLANNED"), and the first declared wins.")
+      LINK_NOTICES+=("Skipped $(dot::relative "$1") → $3: an earlier entry already links it to $(dot::relative "$LINK_PLANNED").")
     fi
     return
   fi
@@ -653,27 +653,27 @@ core.system.link.service::plan_mapping() {
     origin_path="${origin%"$LINK_TREE_SUFFIX"}"
   fi
   if ! guards::stays_inside "$origin_path" || ! guards::stays_inside "$destination"; then
-    core.system.link.service::fail "Link '$entry' climbs out with '..'; not linked."
+    core.system.link.service::fail "Skipped $entry: it uses \"..\", which dotdot doesn't follow."
     return
   fi
   core.system.link.service::resolve_under "$origin_path" "$DOTDOT_ROOT" origin_absolute \
-    || { core.system.link.service::fail "Origin '$origin_path' resolves outside the dotdot directory."; return; }
+    || { core.system.link.service::fail "Skipped $origin_path: it's outside $DOTDOT_NAME/."; return; }
   core.system.link.service::resolve_under "$destination" "$BASE" destination_absolute \
-    || { core.system.link.service::fail "Destination '$destination' resolves outside the project directory."; return; }
+    || { core.system.link.service::fail "Skipped $destination: it's outside the project."; return; }
   guards::link_origin "$origin_absolute" \
-    || { core.system.link.service::fail "Origin '$origin_path' is outside dotdot; not linked."; return; }
+    || { core.system.link.service::fail "Skipped $origin_path: it's outside $DOTDOT_NAME/."; return; }
   guards::link_destination "$destination_absolute" \
-    || { core.system.link.service::fail "Destination '$destination' is inside dotdot or git, or is the dot entry point or the .env; not linked."; return; }
+    || { core.system.link.service::fail "Skipped $destination: it's a protected place ($DOTDOT_NAME/, .git/, the dot entry point, or .env)."; return; }
   if [ ! -e "$origin_absolute" ] && ! { $LINK_SEED_USER && [ "$origin_absolute" = "$USER_FILE" ]; }; then
-    core.system.link.service::fail "Origin '$origin_path' does not exist."
+    core.system.link.service::fail "Skipped $origin_path: it doesn't exist."
     return
   fi
   if $tree && [ ! -d "$origin_absolute" ]; then
-    core.system.link.service::fail "Origin '$origin' uses the '$LINK_TREE_SUFFIX' tree pattern but is not a directory."
+    core.system.link.service::fail "Skipped $origin: it ends in $LINK_TREE_SUFFIX but isn't a directory."
     return
   fi
   if $tree && [ -L "$destination_absolute" ]; then
-    core.system.link.service::fail "Destination '$destination' is a symlink to a directory; remove it if you want dotdot linked there."
+    core.system.link.service::fail "Skipped $destination: it's a link to a directory. Please remove it if dotdot should link there."
     return
   fi
   if ! $tree; then
@@ -776,7 +776,7 @@ core.system.link.service::plan_append() {
   [ -n "$label" ] || label=$(core.system.link.service::append_label "$origin")
   if ! core.system.link.service::append_destination "$destination" path "$label"; then
     $removal && return 0
-    core.system.link.service::fail "Append destination '$destination' must be a project file outside .git other than the .env, or one of dotdot's top-level docs; not appended."
+    core.system.link.service::fail "Skipped appending to $destination: appends go to project files (not in .git/, not .env) or to dotdot's top-level docs."
     return
   fi
   style=$(core.system.link.service::marker_style "$path")
@@ -787,12 +787,12 @@ core.system.link.service::plan_append() {
     return
   fi
   if ! core.system.link.service::append_origin "$origin" absolute; then
-    core.system.link.service::fail "Append origin '$origin' is not a file @dot:, @module:, or @plugin: names; not appended."
+    core.system.link.service::fail "Skipped appending $origin: it isn't a file @dot:, @module: or @plugin: names."
     return
   fi
   if core.system.link.service::is_append_planned "$path" "$label"; then
     [ -z "$LINK_APPEND_PLANNED" ] || [ "$LINK_APPEND_PLANNED" = "$absolute" ] \
-      || core.system.link.service::fail "$origin would share $label's region in $destination with another line; not appended."
+      || core.system.link.service::fail "Skipped appending $origin: $label already appends another file to $destination."
     return
   fi
   if [ "$style" = none ]; then
@@ -856,7 +856,7 @@ core.system.link.service::plan() {
   local override="$1" refresh="${2-}" entry
   core.system.link.service::prepare_map "$refresh"
   [ -n "$LINK_EFFECTIVE_MAP" ] || return 0
-  core.system.link.service::load_denied || { core.system.link.service::fail "Could not read plugins.denyLinkOrigin or plugins.denyLinkDestination."; return 0; }
+  core.system.link.service::load_denied || { core.system.link.service::fail "plugins.denyLinkOrigin or plugins.denyLinkDestination in $(dot::relative "$SETTINGS_FILE") can't be read, so nothing was linked."; return 0; }
   core.system.link.service::plan_removals
   if [ ! -e "$USER_FILE" ] && [ ! -L "$USER_FILE" ] && [ -f "$USER_EXAMPLE_FILE" ]; then
     LINK_SEED_USER=true
@@ -918,10 +918,10 @@ core.system.link.service::user_state() {
 
 core.system.link.service::seed() {
   if [ ${#LINK_MAP_NOTES[@]} -gt 0 ]; then
-    core.system.link.service::save || core.system.link.service::fail "Could not write $(dot::relative "$SETTINGS_FILE")."
+    core.system.link.service::save || core.system.link.service::fail "Couldn't write $(dot::relative "$SETTINGS_FILE"); please check that it's writable."
   fi
   if $LINK_SEED_USER; then
-    sed '/^ignore: true$/d' "$USER_EXAMPLE_FILE" > "$USER_FILE" || core.system.link.service::fail "Could not create $DOTDOT_NAME/USER.md."
+    sed '/^ignore: true$/d' "$USER_EXAMPLE_FILE" > "$USER_FILE" || core.system.link.service::fail "Couldn't create $DOTDOT_NAME/USER.md."
   fi
 }
 
@@ -937,23 +937,23 @@ core.system.link.service::apply() {
       ok) LINK_UNCHANGED=$((LINK_UNCHANGED + 1)); continue ;;
       skip) LINK_SKIPPED=$((LINK_SKIPPED + 1)); continue ;;
       prune | unlink)
-        if rm -f -- "$destination"; then LINK_REMOVED=$((LINK_REMOVED + 1)); else core.system.link.service::fail "Could not remove $label."; fi
+        if rm -f -- "$destination"; then LINK_REMOVED=$((LINK_REMOVED + 1)); else core.system.link.service::fail "Couldn't remove $label."; fi
         continue
         ;;
       move) rm -f -- "$destination" ;;
       relink)
-        LINK_WARNINGS+=("replaced symlink $label (was -> $(readlink -- "$destination"))")
+        LINK_WARNINGS+=("Replaced $label (it pointed to $(readlink -- "$destination")).")
         rm -f -- "$destination"
         ;;
       backup)
         mv -- "$destination" "$destination.bak-$stamp"
-        LINK_WARNINGS+=("backed up $label -> $label.bak-$stamp")
+        LINK_WARNINGS+=("Backed up $label as $label.bak-$stamp.")
         ;;
     esac
     if framework.helpers.fs::link "$origin" "$destination"; then
       LINK_LINKED=$((LINK_LINKED + 1))
     else
-      core.system.link.service::fail "Could not link $label (symlinks may need Developer Mode on Windows)."
+      core.system.link.service::fail "Couldn't link $label. On Windows, symlinks need Developer Mode turned on."
     fi
   done
   core.system.link.service::apply_appends
@@ -1033,18 +1033,18 @@ core.system.link.service::apply_appends() {
     # Checked again as written: a link made earlier in this run may now lead
     # the destination somewhere the plan never allowed.
     if ! framework.helpers.fs::resolve_to physical "$path" || [ "$physical" != "$path" ] || ! guards::append_destination "$physical" "$marker"; then
-      core.system.link.service::fail "$label changed since the preview (now $(dot::relative "${physical:-?}")); not appended."
+      core.system.link.service::fail "Skipped appending to $label: it changed after the preview (it now leads to $(dot::relative "${physical:-?}"))."
       continue
     fi
     case "${LINK_APPEND_ACTIONS[$index]}" in
       append)
-        if core.system.link.service::append "$origin" "$path" "$marker"; then LINK_APPENDED=$((LINK_APPENDED + 1)); else core.system.link.service::fail "Could not append to $label."; fi
+        if core.system.link.service::append "$origin" "$path" "$marker"; then LINK_APPENDED=$((LINK_APPENDED + 1)); else core.system.link.service::fail "Couldn't append to $label."; fi
         ;;
       create)
-        if mkdir -p -- "${path%/*}" && cp -- "$origin" "$path"; then LINK_APPENDED=$((LINK_APPENDED + 1)); else core.system.link.service::fail "Could not create $label."; fi
+        if mkdir -p -- "${path%/*}" && cp -- "$origin" "$path"; then LINK_APPENDED=$((LINK_APPENDED + 1)); else core.system.link.service::fail "Couldn't create $label."; fi
         ;;
       unappend)
-        if core.system.link.service::unappend "$path" "$marker"; then LINK_UNAPPENDED=$((LINK_UNAPPENDED + 1)); else core.system.link.service::fail "Could not remove what was appended to $label."; fi
+        if core.system.link.service::unappend "$path" "$marker"; then LINK_UNAPPENDED=$((LINK_UNAPPENDED + 1)); else core.system.link.service::fail "Couldn't take back what was appended to $label."; fi
         ;;
       appended | exists) LINK_UNCHANGED=$((LINK_UNCHANGED + 1)) ;;
     esac
@@ -1057,7 +1057,7 @@ core.system.link.service::apply_appends() {
 # it takes the place of a group already there.
 core.system.link.service::move_group() {
   local plugin="$1" to="$2" replace="$3" document key from_path to_path group placement=()
-  core.system.link.service::has_map || { core.system.link.service::fail "$(dot::relative "$SETTINGS_FILE") has no links yet; run bash dot link first."; return; }
+  core.system.link.service::has_map || { core.system.link.service::fail "$(dot::relative "$SETTINGS_FILE") has no links yet. Please run bash dot link first."; return; }
   document=$(cat -- "$SETTINGS_FILE")
   key=$(framework.helpers.json::string "$plugin")
   if [ "$to" = active ]; then
@@ -1068,28 +1068,28 @@ core.system.link.service::move_group() {
   group=$(framework.helpers.json::encoded "$document" "$from_path")
   case "$group" in
     "{"*) ;;
-    "") core.system.link.service::fail "$(dot::relative "$SETTINGS_FILE") is not valid JSON; fix it, then try again."; return ;;
+    "") core.system.link.service::fail "$(dot::relative "$SETTINGS_FILE") isn't valid JSON. Please fix it and run the command again."; return ;;
     *)
       if [ "$to" = active ]; then
-        core.system.link.service::fail "$plugin has no inactive links in $(dot::relative "$SETTINGS_FILE")."
+        core.system.link.service::fail "$plugin has no links waiting under \"inactive\"."
       else
-        core.system.link.service::fail "$plugin has no active links in $(dot::relative "$SETTINGS_FILE")."
+        core.system.link.service::fail "$plugin has no active links."
       fi
       return
       ;;
   esac
   if [ "$(framework.helpers.json::encoded "$document" "$to_path")" != null ] && ! $replace; then
-    core.system.link.service::fail "$plugin's links are $to already; edit them, or replace them with --replace."
+    core.system.link.service::fail "$plugin's links are already $to. Please edit them in $(dot::relative "$SETTINGS_FILE"), or add --replace to take the new ones."
     return
   fi
   document=$(framework.helpers.json::set "$document" "$to_path" "$(framework.helpers.json::set null . "$group")" --keep-format ${placement[@]+"${placement[@]}"}) \
     && document=$(framework.helpers.json::delete "$document" "$from_path" --keep-format) \
     && printf '%s\n' "$document" | framework.helpers.fs::write "$SETTINGS_FILE" \
-    || core.system.link.service::fail "Could not write $(dot::relative "$SETTINGS_FILE")."
+    || core.system.link.service::fail "Couldn't write $(dot::relative "$SETTINGS_FILE"); please check that it's writable."
 }
 
 # Writes the map alone, for plugin commands: no link, no append.
 core.system.link.service::save_map() {
   [ ${#LINK_MAP_NOTES[@]} -gt 0 ] || return 0
-  core.system.link.service::save || core.system.link.service::fail "Could not write $(dot::relative "$SETTINGS_FILE")."
+  core.system.link.service::save || core.system.link.service::fail "Couldn't write $(dot::relative "$SETTINGS_FILE"); please check that it's writable."
 }

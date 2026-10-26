@@ -33,7 +33,7 @@ handle() {
       *) framework.console.args::unexpected "$1" ;;
     esac
   done
-  framework.helpers.fs::make_temp_dir work || framework.console.output::fail "Could not create a temp directory."
+  framework.helpers.fs::make_temp_dir work || framework.console.output::fail "Couldn't create a temporary directory; please check free space and \$TMPDIR."
   core.modules.tasks.console::call show "$id" > "$work/show" || exit 1
   IFS=$'\t' read -r task_id status created updated title < "$work/show"
   case "$task_id" in

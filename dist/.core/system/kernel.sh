@@ -134,13 +134,13 @@ kernel::description() {
 
 kernel::list() {
   local name file namespace previous=""
-  framework.console.output::line "$(framework.console.output::paint bold dotdot) commands. Every command answers --help."
+  framework.console.output::line "$(framework.console.output::paint bold dotdot)"
   framework.console.output::newline
   framework.console.output::line "$(framework.console.output::paint yellow Usage:)"
   framework.console.output::line "  bash dot <command> [arguments]"
   framework.console.output::line "  bash dot help <command>"
   framework.console.output::newline
-  framework.console.output::line "$(framework.console.output::paint yellow 'Available commands:')"
+  framework.console.output::line "$(framework.console.output::paint yellow 'Commands:')"
   while IFS='|' read -r name file; do
     namespace="${name%%:*}"
     if [ "$name" != "$namespace" ] && [ "$namespace" != "$previous" ]; then
@@ -149,19 +149,46 @@ kernel::list() {
     previous="$namespace"
     printf '  %s %s\n' "$(framework.console.output::paint green "$(printf "%-${KERNEL_COLUMN_WIDTH}s" "$name")")" "$(kernel::description "$file")"
   done < <(kernel::commands | awk -F'|' '{ print ($1 ~ /:/ ? 1 : 0) "|" $0 }' | sort | cut -d'|' -f2-)
+  framework.console.output::newline
+  framework.console.output::line "Add --help to any command for details."
+}
+
+# The command closest to <name> (at most 2 edits away), or nothing.
+kernel::closest() {
+  kernel::commands | cut -d'|' -f1 | awk -v typed="$1" '
+    function distance(a, b,   i, j, m, n, cost, d) {
+      m = length(a); n = length(b)
+      for (i = 0; i <= m; i++) d[i, 0] = i
+      for (j = 0; j <= n; j++) d[0, j] = j
+      for (i = 1; i <= m; i++)
+        for (j = 1; j <= n; j++) {
+          cost = substr(a, i, 1) == substr(b, j, 1) ? 0 : 1
+          d[i, j] = d[i - 1, j] + 1
+          if (d[i, j - 1] + 1 < d[i, j]) d[i, j] = d[i, j - 1] + 1
+          if (d[i - 1, j - 1] + cost < d[i, j]) d[i, j] = d[i - 1, j - 1] + cost
+        }
+      return d[m, n]
+    }
+    { score = distance(typed, $0); if (best == "" || score < low) { best = $0; low = score } }
+    END { if (best != "" && low <= 2) print best }
+  '
 }
 
 kernel::run() {
   local name="${1-}" file
-  [[ "$name" =~ $DOT_COMMAND_PATTERN ]] || framework.console.output::fail "Invalid command: $name. Run bash dot to list them."
-  kernel::find "$name" || framework.console.output::fail "Unknown command: $name. Run bash dot to list them."
+  if ! { [[ "$name" =~ $DOT_COMMAND_PATTERN ]] && kernel::find "$name"; }; then
+    local closest
+    closest=$(kernel::closest "$name")
+    [ -z "$closest" ] || framework.console.output::fail "There's no command $name. Did you mean $closest?" "To list all available commands, run: bash dot"
+    framework.console.output::fail "There's no command $name." "To list all available commands, run: bash dot"
+  fi
   file="$KERNEL_FILE"
   shift
   case "$name:${1-}" in
     migrate:* | update:* | *:-h | *:--help) ;;
     *)
       [ -z "$(kernel::pending_migrations)" ] \
-        || framework.console.output::fail "dotdot's files are in an older format; run bash dot migrate first."
+        || framework.console.output::fail "dotdot's files need a quick upgrade first." "Please run: bash dot migrate"
       ;;
   esac
   DOT_COMMAND="$name"

@@ -75,40 +75,40 @@ handle() {
       continue
     fi
     case "$1" in
-      -*) framework.console.args::invalid "Unexpected option: $1" ;;
+      -*) framework.console.args::invalid "Unknown argument: $1" ;;
       *) [ -z "$version" ] || framework.console.args::unexpected "$1"; version="$1"; shift ;;
     esac
   done
-  [ -n "$version" ] || framework.console.args::invalid "A version is required."
-  [[ "$version" =~ $RELEASE_VERSION_PATTERN ]] || framework.console.args::invalid "Not a semantic version: $version"
+  [ -n "$version" ] || framework.console.args::invalid "Which version? Please give one like 1.2.0."
+  [[ "$version" =~ $RELEASE_VERSION_PATTERN ]] || framework.console.args::invalid "\"$version\" isn't a version like 1.2.0."
   tag="v$version"
-  ! $RELEASE_FORCE || framework.console.prompt::confirm_or_exit "Force push $tag, overwriting the remotes' history?" n "bash dot release:create $version --force"
-  cd "$RELEASE_PROJECT" || framework.console.output::fail "Cannot enter the project: $RELEASE_PROJECT"
-  git rev-parse --is-inside-work-tree >/dev/null 2>&1 || framework.console.output::fail "The project is not a git repository: $RELEASE_PROJECT"
+  ! $RELEASE_FORCE || framework.console.prompt::confirm_or_exit "Force-pushing replaces the remotes' history. Do you want to force-push $tag?" n "bash dot release:create $version --force"
+  cd "$RELEASE_PROJECT" || framework.console.output::fail "Can't open the project at $RELEASE_PROJECT."
+  git rev-parse --is-inside-work-tree >/dev/null 2>&1 || framework.console.output::fail "$RELEASE_PROJECT isn't a git repository."
   RELEASE_DESTINATION=$(dot::setting release.destination)
   branch=$(dot::setting release.branch)
   RELEASE_SIGNING_NAME=$(dot::setting release.signingKey)
   RELEASE_AUTHOR_NAME=$(dot::setting release.authorName)
   RELEASE_AUTHOR_EMAIL=$(dot::setting release.authorEmail)
-  git check-ref-format --branch "$branch" >/dev/null 2>&1 || framework.console.output::fail "release.branch is not a valid branch name: $branch"
+  git check-ref-format --branch "$branch" >/dev/null 2>&1 || framework.console.output::fail "release.branch \"$branch\" isn't a valid branch name."
   core.modules.release.service::check_signing_identity
   core.modules.release.service::load_remotes
   core.modules.release.service::check_push_targets
   core.modules.release.service::check_tokens
   core.modules.release.service::read_exclusions
-  core.modules.release.service::ships_clean || framework.console.output::fail "What the release ships has uncommitted changes; commit or stash them first."
+  core.modules.release.service::ships_clean || framework.console.output::fail "Some files in the release have uncommitted changes." "Please commit or stash them, then try again."
   core.modules.release.console::print_warnings
   core.modules.release.service::prepare_repository "$branch" "$tag"
   core.modules.release.service::configure_signing
-  framework.console.output::title "🔏 Signing the release: enter the passphrase of your signing key"
+  framework.console.output::title "🔏 Signing — please enter your signing key's passphrase"
   core.modules.release.service::start_agent
-  framework.console.output::title "📦 Exporting the project minus the exclude list"
+  framework.console.output::title "📦 Exporting the release…"
   core.modules.release.service::export
   core.modules.release.service::scan_secrets
   core.modules.release.service::commit "$tag"
   core.modules.release.service::stop_agent
   framework.console.output::newline
-  framework.console.output::success "Release $tag committed and signed"
+  framework.console.output::success "Release $tag committed and signed."
   framework.console.output::detail "$(dot::relative "$RELEASE_DESTINATION")"
   core.modules.release.console::push "$branch" "$tag"
 }

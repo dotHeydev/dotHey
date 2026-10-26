@@ -32,13 +32,13 @@ test_help_command_matches_help_flag() {
 test_unknown_command_fails_with_hint() {
   dot nothing:here
   assert_failure
-  assert_contains "$ERRORS" "Unknown command: nothing:here"
+  assert_contains "$ERRORS" "There's no command nothing:here."
 }
 
 test_invalid_command_name_is_refused() {
   dot '../escape'
   assert_failure
-  assert_contains "$ERRORS" "Invalid command"
+  assert_contains "$ERRORS" "There's no command"
 }
 
 test_runs_through_a_symlinked_entry_point() {
@@ -79,4 +79,22 @@ test_record_folders_ship_with_dotdot() {
     assert_file "$DOTDOT/$folder/.gitkeep"
     ! git -C "$REPOSITORY_DIR" check-ignore -q "dist/$folder/.gitkeep" || fail "dist/$folder/.gitkeep is git-ignored, so installs would not get it"
   done <<< "$OUTPUT"
+}
+
+test_a_typo_suggests_the_closest_command() {
+  dot notes:creat
+  assert_failure
+  assert_contains "$ERRORS" "There's no command notes:creat. Did you mean notes:create?"
+  dot zzzzzz
+  assert_failure
+  assert_not_contains "$ERRORS" "Did you mean"
+}
+
+test_agents_get_plain_output_and_hand_over_what_needs_a_person() {
+  dot update
+  assert_contains "$ERRORS" "Please run the command manually: bash dot update"
+  dot --agent update
+  assert_contains "$ERRORS" "Please ask the user to run it in a terminal: bash dot update"
+  run env AI_AGENT=some-agent bash ./dot update
+  assert_contains "$ERRORS" "Please ask the user to run it in a terminal: bash dot update"
 }

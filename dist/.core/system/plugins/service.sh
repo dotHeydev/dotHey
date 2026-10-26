@@ -13,7 +13,7 @@ PLUGIN_LOCAL_REF="-"
 PLUGINS_WORKSPACE=""
 
 core.system.plugins.service::prepare_workspace() {
-  [ -n "${PLUGINS_WORKSPACE-}" ] || framework.helpers.fs::make_temp_dir PLUGINS_WORKSPACE || dot::abort "Could not create a temp directory."
+  [ -n "${PLUGINS_WORKSPACE-}" ] || framework.helpers.fs::make_temp_dir PLUGINS_WORKSPACE || dot::abort "Couldn't create a temporary directory; please check free space and \$TMPDIR."
   rm -rf -- "${PLUGINS_WORKSPACE:?}"/*
 }
 
@@ -24,17 +24,17 @@ core.system.plugins.service::download() {
 
 core.system.plugins.service::plugin_root() {
   local repository_root="$1" plugin="$2"
-  [ -d "$repository_root/$PLUGIN_ROOT" ] || { dot::raise "$plugin has no $PLUGIN_ROOT/ folder, so it is not a dotdot plugin."; return 1; }
+  [ -d "$repository_root/$PLUGIN_ROOT" ] || { dot::raise "$plugin isn't a dotdot plugin: it has no $PLUGIN_ROOT/ directory."; return 1; }
   printf '%s\n' "$repository_root/$PLUGIN_ROOT"
 }
 
 core.system.plugins.service::fetch_github() {
   local plugin="$1" ref="$2" top
-  framework.integrations.github.service::is_ref "$ref" || { dot::raise "Invalid ref: $ref"; return 1; }
+  framework.integrations.github.service::is_ref "$ref" || { dot::raise "\"$ref\" isn't a valid branch, tag or commit."; return 1; }
   core.system.plugins.service::download "$plugin" "$ref" "$PLUGINS_WORKSPACE/plugin.tar.gz" || return 1
   mkdir -p -- "$PLUGINS_WORKSPACE/tree"
-  guards::archive "$PLUGINS_WORKSPACE/plugin.tar.gz" || { dot::raise "$plugin@$ref holds paths that leave its folder; refused."; return 1; }
-  tar -xzf "$PLUGINS_WORKSPACE/plugin.tar.gz" -C "$PLUGINS_WORKSPACE/tree" || { dot::raise "Could not unpack $plugin@$ref."; return 1; }
+  guards::archive "$PLUGINS_WORKSPACE/plugin.tar.gz" || { dot::raise "$plugin@$ref contains paths outside its own directory, so it wasn't installed."; return 1; }
+  tar -xzf "$PLUGINS_WORKSPACE/plugin.tar.gz" -C "$PLUGINS_WORKSPACE/tree" || { dot::raise "Couldn't unpack $plugin@$ref."; return 1; }
   top=$(find "$PLUGINS_WORKSPACE/tree" -mindepth 1 -maxdepth 1 -type d | head -n 1)
   [ -n "$top" ] || { dot::raise "$plugin@$ref is empty."; return 1; }
   PLUGIN_SOURCE=$(core.system.plugins.service::plugin_root "$top" "$plugin") || return 1
@@ -55,22 +55,22 @@ core.system.plugins.service::is_repository() {
 # commit recorded; any other folder as it is on disk, with no ref or commit.
 core.system.plugins.service::fetch_path() {
   local plugin="$1" path="$2" ref="$3" root
-  root=$(framework.helpers.fs::within "$path" "$BASE") || { dot::raise "A local plugin must be inside the project: $path"; return 1; }
-  [ -d "$root" ] || { dot::raise "Not a directory: $path"; return 1; }
+  root=$(framework.helpers.fs::within "$path" "$BASE") || { dot::raise "--from must be a directory inside the project (got $path)."; return 1; }
+  [ -d "$root" ] || { dot::raise "--from must be a directory inside the project (got $path)."; return 1; }
   PLUGIN_ORIGIN="$PLUGIN_PATH_SOURCE$(dot::relative "$root")"
   if ! core.system.plugins.service::is_repository "$root"; then
-    [ -z "$ref" ] || { dot::raise "$path is not a git repo of its own, so it has no ref: @$ref"; return 1; }
+    [ -z "$ref" ] || { dot::raise "$path isn't a git repo of its own, so @$ref can't apply."; return 1; }
     PLUGIN_SOURCE=$(core.system.plugins.service::plugin_root "$root" "$plugin") || return 1
     PLUGIN_COMMIT="$PLUGIN_LOCAL_REF"
     PLUGIN_REF="$PLUGIN_LOCAL_REF"
     return 0
   fi
   [ -n "$ref" ] || ref=$(git -C "$root" symbolic-ref -q --short HEAD) || ref=$(git -C "$root" rev-parse HEAD) || return 1
-  framework.integrations.github.service::is_ref "$ref" || { dot::raise "Invalid ref: $ref"; return 1; }
+  framework.integrations.github.service::is_ref "$ref" || { dot::raise "\"$ref\" isn't a valid branch, tag or commit."; return 1; }
   PLUGIN_COMMIT=$(git -C "$root" rev-parse -q --verify "$ref^{commit}") || { dot::raise "$path has no $ref."; return 1; }
   mkdir -p -- "$PLUGINS_WORKSPACE/tree"
   git -C "$root" archive --format=tar "$PLUGIN_COMMIT" -- "$PLUGIN_ROOT" 2>/dev/null | tar -x -C "$PLUGINS_WORKSPACE/tree" \
-    || { dot::raise "$plugin has no $PLUGIN_ROOT/ folder at $ref, so it is not a dotdot plugin."; return 1; }
+    || { dot::raise "$plugin isn't a dotdot plugin: it has no $PLUGIN_ROOT/ directory at $ref."; return 1; }
   PLUGIN_SOURCE=$(core.system.plugins.service::plugin_root "$PLUGINS_WORKSPACE/tree" "$plugin") || return 1
   PLUGIN_REF="$ref"
 }
@@ -121,7 +121,7 @@ core.system.plugins.service::install() {
   rm -rf -- "$destination"
   mkdir -p -- "$destination"
   (cd -- "$source" && tar -cf - .) | (cd -- "$destination" && tar -xf -) \
-    || { dot::raise "Could not copy $plugin into $(dot::relative "$destination")."; return 1; }
+    || { dot::raise "Couldn't copy $plugin into $(dot::relative "$destination")."; return 1; }
 }
 
 # Writes a plugin's plugin.json settings into dot.json under
@@ -140,7 +140,7 @@ core.system.plugins.service::register_settings() {
     path=".plugins[$(framework.helpers.json::string "$plugin")][$(framework.helpers.json::string "$key")]"
     [ "$(framework.helpers.json::encoded "$document" "$path")" = null ] || continue
     document=$(framework.helpers.json::set "$document" "$path" "$(framework.helpers.json::encoded "$defaults" ".[$(framework.helpers.json::string "$key")]")" --keep-format) \
-      || { dot::raise "Could not add $plugin's settings to $(dot::relative "$SETTINGS_FILE")."; return 1; }
+      || { dot::raise "Couldn't add $plugin's settings to $(dot::relative "$SETTINGS_FILE")."; return 1; }
     printf '%s\n' "$key"
   done < <(framework.helpers.json::keys "$defaults" .)
   printf '%s\n' "$document" | framework.helpers.fs::write "$SETTINGS_FILE"
@@ -150,9 +150,9 @@ core.system.plugins.service::uninstall() {
   local plugin="$1" directory
   directory=$(core.system.plugins.manifest::directory "$plugin")
   ! framework.helpers.kv::keys "$HOST_ENV_FILE" | grep "^$(dot::env_prefix "$plugin")" >/dev/null \
-    || printf 'left\t%s\n' "$(dot::relative "$HOST_ENV_FILE") ($(dot::env_prefix "$plugin")* secrets)"
+    || printf 'left\t%s\t%s\n' "$(dot::relative "$HOST_ENV_FILE")" "$(dot::env_prefix "$plugin")* secrets"
   [ ! -f "$SETTINGS_FILE" ] || [ "$(framework.helpers.json::encoded "$(cat -- "$SETTINGS_FILE")" ".plugins[\"$plugin\"]")" = null ] \
-    || printf 'left\t%s\n' "$(dot::relative "$SETTINGS_FILE") (plugins.$plugin)"
+    || printf 'left\t%s\t%s\n' "$(dot::relative "$SETTINGS_FILE")" "plugins[\"$plugin\"] settings"
   rm -rf -- "${directory:?}"
   rmdir -- "$(dirname -- "$directory")" 2>/dev/null || true
 }

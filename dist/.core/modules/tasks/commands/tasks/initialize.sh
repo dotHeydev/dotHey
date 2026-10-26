@@ -38,22 +38,22 @@ EOF
 handle() {
   local services=() labels=() service current choice
   [ $# -eq 0 ] || framework.console.args::unexpected "$1"
-  framework.console.prompt::can_ask || framework.console.output::fail "Choosing a task service needs a terminal; ask the user to run bash dot tasks:initialize."
+  framework.console.prompt::can_ask || framework.console.output::fail "Choosing a task service needs a terminal." "$OUTPUT_MANUAL_RUN bash dot tasks:initialize"
   core.modules.tasks.service::require_template
   while IFS= read -r service; do
     services+=("$service")
     labels+=("$service — $(core.modules.tasks.service::service_description "$service")")
   done < <(core.modules.tasks.service::services)
-  [ ${#services[@]} -gt 0 ] || framework.console.output::fail "No task services installed in $(dot::relative "$TASK_DRIVERS_DIR")/."
+  [ ${#services[@]} -gt 0 ] || framework.console.output::fail "No task services found in $(dot::relative "$TASK_DRIVERS_DIR")/."
   if current=$(core.modules.tasks.service::selected_service); then
-    framework.console.output::line "Tasks are kept in: $(framework.console.output::paint bold "$current"). Switching leaves existing tasks where they are."
+    framework.console.output::line "Tasks are now kept in $(framework.console.output::paint bold "$current"); switching leaves existing ones where they are."
   fi
   framework.console.output::newline
   choice=$(framework.console.prompt::choice "Where should this project keep its tasks?" "${labels[@]}") || { framework.console.output::aborted; exit 1; }
   service="${services[$((choice - 1))]}"
   core.modules.tasks.service::load_service "$service"
   dot::use "core.modules.tasks.drivers.$service-setup"
-  "core.modules.tasks.drivers.${service}-setup::setup" || framework.console.output::fail "Setting up $service failed — nothing changed."
+  "core.modules.tasks.drivers.${service}-setup::setup" || framework.console.output::fail "Couldn't set up $service, so nothing changed."
   core.modules.tasks.service::select_service "$service"
-  framework.console.output::success "Tasks are kept in $service ($TASK_SERVICE_SETTING in $(dot::relative "$SETTINGS_FILE"))."
+  framework.console.output::success "Tasks will be kept in $service."
 }

@@ -139,7 +139,7 @@ core.system.plugins.manifest::validate_commands() {
     depth=$(printf '%s' "$relative" | tr -cd '/' | wc -c | tr -d ' ')
     [ -d "$entry" ] && continue
     [[ "$(basename -- "$entry")" =~ $PLUGIN_SCRIPT_PATTERN ]] && [ "$depth" -lt "$DOT_COMMAND_MAX_DEPTH" ] \
-      || { dot::raise "$MODULE_COMMANDS_DIR/$relative must be a <name>.sh command, at most $DOT_COMMAND_MAX_DEPTH levels deep."; return 1; }
+      || { dot::raise "$MODULE_COMMANDS_DIR/$relative must be a <name>.sh command at most $DOT_COMMAND_MAX_DEPTH directories deep."; return 1; }
   done < <(find "$source/$MODULE_COMMANDS_DIR" -mindepth 1 ! -name '.*')
 }
 
@@ -147,7 +147,7 @@ core.system.plugins.manifest::validate_owner() {
   local owner
   owner=$(core.system.plugins.manifest::owner "$1")
   ! kernel::reserved_names | grep -xF -- "$owner" >/dev/null \
-    || { dot::raise "$1 can't be added: its commands would run as $owner:<command>, but $owner is one of dotdot's own command names, so they would mix with dotdot's."; return 1; }
+    || { dot::raise "$1 can't be added: its owner \"$owner\" is also a dotdot command name, so $owner:<command> would mix with dotdot's commands."; return 1; }
 }
 
 core.system.plugins.manifest::linked_entries() {
@@ -168,7 +168,7 @@ core.system.plugins.manifest::validate_links() {
     while IFS= read -r root; do
       [ "$root" != "$PLUGINS_DIR/$plugin" ] || continue
       [ ! -e "$root/$entry" ] && [ ! -L "$root/$entry" ] \
-        || framework.console.output::warn "$plugin's $entry has the name of $(dot::relative "$root")'s; wherever both are linked to one place, bash dot link keeps the first declared and reports the other."
+        || framework.console.output::warn "$plugin's $entry has the same name as one in $(dot::relative "$root"); where both link to one place, the first declared wins."
     done < <({ paths::modules; paths::plugins; })
   done < <(core.system.plugins.manifest::linked_entries "$source")
 }
@@ -202,18 +202,18 @@ core.system.plugins.manifest::validate_declared_links() {
   list=$(dot::setting plugins.denyLinkOrigin "[]") && denied_origins=$(framework.helpers.json::values "$list" '.[]') || return 1
   list=$(dot::setting plugins.denyLinkDestination "[]") && denied_destinations=$(framework.helpers.json::values "$list" '.[]' | sed "s|^@dot:|$DOTDOT_NAME/|") || return 1
   while IFS="$tab" read -r kind origin destination; do
-    [ "$kind" != "!" ] || { dot::raise "$plugin's $PLUGIN_MANIFEST: link and append are {origin: [destinations]}, not ${origin//$tab/ }."; return 1; }
+    [ "$kind" != "!" ] || { dot::raise "$plugin's $PLUGIN_MANIFEST: link and append take {\"<origin>\": [\"<destination>\"]}; found ${origin//$tab/ }."; return 1; }
     guards::plugin_origin "$origin" "$plugin" \
-      || { dot::raise "$kind origin $origin must be a path in the plugin, @dot:<Doc>.md, @dotdotSkills, or @dotdotAgents."; return 1; }
+      || { dot::raise "$plugin's $PLUGIN_MANIFEST: $kind origin \"$origin\" must be a path in the plugin, @dot:<Doc>.md, @dotdotSkills or @dotdotAgents."; return 1; }
     case "$origin" in
       @dot:* | @dotdotSkills | @dotdotAgents) ;;
       *)
         path="${origin#"@plugin:${plugin/\//.}:"}"
         path=$(framework.helpers.fs::pattern_path "$path")
         if [ "$kind" = append ]; then
-          [ -f "$source/$path" ] || { dot::raise "append origin $origin must be a file in the plugin."; return 1; }
+          [ -f "$source/$path" ] || { dot::raise "$plugin's $PLUGIN_MANIFEST: append origin \"$origin\" isn't a file in the plugin."; return 1; }
         else
-          [ -e "$source/$path" ] || { dot::raise "link origin $origin is not in the plugin."; return 1; }
+          [ -e "$source/$path" ] || { dot::raise "$plugin's $PLUGIN_MANIFEST: link origin \"$origin\" isn't in the plugin."; return 1; }
         fi
         ;;
     esac
@@ -226,24 +226,24 @@ core.system.plugins.manifest::validate_declared_links() {
       *) path="@plugin:${plugin/\//.}:$path" ;;
     esac
     if printf '%s\n' "$denied_origins" | guards::denied "$path"; then
-      framework.console.output::warn "$plugin suggests to $kind from $path, which plugins.denyLinkOrigin protects; it never applies, even once activated."
+      framework.console.output::warn "$plugin wants to $kind from $path, which plugins.denyLinkOrigin protects; it will never apply."
     elif printf '%s\n' "$denied_destinations" | guards::denied "$destination"; then
-      framework.console.output::warn "$plugin suggests to $kind to $destination, which plugins.denyLinkDestination protects; it never applies, even once activated."
+      framework.console.output::warn "$plugin wants to $kind to $destination, which plugins.denyLinkDestination protects; it will never apply."
     fi
     if [ "$kind" = append ]; then
       guards::plugin_append_destination "$destination" \
-        || { dot::raise "append destination $destination must be a project file outside .git/ other than .env, or one of $DOTDOT_NAME/'s top-level docs."; return 1; }
+        || { dot::raise "$plugin's $PLUGIN_MANIFEST: append destination \"$destination\" must be a project file (not in .git/, not .env) or one of $DOTDOT_NAME/'s top-level docs."; return 1; }
       continue
     fi
     guards::plugin_destination "${destination%/}" \
-      || { dot::raise "link destination $destination must be a project path outside $DOTDOT_NAME/ and .git/, other than .env."; return 1; }
+      || { dot::raise "$plugin's $PLUGIN_MANIFEST: link destination \"$destination\" must be a project path outside $DOTDOT_NAME/ and .git/, other than .env."; return 1; }
     ! paths::links_rows 2>/dev/null | awk -F '\t' -v origin="$path" -v destination="$destination" \
       '($1 == "." || $1 ~ /^\+/) && $2 == "link" && $4 == destination && $3 != origin { found = 1 } END { exit !found }' \
-      || framework.console.output::warn "$plugin suggests linking $destination, which $(dot::relative "$SETTINGS_FILE") already links elsewhere; yours stays, and the suggestion only applies if you take it."
+      || framework.console.output::warn "$plugin wants to link $destination, which you already link elsewhere; yours stays."
     while IFS= read -r root; do
       [ "$root" != "$PLUGINS_DIR/$plugin" ] || continue
       ! core.system.plugins.manifest::link_destinations "$root" | grep -xF -- "$destination" >/dev/null \
-        || framework.console.output::warn "$plugin suggests linking $destination, which $(dot::relative "$root") suggests too; both stay inactive until you activate one, and bash dot link keeps the first declared."
+        || framework.console.output::warn "$plugin and $(dot::relative "$root") both want to link $destination; if you activate both, the first declared wins."
     done < <(paths::plugins)
   done < <(core.system.plugins.manifest::entries_of "$source")
 }
@@ -257,7 +257,7 @@ core.system.plugins.manifest::validate_document() {
   document=$(core.system.plugins.manifest::document "$1")
   case "$(framework.helpers.json::field "$document" .)" in
     "{"*) ;;
-    *) dot::raise "$2's $PLUGIN_ROOT/$PLUGIN_MANIFEST is not a JSON object."; return 1 ;;
+    *) dot::raise "$2's $PLUGIN_ROOT/$PLUGIN_MANIFEST must be a JSON object."; return 1 ;;
   esac
   value=$(framework.helpers.json::field "$document" ".$PLUGIN_DEPENDS_KEY")
   case "$value" in
@@ -268,7 +268,7 @@ core.system.plugins.manifest::validate_document() {
     value=$(framework.helpers.json::field "$document" ".$key")
     case "$value" in
       "" | "{"*) ;;
-      *) dot::raise "$2's $PLUGIN_ROOT/$PLUGIN_MANIFEST: $key must be {origin: [destinations]}."; return 1 ;;
+      *) dot::raise "$2's $PLUGIN_ROOT/$PLUGIN_MANIFEST: $key must be {\"<origin>\": [\"<destination>\"]}."; return 1 ;;
     esac
   done
   case "$(framework.helpers.json::encoded "$document" ".$PLUGIN_SETTINGS_KEY")" in
@@ -276,33 +276,33 @@ core.system.plugins.manifest::validate_document() {
     *) dot::raise "$2's $PLUGIN_ROOT/$PLUGIN_MANIFEST: $PLUGIN_SETTINGS_KEY must be an object."; return 1 ;;
   esac
   key=$(framework.helpers.json::keys "$document" ".$PLUGIN_SETTINGS_KEY" | grep -vxE "$PLUGIN_SETTING_KEY_PATTERN" | head -n 1)
-  [ -z "$key" ] || { dot::raise "$2's $PLUGIN_ROOT/$PLUGIN_MANIFEST: setting $key must be camelCase (letters and digits, a lowercase first)."; return 1; }
+  [ -z "$key" ] || { dot::raise "$2's $PLUGIN_ROOT/$PLUGIN_MANIFEST: setting $key must be camelCase, like apiUrl."; return 1; }
   [[ "$(framework.helpers.json::encoded "$document" ".$PLUGIN_SETTINGS_KEY")" != *'"@env:'* ]] \
-    || { dot::raise "$2's $PLUGIN_ROOT/$PLUGIN_MANIFEST: setting defaults may not refer to .env; only $(dot::relative "$SETTINGS_FILE") does."; return 1; }
+    || { dot::raise "$2's $PLUGIN_ROOT/$PLUGIN_MANIFEST: setting defaults can't read from .env; only $(dot::relative "$SETTINGS_FILE") can."; return 1; }
 }
 
 core.system.plugins.manifest::validate() {
   local source="$1" plugin="$2" requires entry taken
-  [ -f "$source/$PLUGIN_MANIFEST" ] || { dot::raise "$plugin has no $PLUGIN_ROOT/$PLUGIN_MANIFEST, which needs at least a \"$PLUGIN_DESCRIPTION_KEY\"."; return 1; }
+  [ -f "$source/$PLUGIN_MANIFEST" ] || { dot::raise "$plugin needs a $PLUGIN_ROOT/$PLUGIN_MANIFEST with at least a \"$PLUGIN_DESCRIPTION_KEY\"."; return 1; }
   core.system.plugins.manifest::validate_document "$source" "$plugin" || return 1
   [ -n "$(core.system.plugins.manifest::value "$source" "$PLUGIN_DESCRIPTION_KEY")" ] \
-    || { dot::raise "$plugin's $PLUGIN_ROOT/$PLUGIN_MANIFEST needs a \"$PLUGIN_DESCRIPTION_KEY\", the one key it must have."; return 1; }
+    || { dot::raise "$plugin needs a $PLUGIN_ROOT/$PLUGIN_MANIFEST with at least a \"$PLUGIN_DESCRIPTION_KEY\"."; return 1; }
   requires=$(core.system.plugins.manifest::value "$source" "$PLUGIN_REQUIRES_KEY")
   [ -z "$requires" ] || [ "$requires" = "$PLUGIN_API" ] \
-    || { dot::raise "$plugin needs plugin API $requires; this dotdot has $PLUGIN_API. Update the plugin or dotdot."; return 1; }
-  [ -z "$(find "$source" -type l -print -quit)" ] || { dot::raise "$plugin holds symlinks."; return 1; }
+    || { dot::raise "$plugin is made for plugin API $requires, and this dotdot has $PLUGIN_API." "Please update dotdot (bash dot update) or use a matching plugin version."; return 1; }
+  [ -z "$(find "$source" -type l -print -quit)" ] || { dot::raise "$plugin contains symlinks, which plugins can't have."; return 1; }
   [ -z "$(find "$source/$PLUGIN_STUBS_DIR" -name .git -print -quit 2>/dev/null)" ] \
-    || { dot::raise "$plugin has stubs under .git/; a plugin may not seed git's own files."; return 1; }
+    || { dot::raise "$plugin has stubs for .git/, which plugins can't touch."; return 1; }
   core.system.plugins.manifest::validate_owner "$plugin" || return 1
   core.system.plugins.manifest::validate_commands "$source" || return 1
   taken=$(core.system.plugins.manifest::taken_commands "$plugin" "$source")
-  [ -z "$taken" ] || { dot::raise "$plugin's commands are already taken: $(printf '%s' "$taken" | paste -sd ' ' -)"; return 1; }
+  [ -z "$taken" ] || { dot::raise "$plugin's commands clash with ones already installed: $(printf '%s' "$taken" | paste -sd ' ' -)"; return 1; }
   core.system.plugins.manifest::validate_links "$source" "$plugin" || return 1
   core.system.plugins.manifest::validate_declared_links "$source" "$plugin" || return 1
   for entry in "$source/$PLUGIN_CONTEXT_DIR"/*; do
     [ -e "$entry" ] || continue
     [ -f "$entry" ] && guards::document "$(basename -- "$entry")" \
-      || { dot::raise "$PLUGIN_CONTEXT_DIR/$(basename -- "$entry") must be a .md file."; return 1; }
+      || { dot::raise "$plugin's $PLUGIN_CONTEXT_DIR/$(basename -- "$entry") must be a Markdown (.md) file."; return 1; }
   done
 }
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-DESCRIPTION="Add a plugin from a GitHub repo you trust: its dotdot/ folder, its commands, skills, and context."
+DESCRIPTION="Add a plugin from a GitHub repo you trust: its dotdot/ directory, its commands, skills, and context."
 
 dot::use framework.console.args framework.console.output core.system.plugins.console core.system.plugins.manifest
 
@@ -59,17 +59,17 @@ handle() {
       *) [ -z "$source" ] || framework.console.args::unexpected "$1"; source="$1"; shift ;;
     esac
   done
-  [ -n "$source" ] || framework.console.args::invalid "A plugin is required, as <owner>/<name>."
+  [ -n "$source" ] || framework.console.args::invalid "Which plugin? Please give it as <owner>/<name>."
   [ "${source%@*}" = "$source" ] || ref="${source##*@}"
   plugin=$(core.system.plugins.console::plugin "${source%@*}")
   ! core.system.plugins.manifest::lock_entry "$plugin" >/dev/null \
-    || framework.console.output::fail "$plugin is already installed; use bash dot plugins:update $plugin."
+    || framework.console.output::fail "$plugin is already installed." "To get its latest version: bash dot plugins:update $plugin"
   core.system.plugins.console::fetch "$plugin" "$ref" "$path"
   core.system.plugins.manifest::validate "$PLUGIN_SOURCE" "$plugin" || exit 1
   core.system.plugins.console::warn "$plugin"
-  framework.console.output::line "Plugin $plugin ($PLUGIN_ORIGIN${PLUGIN_COMMIT:+ @ ${PLUGIN_COMMIT:0:7}}):"
+  core.system.plugins.console::header "$plugin" "$PLUGIN_ORIGIN${PLUGIN_COMMIT:+ @ ${PLUGIN_COMMIT:0:7}}"
   core.system.plugins.console::preview "$plugin" "$PLUGIN_SOURCE"
-  core.system.plugins.console::confirm "Add $plugin?" "$confirmed" "bash dot plugins:add $source" || exit 1
+  core.system.plugins.console::confirm "Do you want to add $plugin?" "$confirmed" "bash dot plugins:add $source" || exit 1
   core.system.plugins.console::install "$plugin" "$PLUGIN_SOURCE"
   core.system.plugins.console::suggest --refresh "$plugin"
   core.system.plugins.console::installed "Added $plugin." "$plugin"

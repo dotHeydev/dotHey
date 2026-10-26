@@ -88,18 +88,18 @@ add_items() {
 
 report_check() {
   local kind self target section checked=0 broken=0
-  framework.console.output::line "Checking decision links resolve:"
+  framework.console.output::line "Checking the links between decisions…"
   while IFS=$'\t' read -r kind self target section; do
     case "$kind" in
       checked) checked=$((checked + 1)) ;;
-      missing) framework.console.output::detail "$OUTPUT_ERROR_ICON $self → $target ($section) does not exist"; broken=$((broken + 1)) ;;
-      self) framework.console.output::detail "$OUTPUT_ERROR_ICON $self → $self ($section) references itself"; broken=$((broken + 1)) ;;
+      missing) framework.console.output::detail "$OUTPUT_ERROR_ICON $self → $target ($section): no such decision"; broken=$((broken + 1)) ;;
+      self) framework.console.output::detail "$OUTPUT_ERROR_ICON $self ($section) points at itself"; broken=$((broken + 1)) ;;
     esac
   done < <(core.modules.decisions.service::broken_links)
   if [ "$broken" -eq 0 ]; then
-    framework.console.output::detail "$OUTPUT_SUCCESS_ICON $checked reference(s) checked, all resolve."
+    framework.console.output::detail "$OUTPUT_SUCCESS_ICON All $(framework.helpers.text::plural "$checked" link) resolve."
   else
-    framework.console.output::detail "$broken broken of $checked checked."
+    framework.console.output::detail "$OUTPUT_ERROR_ICON $broken of $(framework.helpers.text::plural "$checked" link) are broken."
   fi
   framework.console.output::newline
   [ "$broken" -eq 0 ]
@@ -107,7 +107,7 @@ report_check() {
 
 report_inbound() {
   local reference="$1" target file reasons path found=false
-  target=$(core.modules.decisions.service::find "$reference") || framework.console.output::fail "No decision matching '$reference' in Decisions/."
+  target=$(core.modules.decisions.service::find "$reference") || framework.console.output::fail "No decision matches \"$reference\"." "See them all: bash dot scan:frontmatter Decisions"
   framework.console.output::line "Decisions pointing at $target:"
   while IFS=$'\t' read -r file reasons; do
     found=true
@@ -131,7 +131,7 @@ print_field() {
 report_citations() {
   local references_file="$1" reference file decisions=() feature cited found=false
   while IFS= read -r reference; do
-    file=$(core.modules.decisions.service::find "$reference") || framework.console.output::fail "No decision matching '$reference' in Decisions/."
+    file=$(core.modules.decisions.service::find "$reference") || framework.console.output::fail "No decision matches \"$reference\"." "See them all: bash dot scan:frontmatter Decisions"
     decisions+=("$file")
   done < "$references_file"
   framework.console.output::line "Features citing these decisions under \"$FEATURE_DECISIONS_HEADING\":"
@@ -171,7 +171,7 @@ report_terms() {
 
 handle() {
   local work terms references inbound="" check=false scope=all lines="$IMPACT_DEFAULT_LINES" healthy=true
-  framework.helpers.fs::make_temp_dir work || framework.console.output::fail "Could not create a temp directory."
+  framework.helpers.fs::make_temp_dir work || framework.console.output::fail "Couldn't create a temporary directory; please check free space and \$TMPDIR."
   terms="$work/terms"
   references="$work/references"
   : > "$terms"
@@ -197,9 +197,9 @@ handle() {
     esac
   done
   [ -s "$terms" ] || [ -s "$references" ] || [ -n "$inbound" ] || $check \
-    || framework.console.args::invalid "Nothing to do — pass --decisions, --terms, --inbound, or --check."
-  [[ "$IMPACT_SCOPES" == *" $scope "* ]] || framework.console.args::invalid "Unknown --scope: $scope (expected all|features|decisions)."
-  framework.console.args::is_number "$lines" || framework.console.args::invalid "--lines must be a whole number, got: $lines"
+    || framework.console.args::invalid "What should it look for? Please give --decisions, --terms, --inbound or --check."
+  [[ "$IMPACT_SCOPES" == *" $scope "* ]] || framework.console.args::invalid "--scope takes all, features or decisions (got $scope)."
+  framework.console.args::is_number "$lines" || framework.console.args::invalid "--lines takes a whole number (got $lines)."
   ! $check || report_check || healthy=false
   [ -z "$inbound" ] || report_inbound "$inbound"
   [ ! -s "$references" ] || report_citations "$references"

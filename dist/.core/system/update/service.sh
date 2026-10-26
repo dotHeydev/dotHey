@@ -28,7 +28,7 @@ core.system.update.service::git() {
 core.system.update.service::installed_commit() {
   local commit
   commit=$(dot::setting "$UPDATE_VERSION_SETTING" "") && [ -n "$commit" ] || return 0
-  [[ "$commit" =~ $UPDATE_COMMIT_PATTERN ]] || dot::abort "$UPDATE_VERSION_SETTING in $(dot::relative "$SETTINGS_FILE") does not hold a commit hash."
+  [[ "$commit" =~ $UPDATE_COMMIT_PATTERN ]] || dot::abort "$UPDATE_VERSION_SETTING in $(dot::relative "$SETTINGS_FILE") isn't a commit hash." "Please set it to the installed commit, or remove it."
   printf '%s\n' "$commit"
 }
 
@@ -133,13 +133,13 @@ core.system.update.service::copy() {
       fi
     fi
     rm -f -- "$partial"
-    UPDATE_FAILURES+=("Could not copy $relative.")
+    UPDATE_FAILURES+=("Couldn't copy $relative.")
   done
   for relative in ${UPDATE_REMOVED[@]+"${UPDATE_REMOVED[@]}"}; do
     if rm -f -- "$DOTDOT_ROOT/$relative"; then
       framework.helpers.fs::prune_empty_parents "$DOTDOT_ROOT/$relative" "$DOTDOT_ROOT"
     else
-      UPDATE_FAILURES+=("Could not remove $relative.")
+      UPDATE_FAILURES+=("Couldn't remove $relative.")
     fi
   done
   [ ${#UPDATE_FAILURES[@]} -eq 0 ]

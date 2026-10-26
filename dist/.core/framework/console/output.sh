@@ -2,25 +2,43 @@
 
 dot::use framework.helpers.secrets
 
-OUTPUT_SUCCESS_ICON="✅"
-OUTPUT_ERROR_ICON="❌"
-OUTPUT_WARNING_ICON="⚠️ "
-OUTPUT_INFO_ICON="ℹ️ "
+OUTPUT_SUCCESS_ICON="✓"
+OUTPUT_ERROR_ICON="✗"
+OUTPUT_WARNING_ICON="!"
+OUTPUT_INFO_ICON="ℹ"
+OUTPUT_NEXT_ICON="→"
+OUTPUT_SEPARATOR="•"
+OUTPUT_TIP_LABEL="💡 Tip:"
 OUTPUT_INDENT="   "
+OUTPUT_HIGHLIGHTER="${BASH_SOURCE[0]%/*}/highlight.awk"
+OUTPUT_HIGHLIGHT=true
 OUTPUT_DEFAULT_WIDTH=80
 # The spinner shared with install.sh: one frame every SPINNER_INTERVAL seconds.
 SPINNER_FRAMES=(' ·●' ' •⏺' ' ⏺•' ' ●·' ' ⏺•' ' •⏺' ' ·●')
 SPINNER_INTERVAL=0.07
 SPINNER_GRACE_FRAMES=4
 
+# Whether an AI agent runs this (AI_AGENT set, or CLAUDECODE=1): the output
+# then stays plain text, without colors, highlighting, or a spinner, and asks
+# the agent to hand over what needs a person.
+framework.console.output::is_agent() {
+  [ -n "${AI_AGENT-}" ] || [ "${CLAUDECODE-}" = 1 ]
+}
+
+OUTPUT_MANUAL_RUN="Please run the command manually:"
+! framework.console.output::is_agent || OUTPUT_MANUAL_RUN="Please ask the user to run it in a terminal:"
+
 framework.console.output::is_styled() {
-  [ -t "${1:-1}" ] && [ -z "${NO_COLOR-}" ] && [ "${TERM-}" != dumb ]
+  [ -t "${1:-1}" ] && [ -z "${NO_COLOR-}" ] && [ "${TERM-}" != dumb ] && ! framework.console.output::is_agent
 }
 
 framework.console.output::style_code() {
   case "$1" in
     bold) printf '\033[1m' ;;
     dim) printf '\033[2m' ;;
+    italic) printf '\033[3m' ;;
+    gray) printf '\033[90m' ;;
+    light-blue) printf '\033[94m' ;;
     red) printf '\033[31m' ;;
     green) printf '\033[32m' ;;
     yellow) printf '\033[33m' ;;
@@ -40,11 +58,18 @@ framework.console.output::paint() {
 }
 
 # Every line printed passes here, onto <descriptor>, with anything that looks
-# like a secret masked (framework.helpers.secrets::mask).
+# like a secret masked (framework.helpers.secrets::mask), and at a terminal its
+# commands, paths, and values styled (highlight.awk) unless OUTPUT_HIGHLIGHT
+# is false.
 framework.console.output::emit() {
-  local descriptor="$1"
+  local descriptor="$1" text
   shift
-  printf '%s\n' "$(framework.helpers.secrets::mask "$*")" >&"$descriptor"
+  text=$(framework.helpers.secrets::mask "$*")
+  if $OUTPUT_HIGHLIGHT && framework.console.output::is_styled "$descriptor"; then
+    printf '%s\n' "$text" | awk -f "$OUTPUT_HIGHLIGHTER" >&"$descriptor"
+  else
+    printf '%s\n' "$text" >&"$descriptor"
+  fi
 }
 
 # Each line of <file> through emit, then the file removed.
@@ -69,15 +94,43 @@ framework.console.output::title() {
 }
 
 framework.console.output::success() {
-  framework.console.output::emit 1 "$OUTPUT_SUCCESS_ICON $(framework.console.output::paint green "$*")"
+  framework.console.output::emit 1 "$(framework.console.output::paint green "$OUTPUT_SUCCESS_ICON") $*"
 }
 
+# A side note: light blue, its text in italics.
 framework.console.output::info() {
-  framework.console.output::emit 1 "$OUTPUT_INFO_ICON $*"
+  local OUTPUT_HIGHLIGHT=false
+  framework.console.output::emit 1 "$(framework.console.output::paint light-blue "$OUTPUT_INFO_ICON $(framework.console.output::paint italic "$*")")"
+}
+
+framework.console.output::tip() {
+  framework.console.output::emit 1 "$OUTPUT_TIP_LABEL $*"
 }
 
 framework.console.output::detail() {
   framework.console.output::emit 1 "$OUTPUT_INDENT$*"
+}
+
+# The next step to take, under the message it follows.
+framework.console.output::next() {
+  framework.console.output::emit 1 "$OUTPUT_INDENT$(framework.console.output::paint blue "$OUTPUT_NEXT_ICON") $*"
+}
+
+# A listed change: <symbol> in <color> (+ new, - removed, * changed, ~ linked,
+# > appended, ! taken, · unchanged), what it is, and a note in light-blue
+# italics.
+framework.console.output::entry() {
+  local color="$1" symbol="$2" text="$3" note="${4-}"
+  framework.console.output::emit 1 "$OUTPUT_INDENT$(framework.console.output::paint "$color" "$symbol") $text${note:+ $(framework.console.output::paint light-blue "$(framework.console.output::paint italic "$note")")}"
+}
+
+# A file's change as git shows it: added, removed, or changed.
+framework.console.output::change() {
+  case "$1" in
+    added) framework.console.output::entry green "+" "$2" "${3-}" ;;
+    removed) framework.console.output::entry red "-" "$2" "${3-}" ;;
+    *) framework.console.output::entry yellow "*" "$2" "${3-}" ;;
+  esac
 }
 
 framework.console.output::item() {
@@ -89,12 +142,20 @@ framework.console.output::item() {
   framework.console.output::emit 1 "  $label $(framework.console.output::paint "$style" "($note)")"
 }
 
+# A warning, all of it yellow.
 framework.console.output::warn() {
-  framework.console.output::emit 2 "$OUTPUT_WARNING_ICON $(framework.console.output::paint yellow "$*" 2)"
+  local OUTPUT_HIGHLIGHT=false
+  framework.console.output::emit 2 "$(framework.console.output::paint yellow "$OUTPUT_WARNING_ICON $*" 2)"
 }
 
+# <message>, then each further argument as a next step under it.
 framework.console.output::error() {
-  framework.console.output::emit 2 "$OUTPUT_ERROR_ICON $(framework.console.output::paint red "$*" 2)"
+  local step
+  framework.console.output::emit 2 "$(framework.console.output::paint red "$OUTPUT_ERROR_ICON" 2) $1"
+  shift
+  for step in "$@"; do
+    framework.console.output::next "$step" >&2
+  done
 }
 
 framework.console.output::fail() {
@@ -104,7 +165,8 @@ framework.console.output::fail() {
 
 framework.console.output::aborted() {
   local hint="${1-}"
-  framework.console.output::emit 2 "Aborted — nothing changed.${hint:+ $hint}"
+  framework.console.output::emit 2 "Cancelled — nothing changed."
+  [ -z "$hint" ] || framework.console.output::next "$hint" >&2
 }
 
 framework.console.output::width() {
@@ -131,7 +193,7 @@ framework.console.output::spin() {
   local label="$1" errors status=0 process tick=0 drawn=false frame_count=${#SPINNER_FRAMES[@]}
   shift
   errors=$(mktemp) || return 1
-  if [ ! -t 2 ]; then
+  if [ ! -t 2 ] || framework.console.output::is_agent; then
     [ -z "$label" ] || framework.console.output::emit 2 "$label"
     "$@" 2>"$errors" || status=$?
     framework.console.output::emit_file 2 "$errors"

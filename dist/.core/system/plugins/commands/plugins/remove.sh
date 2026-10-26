@@ -23,15 +23,22 @@ USAGE
 }
 
 handle() {
-  local plugin
-  [ $# -ge 1 ] || framework.console.args::invalid "A plugin is required, as <owner>/<name>."
+  local plugin directory left
+  [ $# -ge 1 ] || framework.console.args::invalid "Which plugin? Please give it as <owner>/<name>."
   [ $# -eq 1 ] || framework.console.args::unexpected "$2"
   plugin=$(core.system.plugins.console::plugin "$1")
-  core.system.plugins.manifest::lock_entry "$plugin" >/dev/null || framework.console.output::fail "$plugin is not installed."
-  framework.console.prompt::confirm_or_exit "Remove $plugin?" n "bash dot plugins:remove $plugin"
-  core.system.plugins.service::uninstall "$plugin" | core.system.plugins.console::report
+  core.system.plugins.manifest::lock_entry "$plugin" >/dev/null || framework.console.output::fail "$plugin isn't installed." "See what is: bash dot plugins:list"
+  framework.console.prompt::confirm_or_exit "Do you want to remove $plugin and everything it linked?" n "bash dot plugins:remove $plugin"
+  directory=$(dot::relative "$(core.system.plugins.manifest::directory "$plugin")")
+  left=$(core.system.plugins.service::uninstall "$plugin")
   core.system.plugins.manifest::unlock "$plugin"
-  dot::call link --sweep -y || framework.console.output::fail "Could not take back all of $plugin's links and appends; run bash dot link."
   framework.console.output::success "Removed $plugin."
-  framework.console.output::detail "Review what is left of it yourself, and remove what is unused."
+  framework.console.output::entry red "-" "$directory/"
+  dot::call link --sweep -y || framework.console.output::fail "Some of $plugin's links or appended sections couldn't be removed (see above)." "Please finish with: bash dot link"
+  framework.console.output::newline
+  if [ -n "$left" ]; then
+    framework.console.output::warn "Left for you to review:"
+    core.system.plugins.console::report <<< "$left"
+  fi
+  framework.console.output::detail "Please also review anything else it created (its records, say) and remove what is unused."
 }

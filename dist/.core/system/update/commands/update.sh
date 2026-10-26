@@ -42,16 +42,19 @@ EOF
 }
 
 report() {
-  local new="$1"
+  local new="$1" counts="" count
   framework.console.output::newline
-  framework.console.output::success "dotdot is updated to ${new:0:7}: ${#UPDATE_ADDED[@]} added, ${#UPDATE_UPDATED[@]} updated, ${#UPDATE_REMOVED[@]} removed, $UPDATE_UNCHANGED unchanged."
+  for count in "${#UPDATE_ADDED[@]} added" "${#UPDATE_UPDATED[@]} updated" "${#UPDATE_REMOVED[@]} removed"; do
+    [ "${count%% *}" -eq 0 ] || counts="$counts $OUTPUT_SEPARATOR $count"
+  done
+  framework.console.output::success "dotdot updated to ${new:0:7}$counts."
   if [ ${#UPDATE_EDITED[@]} -gt 0 ]; then
-    framework.console.output::warn "Removed upstream but edited here, so kept; delete them once reviewed:"
-    printf '  %s\n' "${UPDATE_EDITED[@]}"
+    framework.console.output::warn "Kept the files you edited that dotdot no longer ships; please delete them once reviewed:"
+    printf "$OUTPUT_INDENT%s\n" "${UPDATE_EDITED[@]}"
   fi
   if [ ${#UPDATE_UNKNOWN[@]} -gt 0 ]; then
-    framework.console.output::warn "Not in dotdot at ${new:0:7}; kept. Delete the stale ones, keep your own:"
-    printf '  %s\n' "${UPDATE_UNKNOWN[@]}"
+    framework.console.output::warn "These files aren't part of dotdot ${new:0:7}. Please delete any left from older versions and keep your own:"
+    printf "$OUTPUT_INDENT%s\n" "${UPDATE_UNKNOWN[@]}"
   fi
 }
 
@@ -61,36 +64,37 @@ handle() {
     -y | --yes) confirmed=true; shift ;;
   esac
   [ $# -eq 0 ] || framework.console.args::unexpected "$1"
-  framework.console.prompt::can_ask || framework.console.output::fail "Aborted — nothing changed. Confirmation needs a terminal; run bash dot update yourself."
-  command -v git >/dev/null || framework.console.output::fail "git is required."
+  framework.console.prompt::can_ask || framework.console.output::fail "This needs your confirmation in a terminal, so nothing changed." "$OUTPUT_MANUAL_RUN bash dot update"
+  command -v git >/dev/null || framework.console.output::fail "bash dot update needs git, which isn't installed here."
   old=$(core.system.update.service::installed_commit)
-  framework.helpers.fs::make_temp_dir UPDATE_WORKSPACE || framework.console.output::fail "Could not create a temp directory."
+  framework.helpers.fs::make_temp_dir UPDATE_WORKSPACE || framework.console.output::fail "Couldn't create a temporary directory; please check free space and \$TMPDIR."
   UPDATE_REPOSITORY="$UPDATE_WORKSPACE/repository"
-  framework.console.output::spin "Downloading dotdot..." core.system.update.service::download "$old" || framework.console.output::fail "Download failed. Nothing changed."
-  core.system.update.service::has_commit "$UPDATE_NEW_REF" || framework.console.output::fail "The download holds no commit."
+  framework.console.output::spin "Downloading dotdot…" core.system.update.service::download "$old" || framework.console.output::fail "The download didn't work, so nothing changed."
+  core.system.update.service::has_commit "$UPDATE_NEW_REF" || framework.console.output::fail "The download doesn't look like dotdot (it has no commit), so nothing changed."
   new=$(core.system.update.service::git rev-parse --verify "$UPDATE_NEW_REF^{commit}")
   if [ -n "$old" ] && ! core.system.update.service::has_commit "$UPDATE_OLD_REF"; then
-    framework.console.output::warn "The installed version ${old:0:7} isn't in the public repo: nothing will be removed; files the latest lacks are listed instead."
+    framework.console.output::warn "The installed version ${old:0:7} isn't in the public repo, so nothing will be deleted; files the latest no longer has are listed instead."
     old=""
   elif [ -z "$old" ]; then
-    framework.console.output::warn "No $UPDATE_VERSION_SETTING in $(dot::relative "$SETTINGS_FILE"): nothing will be removed; files the latest lacks are listed instead."
+    framework.console.output::warn "There's no $UPDATE_VERSION_SETTING in $(dot::relative "$SETTINGS_FILE"), so nothing will be deleted; files the latest no longer has are listed instead."
   fi
   if [ "$old" = "$new" ]; then
     framework.console.output::success "dotdot is up to date (${new:0:7})."
     return 0
   fi
-  framework.console.output::line "Latest: $(core.system.update.service::summary "$new")"
-  [ -z "$old" ] || framework.console.output::line "Yours:  $(core.system.update.service::summary "$old")"
+  framework.console.output::line "A new dotdot is available."
+  framework.console.output::detail "Latest  $(core.system.update.service::summary "$new")"
+  [ -z "$old" ] || framework.console.output::detail "Yours   $(core.system.update.service::summary "$old")"
   if $confirmed; then
-    framework.console.output::line "Update dotdot? yes (--yes)"
+    framework.console.prompt::answered "Do you want to update dotdot?" "yes (--yes)"
   else
-    framework.console.prompt::confirm_or_exit "Update dotdot?" n "bash dot update"
+    framework.console.prompt::confirm_or_exit "Do you want to update dotdot?" n "bash dot update"
   fi
-  framework.console.output::line "Updating dotdot..."
+  framework.console.output::line "Updating dotdot…"
   source="$UPDATE_SOURCE"
-  core.system.update.service::extract "$new" "$source" "$UPDATE_WORKSPACE/tree" || framework.console.output::fail "Could not read $source/ at ${new:0:7}."
+  core.system.update.service::extract "$new" "$source" "$UPDATE_WORKSPACE/tree" || framework.console.output::fail "The download doesn't look like dotdot (can't read $source/ at ${new:0:7}), so nothing changed."
   tree="$UPDATE_WORKSPACE/tree/$source"
-  [ -d "$tree/${UPDATE_TREES[0]}" ] || framework.console.output::fail "Commit ${new:0:7} has no $source/${UPDATE_TREES[0]}/."
+  [ -d "$tree/${UPDATE_TREES[0]}" ] || framework.console.output::fail "The download doesn't look like dotdot (${new:0:7} has no $source/${UPDATE_TREES[0]}/), so nothing changed."
   core.system.update.service::compare "$tree"
   if [ -n "$old" ]; then
     core.system.update.service::find_removed "$old" "$new" "$source"
@@ -101,17 +105,16 @@ handle() {
     for failure in "${UPDATE_FAILURES[@]}"; do
       framework.console.output::error "$failure"
     done
-    framework.console.output::fail "Update incomplete; version not recorded. Fix the failures above and rerun bash dot update."
+    framework.console.output::fail "The update didn't finish, so your version stays as it was." "Please fix the errors above, then run: bash dot update"
   fi
-  core.system.update.service::record_version "$new" || framework.console.output::fail "Files updated, but $UPDATE_VERSION_SETTING could not be saved."
+  core.system.update.service::record_version "$new" || framework.console.output::fail "Files updated, but the new version couldn't be recorded in $(dot::relative "$SETTINGS_FILE") ($UPDATE_VERSION_SETTING)."
   # The new core decides what to migrate: its migrate command, in its own
   # process, asks only when a migration is pending here.
   dot::call migrate --when-pending || true
   report "$new"
-  framework.console.output::newline
-  if framework.console.prompt::confirm "Run bash dot link now?"; then
+  if framework.console.prompt::confirm "Do you want to refresh the links now with bash dot link?"; then
     dot::call link || true
   else
-    framework.console.output::line "Run bash dot link when ready; it relinks moved dotdot links and removes broken ones."
+    framework.console.output::next "Run bash dot link when you're ready."
   fi
 }

@@ -27,7 +27,7 @@ USAGE
 
 update_plugin() {
   local plugin="$1" confirmed="$2" entry origin ref commit
-  entry=$(core.system.plugins.manifest::lock_entry "$plugin") || framework.console.output::fail "$plugin is not installed."
+  entry=$(core.system.plugins.manifest::lock_entry "$plugin") || framework.console.output::fail "$plugin isn't installed." "See what is: bash dot plugins:list"
   read -r origin ref commit <<< "$entry"
   case "$origin" in
     "$PLUGIN_PATH_SOURCE"*)
@@ -42,9 +42,9 @@ update_plugin() {
     return 0
   fi
   core.system.plugins.console::warn "$plugin"
-  framework.console.output::line "Plugin $plugin: ${commit:0:7} → ${PLUGIN_COMMIT:0:7}"
+  core.system.plugins.console::header "$plugin" "${commit:0:7} → ${PLUGIN_COMMIT:0:7}"
   core.system.plugins.console::preview "$plugin" "$PLUGIN_SOURCE"
-  core.system.plugins.console::confirm "Update $plugin?" "$confirmed" "bash dot plugins:update $plugin" || return 0
+  core.system.plugins.console::confirm "Do you want to update $plugin?" "$confirmed" "bash dot plugins:update $plugin" || return 0
   core.system.plugins.console::install "$plugin" "$PLUGIN_SOURCE"
   framework.console.output::success "Updated $plugin."
   PLUGINS_UPDATED=true
@@ -70,7 +70,7 @@ handle() {
     done < <(core.system.plugins.manifest::installed)
   fi
   if [ ${#selected[@]} -eq 0 ]; then
-    framework.console.output::line "No plugins installed."
+    framework.console.output::line "No plugins installed yet."
     return 0
   fi
   for plugin in "${selected[@]}"; do
@@ -78,5 +78,5 @@ handle() {
   done
   $PLUGINS_UPDATED || return 0
   core.system.plugins.console::suggest "${PLUGINS_REFRESH[@]}"
-  framework.console.output::detail "Their links are under \"inactive\" in $(dot::relative "$SETTINGS_FILE"); take them with bash dot link:activate <owner>/<name> --replace, then run bash dot link."
+  framework.console.output::next "Take the new links: bash dot link:activate <owner>/<name> --replace, then bash dot link"
 }

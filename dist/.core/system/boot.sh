@@ -97,11 +97,11 @@ dot::use() {
   dot::physical_to importer "${BASH_SOURCE[1]-}"
   for name in "$@"; do
     if ! dot::module_file "$name" || [ ! -f "$DOT_MODULE_FILE" ]; then
-      printf '❌ Unknown dotdot module: %s\n' "$name" >&2
+      printf '❌ Unknown dotdot module: %s (framework.*, core.system.*, core.modules.*).\n' "$name" >&2
       exit 1
     fi
     if ! dot::is_allowed "$name" "$importer"; then
-      printf '❌ %s may not use the dotdot module %s.\n' "$(dot::relative "${importer:-this script}")" "$name" >&2
+      printf '❌ %s may not use %s: a system part or module only uses the framework and its own code; reach another one with dot::call.\n' "$(dot::relative "${importer:-this script}")" "$name" >&2
       exit 1
     fi
     case "$DOT_LOADED_MODULES" in
@@ -177,7 +177,7 @@ dot::json_value() {
   [ -f "$file" ] || return 1
   value=$(framework.helpers.json::encoded "$(cat -- "$file")" "$path")
   case "$value" in
-    "") dot::raise "$(dot::relative "$file") is not valid JSON, or ${path#.} does not fit it."; return 2 ;;
+    "") dot::raise "$(dot::relative "$file") isn't valid JSON, or ${path#.} has the wrong shape." "Please fix the file and run the command again."; return 2 ;;
     null) return 1 ;;
   esac
   printf '%s\n' "$value"
@@ -192,7 +192,7 @@ dot::default_value() {
   [ -z "$plugin" ] || return 1
   value=$(dot::json_value "$SETTINGS_DEFAULTS" ".$path") || return
   [[ "$value" != *'"@env:'* ]] \
-    || { dot::raise "Invalid .env reference for $path in $(dot::relative "$SETTINGS_DEFAULTS"): only $(dot::relative "$SETTINGS_FILE") may refer to .env."; return 2; }
+    || { dot::raise "$path in $(dot::relative "$SETTINGS_DEFAULTS") reads from .env; only $(dot::relative "$SETTINGS_FILE") may."; return 2; }
   printf '%s\n' "$value"
 }
 
@@ -202,9 +202,9 @@ dot::default_value() {
 # for a secret.
 dot::env_value() {
   local key="$1" label="$2"
-  guards::env_key "$key" || { dot::raise "Invalid .env reference for $label: $key is not a valid .env key."; return 2; }
+  guards::env_key "$key" || { dot::raise "\"$key\" isn't a valid .env key (in $label)." "Please use letters, digits and _, starting with a letter."; return 2; }
   ! guards::reserved_env_key "$key" \
-    || { dot::raise "Invalid .env reference for $label: the key $key is reserved, use a different one."; return 2; }
+    || { dot::raise "$key is reserved by dotdot; please pick another .env key for $label."; return 2; }
   framework.helpers.kv::value "$HOST_ENV_FILE" "$key" 2>/dev/null
 }
 
@@ -259,7 +259,7 @@ dot::resolve_setting() {
   local json="$1" path="$2" plugin="$3" label="$4" row steps text key leaf value status
   [[ "$json" == *'"@env:'* ]] || { printf '%s\n' "$json"; return 0; }
   [ -n "$plugin" ] || guards::env_setting "$path" \
-    || { dot::raise "Invalid .env reference for $label: it is set in JSON only."; return 2; }
+    || { dot::raise "$label can't come from .env." "Please set it in $(dot::relative "$SETTINGS_FILE") instead."; return 2; }
   case "$json" in
     \"@env:*)
       key=$(framework.helpers.json::values "$json" .) && key="${key#@env:}"
@@ -292,7 +292,7 @@ dot::resolve_setting() {
 # first.
 dot::read_setting() {
   local path="$1" plugin="$2" json_path value status=0
-  guards::setting "$path" || { dot::raise "Invalid setting path: $path"; return 2; }
+  guards::setting "$path" || { dot::raise "\"$path\" isn't a valid setting path."; return 2; }
   json_path=$(dot::settings_json_path "$path" "$plugin")
   value=$(dot::json_value "$SETTINGS_FILE" "$json_path") \
     && value=$(dot::resolve_setting "$value" "$path" "$plugin" "${json_path#.}") || status=$?
@@ -318,7 +318,7 @@ dot::get_setting() {
   elif [ $# -gt 2 ]; then
     printf '%s\n' "$3"
   else
-    dot::raise "Setting $(dot::settings_json_path "$path" "$plugin" | cut -c2-) is not set: set it in $(dot::relative "$SETTINGS_FILE") (or to \"@env:<KEY>\" to read it from .env), then try again."
+    dot::raise "The setting $(dot::settings_json_path "$path" "$plugin" | cut -c2-) isn't set yet." "Please add it to $(dot::relative "$SETTINGS_FILE"), or set it to \"@env:<KEY>\" to read it from .env."
   fi
 }
 
@@ -327,7 +327,7 @@ dot::get_setting() {
 dot::calling_plugin() {
   local plugin
   plugin=$(dot::plugin_of_caller "$1")
-  [ -n "$plugin" ] || { dot::raise "Plugin settings are read and saved from a plugin's own code only."; return 1; }
+  [ -n "$plugin" ] || { dot::raise "dot::plugin_setting and dot::save_plugin_setting only work from a plugin's own code."; return 1; }
   printf '%s\n' "$plugin"
 }
 
@@ -350,20 +350,20 @@ dot::plugin_setting() {
 # value, the rest of the file left as written.
 dot::write_setting() {
   local path="$1" json_path="$2" value="$3" document="{}" saved
-  guards::setting "$path" || { dot::raise "Invalid setting path: $path"; return 1; }
-  [[ "$value" != *'"@env:'* ]] || { dot::raise "Invalid value for $path: .env references are written into $(dot::relative "$SETTINGS_FILE") by hand only."; return 1; }
+  guards::setting "$path" || { dot::raise "\"$path\" isn't a valid setting path."; return 1; }
+  [[ "$value" != *'"@env:'* ]] || { dot::raise "dot::save_setting can't write \"@env:\" values ($path); they're written in $(dot::relative "$SETTINGS_FILE") by hand only."; return 1; }
   dot::use framework.helpers.json framework.helpers.fs
   [ ! -f "$SETTINGS_FILE" ] || document=$(cat -- "$SETTINGS_FILE")
   saved=$(framework.helpers.json::set "$document" "$json_path" "$value" --keep-format) \
     && printf '%s\n' "$saved" | framework.helpers.fs::write "$SETTINGS_FILE" \
-    || dot::raise "Could not save $path in $(dot::relative "$SETTINGS_FILE")."
+    || dot::raise "Couldn't save $path to $(dot::relative "$SETTINGS_FILE"); please check that it's writable."
 }
 
 # Saves one of dotdot's settings; dotdot's own code only, as plugins read
 # them but never write them.
 dot::save_setting() {
   [ -z "$(dot::plugin_of_caller "${BASH_SOURCE[1]-}")" ] \
-    || { dot::raise "A plugin saves its own settings only, with dot::save_plugin_setting."; return 1; }
+    || { dot::raise "A plugin only saves its own settings, with dot::save_plugin_setting."; return 1; }
   dot::write_setting "$1" ".$1" "$2"
 }
 
@@ -378,10 +378,10 @@ dot::save_plugin_setting() {
 # one a plugin reads or writes carries that plugin's prefix.
 dot::check_secret() {
   local key="$1" plugin
-  guards::secret "$key" || { dot::raise "Invalid secret name: $key"; return 1; }
+  guards::secret "$key" || { dot::raise "\"$key\" isn't a valid secret name."; return 1; }
   plugin=$(dot::plugin_of_caller "$2")
   [ -z "$plugin" ] || guards::plugin_secret "$plugin" "$key" \
-    || { dot::raise "$plugin's secrets must start with $(dot::env_prefix "$plugin"): $key"; return 1; }
+    || { dot::raise "$plugin's secrets must start with $(dot::env_prefix "$plugin") (got $key)."; return 1; }
 }
 
 # A secret's value, from the host project's .env alone: never from settings,
@@ -400,11 +400,11 @@ dot::secret() {
 dot::save_secret() {
   local created=false
   dot::check_secret "$1" "${BASH_SOURCE[1]-}" || return 1
-  guards::secrets_file || { dot::raise "$(dot::relative "$HOST_ENV_FILE") is not git-ignored; ignore it before a secret is stored in it."; return 1; }
+  guards::secrets_file || { dot::raise "$(dot::relative "$HOST_ENV_FILE") isn't git-ignored, so no secret was saved." "Please add it to .gitignore, then try again."; return 1; }
   dot::use framework.helpers.kv
   [ -e "$HOST_ENV_FILE" ] || created=true
   (umask 077 && framework.helpers.kv::write "$HOST_ENV_FILE" "$1" "$2") && { ! $created || chmod 600 "$HOST_ENV_FILE"; } \
-    || dot::raise "Could not save $1 in $(dot::relative "$HOST_ENV_FILE")."
+    || dot::raise "Couldn't save $1 to $(dot::relative "$HOST_ENV_FILE"); please check that it's writable."
 }
 
 dot::remove_secret() {
@@ -425,8 +425,18 @@ dot::on_exit() {
   DOT_EXIT_TASKS+=("$1")
 }
 
+# <message>, then each further argument as a next step under it (as is when
+# it starts with a space, a detail).
 dot::raise() {
-  printf '%s\n' "$*" >> "$DOT_ERROR_FILE"
+  local step
+  printf '%s\n' "$1" >> "$DOT_ERROR_FILE"
+  shift
+  for step in "$@"; do
+    case "$step" in
+      " "*) printf '%s\n' "$step" ;;
+      *) printf '→ %s\n' "$step" ;;
+    esac >> "$DOT_ERROR_FILE"
+  done
   return 1
 }
 
@@ -439,7 +449,11 @@ dot::report_errors() {
   [ -s "$DOT_ERROR_FILE" ] || return 0
   dot::use framework.console.output
   while IFS= read -r message; do
-    framework.console.output::error "$message"
+    case "$message" in
+      "→ "*) framework.console.output::next "${message#→ }" >&2 ;;
+      " "*) framework.console.output::emit 2 "$message" ;;
+      *) framework.console.output::error "$message" ;;
+    esac
   done < "$DOT_ERROR_FILE"
 }
 
@@ -460,7 +474,7 @@ dot::use_timezone() {
   zone=$(dot::setting general.timezone "") && [ -n "$zone" ] || return 0
   framework.helpers.date::use_timezone "$zone" && return 0
   dot::use framework.console.output
-  framework.console.output::warn "Ignoring unknown timezone in general.timezone: $zone"
+  framework.console.output::warn "Unknown timezone \"$zone\" in $(dot::relative "$SETTINGS_FILE") settings (general.timezone); using the system's."
 }
 
 DOT_ERROR_FILE=$(mktemp)

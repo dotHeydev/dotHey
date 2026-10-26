@@ -18,7 +18,7 @@ test_github_tasks_need_their_repository_setting() {
   chmod +x "$SANDBOX/bin/gh"
   run env PATH="$SANDBOX/bin:$PATH" bash ./dot tasks:list
   assert_failure
-  assert_contains "$ERRORS" "Setting tasks.githubRepo is not set: set it in .dot/dot.json"
+  assert_contains "$ERRORS" "The setting tasks.githubRepo isn't set yet."
 }
 
 test_task_lifecycle_with_files() {
@@ -26,7 +26,7 @@ test_task_lifecycle_with_files() {
   use_file_tasks
   dot tasks:create --title "Write tests" --description "Cover the kernel."
   assert_success
-  assert_contains "$OUTPUT" "Task t001 created (todo): Write tests"
+  assert_contains "$OUTPUT" "Created task t001 • Write tests (todo)"
   file="$DOTDOT/Tasks/t001--write-tests.md"
   assert_file "$file"
   assert_contains "$(cat "$file")" "Cover the kernel."
@@ -45,7 +45,7 @@ test_task_lifecycle_with_files() {
   assert_success
   assert_contains "$OUTPUT" "Write more tests"
   dot tasks:list --status "done"
-  assert_contains "$OUTPUT" "No tasks with status done."
+  assert_contains "$OUTPUT" "No tasks with status done yet."
 }
 
 test_task_list_pages() {
@@ -58,9 +58,9 @@ test_task_list_pages() {
   assert_success
   assert_contains "$OUTPUT" "Task 3"
   assert_not_contains "$OUTPUT" "Task 1"
-  assert_contains "$OUTPUT" "Page 2/2"
+  assert_contains "$OUTPUT" "page 2 of 2"
   dot tasks:list --limit 2 --page 9
-  assert_contains "$ERRORS" "The last page is --page 2"
+  assert_contains "$ERRORS" "the last one is --page 2"
 }
 
 test_task_input_is_validated() {
@@ -70,16 +70,16 @@ test_task_input_is_validated() {
   assert_contains "$ERRORS" "--title"
   dot tasks:create --title "x" --status nonsense
   assert_failure
-  assert_contains "$ERRORS" "Unknown status: nonsense"
+  assert_contains "$ERRORS" "\"nonsense\" isn't a task status."
   dot tasks:update t001
   assert_failure
-  assert_contains "$ERRORS" "Nothing to update"
+  assert_contains "$ERRORS" "Nothing to change"
   dot tasks:list --status ""
   assert_failure
-  assert_contains "$ERRORS" "--status requires a value"
+  assert_contains "$ERRORS" "--status needs a value"
   dot tasks:create --title "x" --body-file ../../etc/passwd
   assert_failure
-  assert_contains "$ERRORS" "inside the project"
+  assert_contains "$ERRORS" "must be a file in the project"
 }
 
 test_task_delete_needs_a_terminal() {
@@ -94,8 +94,8 @@ test_unknown_tasks_fail_without_side_effects() {
   use_file_tasks
   dot tasks:doing t999
   assert_failure
-  assert_contains "$ERRORS" "No task t999"
+  assert_contains "$ERRORS" "There's no task t999"
   dot tasks:show t999
   assert_failure
-  assert_contains "$ERRORS" "No task t999"
+  assert_contains "$ERRORS" "There's no task t999"
 }

@@ -38,28 +38,28 @@ main() {
   check_requirements
   check_destination
 
-  temp=$(mktemp -d "$base/$TEMP_PREFIX"XXXXXX) || fail "Could not create a temp folder in $base."
+  temp=$(mktemp -d "$base/$TEMP_PREFIX"XXXXXX) || fail "Couldn't create a temporary directory in $base; nothing was installed."
   trap 'rm -rf -- "$temp"' EXIT
   trap 'exit 130' INT TERM HUP
   log="$temp/log"
-  spin "Downloading $name..." download_and_unpack
+  spin "Downloading $name…" download_and_unpack
   local source
-  source=$(find_source "$temp/tree") || fail "The download holds no dotdot ($SOURCE_DIR/$BOOT_FILE is missing)."
+  source=$(find_source "$temp/tree") || fail "Couldn't find dotdot in the download ($SOURCE_DIR/$BOOT_FILE is missing); nothing was installed."
 
-  printf 'Getting %s ready for your project...\n' "$name"
+  printf 'Getting %s ready for your project…\n' "$name"
   check_destination
-  mv -- "$source/$SOURCE_DIR" "$base/$DOTDOT_DIR" || fail "Could not place dotdot at $base/$DOTDOT_DIR."
+  mv -- "$source/$SOURCE_DIR" "$base/$DOTDOT_DIR" || fail "Couldn't place dotdot at $base/$DOTDOT_DIR."
   record_version "$temp/dotdot.tar.gz"
   record_migrations
-  ln -s -- "$ENTRY_POINT" "$base/$ENTRY_LINK" || fail "Could not link $base/$ENTRY_LINK."
+  ln -s -- "$ENTRY_POINT" "$base/$ENTRY_LINK" || fail "Couldn't link $base/$ENTRY_LINK."
   quietly "Link" env DOT_INTERNAL_CALL=1 bash "$base/$ENTRY_LINK" link -y
   quietly "Checking bash $ENTRY_LINK" bash "$base/$ENTRY_LINK"
 
   printf '\n%s✓ %s is ready!%s\n\n' "$GREEN" "$name$GREEN" "$RESET"
-  printf "To finish, just tell your coding agent you're using %s; it will take it from there.\n" "$name"
-  printf "Or manually fill in your project's context in %s%s/%s.\n" "$BOLD" "$DOTDOT_DIR" "$RESET"
-  printf '\nUsing Claude Code? Add its harness: %sbash %s plugins:add dotdot-sh/claude-code%s\n' "$BOLD" "$ENTRY_LINK" "$RESET"
-  printf 'Tip: run %sbash %s%s to see the available commands.\n' "$BOLD" "$ENTRY_LINK" "$RESET"
+  printf "   → Tell your coding agent that you're using %s and it'll take it from there.\n" "$name"
+  printf "     Or fill in your project's context manually in %s%s/%s.\n" "$BOLD" "$DOTDOT_DIR" "$RESET"
+  printf '   → Using Claude Code? %sbash %s plugins:add dotdot-sh/claude-code%s\n' "$BOLD" "$ENTRY_LINK" "$RESET"
+  printf '   → All commands: %sbash %s%s\n' "$BOLD" "$ENTRY_LINK" "$RESET"
   printf '\n%s🚀 Build something amazing!%s\n\n' "$BOLD" "$RESET"
 }
 
@@ -73,9 +73,9 @@ quietly() {
   local label="$1"
   shift
   if ! "$@" >"$log" 2>&1; then
-    printf '%s❌ %s failed:%s\n' "$RED" "$label" "$RESET" >&2
+    printf "%s❌ %s didn't finish:%s\n" "$RED" "$label" "$RESET" >&2
     sed 's/^/   /' "$log" >&2
-    fail "Fix the errors above, then run bash $ENTRY_LINK link."
+    fail "Please fix the errors above, then run: bash $ENTRY_LINK link"
   fi
 }
 
@@ -85,15 +85,15 @@ check_requirements() {
   for command in "${REQUIRED_COMMANDS[@]}"; do
     command -v "$command" >/dev/null || missing+=("$command")
   done
-  [ ${#missing[@]} -eq 0 ] || fail "Missing required commands: ${missing[*]}"
+  [ ${#missing[@]} -eq 0 ] || fail "dotdot needs ${missing[*]}, which isn't installed here."
 }
 
 check_destination() {
   local name
   if [ "$base" = "/" ] || [ "$base" = "${HOME-}" ]; then
-    fail "Run this from your project's folder, not $base."
+    fail "Please run this from your project's directory, not $base."
   fi
-  [ -w "$base" ] || fail "$base is not writable."
+  [ -w "$base" ] || fail "Can't write to $base; please check its permissions."
   for name in "$DOTDOT_DIR" "$ENTRY_LINK"; do
     if [ -e "$base/$name" ] || [ -L "$base/$name" ]; then
       fail "$base/$name already exists, so nothing was installed."
@@ -124,7 +124,7 @@ spin() {
   fi
   printf '%s\n' "$label"
   if ! wait "$pid"; then
-    printf '%s❌ Download failed:%s\n' "$RED" "$RESET" >&2
+    printf "%s❌ The download didn't work:%s\n" "$RED" "$RESET" >&2
     sed 's/^/   /' "$log" >&2
     fail "Nothing was installed."
   fi
@@ -150,7 +150,7 @@ set_state() {
   # shellcheck source=/dev/null
   document=$(. "$base/$DOTDOT_DIR/$JSON_HELPER" && framework.helpers.json::set "$(cat -- "$settings")" ".state.$1" "$2" --keep-format) \
     && printf '%s\n' "$document" > "$settings" \
-    || printf '%s⚠️  Could not record state.%s in %s.%s\n' "$YELLOW" "$1" "$SETTINGS_FILE" "$RESET"
+    || printf "%s⚠️  Couldn't record state.%s in %s.%s\n" "$YELLOW" "$1" "$SETTINGS_FILE" "$RESET"
 }
 
 # A fresh install has nothing to migrate: every migration it ships is applied.
@@ -173,7 +173,7 @@ record_version() {
   if [ -n "$commit" ]; then
     set_state version "\"$commit\""
   else
-    printf '%s⚠️  Could not read the commit; the first dot update will not remove staled files.%s\n' "$YELLOW" "$RESET"
+    printf "%s⚠️  Couldn't read the installed version; the first bash dot update won't clean up stale files.%s\n" "$YELLOW" "$RESET"
   fi
 }
 

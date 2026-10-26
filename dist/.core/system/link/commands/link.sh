@@ -2,7 +2,7 @@
 
 DESCRIPTION="Seed USER.md and link dotdot and its plugins into the places the harness reads."
 
-dot::use framework.console.args framework.console.output framework.console.prompt framework.helpers.fs framework.helpers.json core.system.link.service
+dot::use framework.console.args framework.console.output framework.console.prompt framework.helpers.fs framework.helpers.json framework.helpers.text core.system.link.service
 
 usage() {
   local entry
@@ -65,6 +65,8 @@ else it is refused, so an agent can't approve changes for the user.
                                    linked ("existing; will back up and override")
   - a real directory             → still skipped; remove it yourself
 
+-v / --verbose lists the entries that stay as they are too.
+
 --sweep takes back only what removed plugins left: their entries in the links,
 their broken links, and what they appended; plugins:remove runs it.
 
@@ -78,6 +80,7 @@ Usage:
   bash dot link --refresh <owner>/<name>
   bash dot link --map-only [--refresh <owner>/<name>]
   bash dot link --sweep
+  bash dot link --verbose
   bash dot link -y
   bash dot link --help
 
@@ -96,54 +99,78 @@ are relative, so the links survive a clone, a move, or a container rebuild.
 EOF
 }
 
-action_note() {
+LINK_VERBOSE=false
+
+# An entry that stays as it is, listed only with --verbose.
+unchanged_entry() {
+  ! $LINK_VERBOSE || framework.console.output::entry dim "·" "$@"
+}
+
+# A link's line: its origin → its destination.
+link_entry() {
+  local origin="$1" label="$2"
+  case "$3" in
+    link) framework.console.output::entry blue "~" "$(dot::relative "$origin") → $label" ;;
+    ok) unchanged_entry "$label" "already linked" ;;
+    move) framework.console.output::entry blue "~" "$(dot::relative "$origin") → $label" "moved; relink" ;;
+    prune) framework.console.output::entry red "-" "$label" "broken; remove" ;;
+    unlink) framework.console.output::entry red "-" "$label" "no longer listed; unlink" ;;
+    skip) framework.console.output::entry yellow "!" "$label" "exists; skip" ;;
+    relink) framework.console.output::entry red "!" "$label" "exists; replace" ;;
+    backup) framework.console.output::entry red "!" "$label" "exists; back up and replace" ;;
+  esac
+}
+
+# An append's line: its origin > its destination, in <owner>'s section.
+append_entry() {
+  local origin="$1" label="$2" owner="$3"
+  case "$4" in
+    append) framework.console.output::entry blue ">" "$(dot::relative "$origin") → $label" "section of $owner" ;;
+    appended) unchanged_entry "$label" "section of $owner already appended" ;;
+    unappend) framework.console.output::entry red "-" "$label" "take back the section of $owner" ;;
+    create) framework.console.output::entry green "+" "$label" "from $(dot::relative "$origin")" ;;
+    exists) unchanged_entry "$label" "exists; keep" ;;
+  esac
+}
+
+# An edit of the links in dot.json.
+map_entry() {
   case "$1" in
-    link) framework.console.output::paint green "(will link)" ;;
-    ok) printf '(already linked)' ;;
-    move) framework.console.output::paint green "(dotdot link moved; will relink)" ;;
-    prune) framework.console.output::paint green "(broken dotdot link; will remove)" ;;
-    unlink) framework.console.output::paint green "(removed in the links; will unlink)" ;;
-    skip) framework.console.output::paint yellow "(existing; will skip)" ;;
-    relink) framework.console.output::paint red "(existing; will override)" ;;
-    backup) framework.console.output::paint red "(existing; will back up and override)" ;;
-    append) framework.console.output::paint green "(will append)" ;;
-    appended) printf '(already appended)' ;;
-    unappend) framework.console.output::paint green "(removed in the links; will remove what was appended)" ;;
-    create) framework.console.output::paint green "(will create)" ;;
-    exists) framework.console.output::paint yellow "(existing; will keep)" ;;
+    remove*) framework.console.output::entry red "-" "$(dot::relative "$SETTINGS_FILE")" "$1" ;;
+    *) framework.console.output::entry green "+" "$(dot::relative "$SETTINGS_FILE")" "$1" ;;
   esac
 }
 
 print_seeds() {
   local note
   for note in ${LINK_MAP_NOTES[@]+"${LINK_MAP_NOTES[@]}"}; do
-    framework.console.output::line "  $(framework.console.output::paint green "(will $note)")"
+    map_entry "$note"
   done
   case "$(core.system.link.service::user_state)" in
-    create) framework.console.output::line "  $DOTDOT_NAME/USER.md $(framework.console.output::paint green "(will create from USER.example.md)")" ;;
-    existing) framework.console.output::line "  $DOTDOT_NAME/USER.md $(framework.console.output::paint yellow "(existing; will skip)")" ;;
+    create) framework.console.output::entry green "+" "$DOTDOT_NAME/USER.md" "from USER.example.md" ;;
+    existing) unchanged_entry "$DOTDOT_NAME/USER.md" "exists; keep" ;;
   esac
 }
 
-print_preview() {
+# Each planned change, as a line.
+print_changes() {
   local index
-  framework.console.output::line "Preview only; nothing changes unless you answer y below:"
   print_seeds
   for index in ${LINK_ACTIONS[@]+"${!LINK_ACTIONS[@]}"}; do
-    printf '  %s ' "${LINK_LABELS[$index]}"
-    action_note "${LINK_ACTIONS[$index]}"
-    printf '\n'
+    link_entry "${LINK_ORIGINS[$index]}" "${LINK_LABELS[$index]}" "${LINK_ACTIONS[$index]}"
   done
   for index in ${LINK_APPEND_ACTIONS[@]+"${!LINK_APPEND_ACTIONS[@]}"}; do
-    printf '  %s ← %s ' "${LINK_APPEND_LABELS[$index]}" "${LINK_APPEND_MARKERS[$index]}"
-    action_note "${LINK_APPEND_ACTIONS[$index]}"
-    printf '\n'
+    append_entry "${LINK_APPEND_ORIGINS[$index]}" "${LINK_APPEND_LABELS[$index]}" "${LINK_APPEND_MARKERS[$index]}" "${LINK_APPEND_ACTIONS[$index]}"
   done
+}
+
+print_notices() {
+  local index
   for index in ${LINK_NOTICES[@]+"${!LINK_NOTICES[@]}"}; do
     framework.console.output::warn "${LINK_NOTICES[$index]}"
   done
   [ "$LINK_OVERRIDABLE" -eq 0 ] \
-    || framework.console.output::line "Run with --override to replace the $LINK_OVERRIDABLE existing symlink(s)/file(s) above; files are backed up first."
+    || framework.console.output::next "To replace the $LINK_OVERRIDABLE taken destination(s) above, run bash dot link --override (files are backed up first)."
 }
 
 print_errors() {
@@ -154,12 +181,24 @@ print_errors() {
   LINK_ERRORS=()
 }
 
+# What was done, its non-zero counts only.
 print_result() {
-  local warning
+  local warning counts=() count label
   print_errors
-  framework.console.output::line "Done. $LINK_LINKED linked, $LINK_REMOVED removed, $LINK_APPENDED appended, $LINK_UNAPPENDED taken back, $LINK_UNCHANGED unchanged, $LINK_SKIPPED skipped, $LINK_FAILURES failed."
+  for count in "$LINK_LINKED|linked" "$LINK_REMOVED|removed" "$LINK_APPENDED|appended" "$LINK_UNAPPENDED|taken back" "$LINK_SKIPPED|skipped"; do
+    label="${count#*|}"
+    count="${count%%|*}"
+    [ "$count" -eq 0 ] || counts+=("$count $label")
+  done
+  label=$(IFS='|'; printf '%s' "${counts[*]-}")
+  label="${label//|/ $OUTPUT_SEPARATOR }"
+  if [ "$LINK_FAILURES" -eq 0 ]; then
+    framework.console.output::success "Done${label:+: $label}."
+  else
+    framework.console.output::error "$(framework.helpers.text::plural "$LINK_FAILURES" change) failed${label:+ ($label)}."
+  fi
   for warning in ${LINK_WARNINGS[@]+"${LINK_WARNINGS[@]}"}; do
-    framework.console.output::warn "Overridden: $warning"
+    framework.console.output::warn "$warning"
   done
 }
 
@@ -175,13 +214,13 @@ offer_merge() {
   done
   LINK_NOTICES=()
   if ! merged=$(framework.helpers.json::merge_duplicates "$(cat -- "$SETTINGS_FILE")" links); then
-    framework.console.output::line "They can't be merged automatically (different values that aren't lists or objects); merge them by hand."
+    framework.console.output::line "These can't be merged automatically; please merge them by hand."
     return 0
   fi
-  framework.console.prompt::confirm "Merge them in $(dot::relative "$SETTINGS_FILE"), keeping every destination?" n || return 0
+  framework.console.prompt::confirm "Do you want to merge them in $(dot::relative "$SETTINGS_FILE"), keeping every destination?" n || return 0
   printf '%s\n' "$merged" | framework.helpers.fs::write "$SETTINGS_FILE" \
-    || framework.console.output::fail "Could not write $(dot::relative "$SETTINGS_FILE")."
-  framework.console.output::success "Merged in $(dot::relative "$SETTINGS_FILE")."
+    || framework.console.output::fail "Couldn't write $(dot::relative "$SETTINGS_FILE"); please check that it's writable."
+  framework.console.output::success "Merged them in $(dot::relative "$SETTINGS_FILE")."
 }
 
 map_only() {
@@ -189,17 +228,17 @@ map_only() {
   core.system.link.service::prepare_map "$refresh" true
   print_errors
   if [ ${#LINK_MAP_NOTES[@]} -eq 0 ]; then
-    framework.console.output::line "Nothing to do."
+    framework.console.output::success "The links are up to date."
     return 0
   fi
-  framework.console.output::line "Preview only; nothing changes unless you answer y below:"
+  framework.console.output::line "bash dot link will:"
   for note in "${LINK_MAP_NOTES[@]}"; do
-    framework.console.output::line "  $(framework.console.output::paint green "(will $note)")"
+    map_entry "$note"
   done
   if $confirmed; then
-    framework.console.output::line "Writing $(dot::relative "$SETTINGS_FILE") (-y)."
+    framework.console.output::line "Writing $(dot::relative "$SETTINGS_FILE") (-y)…"
   else
-    framework.console.prompt::confirm_or_exit "Write $(dot::relative "$SETTINGS_FILE")?" n "bash dot link --map-only"
+    framework.console.prompt::confirm_or_exit "Do you want to write $(dot::relative "$SETTINGS_FILE")?" n "bash dot link --map-only"
   fi
   core.system.link.service::save_map
   print_errors
@@ -213,10 +252,11 @@ handle() {
       --override) override=true ;;
       --map-only) only_map=true ;;
       --sweep) sweep=true ;;
+      -v | --verbose) LINK_VERBOSE=true ;;
       -y | --yes) confirmed=true ;;
       --refresh)
         framework.console.args::require_value "$@"
-        [[ "$2" =~ ^[a-z0-9][a-z0-9-]*/[a-z0-9][a-z0-9-]*$ ]] || framework.console.args::invalid "--refresh takes a plugin as <owner>/<name>: $2"
+        [[ "$2" =~ ^[a-z0-9][a-z0-9-]*/[a-z0-9][a-z0-9-]*$ ]] || framework.console.args::invalid "--refresh needs a plugin as <owner>/<name> (got $2)."
         refresh="$refresh $2"
         shift
         ;;
@@ -225,7 +265,7 @@ handle() {
     shift
   done
   ! $confirmed || guards::skip_confirmation \
-    || framework.console.output::fail "-y applies changes unseen, so it needs a terminal; ask the user to run bash dot link."
+    || framework.console.output::fail "-y only works in a terminal, so nothing changed unseen." "$OUTPUT_MANUAL_RUN bash dot link"
   if $only_map; then
     map_only "$confirmed" "$refresh"
     return
@@ -238,16 +278,27 @@ handle() {
   fi
   core.system.link.service::count_changes
   print_errors
-  print_preview
-  if [ "$LINK_CHANGES" -eq 0 ]; then
-    framework.console.output::line "Nothing to do."
+  if $sweep; then
+    core.system.link.service::apply
+    print_changes
+    print_errors
     [ "$LINK_FAILURES" -eq 0 ]
     return
   fi
+  if [ "$LINK_CHANGES" -eq 0 ]; then
+    ! $LINK_VERBOSE || print_changes
+    print_notices
+    [ "$LINK_FAILURES" -gt 0 ] || framework.console.output::success "Everything is already linked."
+    [ "$LINK_FAILURES" -eq 0 ]
+    return
+  fi
+  framework.console.output::line "bash dot link will:"
+  print_changes
+  print_notices
   if $confirmed; then
-    framework.console.output::line "Applying $LINK_CHANGES change(s) (-y)."
+    framework.console.output::line "Applying $(framework.helpers.text::plural "$LINK_CHANGES" change) (-y)…"
   else
-    framework.console.prompt::confirm_or_exit "Apply $LINK_CHANGES change(s)?" n "bash dot link"
+    framework.console.prompt::confirm_or_exit "Do you want to apply $(framework.helpers.text::plural "$LINK_CHANGES" change)?" n "bash dot link"
   fi
   core.system.link.service::apply
   print_result

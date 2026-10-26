@@ -53,33 +53,33 @@ scan_directory() {
   for file in "$directory"/*.md; do
     [ -e "$file" ] || continue
     if ! framework.helpers.fs::within "$file" "$DOTDOT_ROOT" >/dev/null; then
-      framework.console.output::error "Skipped, resolves outside dotdot: $label/$(basename -- "$file")"
+      framework.console.output::warn "Skipped $label/$(basename -- "$file"): it leads outside $DOTDOT_NAME/."
       continue
     fi
     ! $found || framework.console.output::rule
     found=true
     print_frontmatter "$file" "$label/$(basename -- "$file")"
   done
-  $found || framework.console.output::line "(no .md files in $label)"
+  $found || framework.console.output::line "No Markdown files in $label."
 }
 
 handle() {
   local label target
-  [ $# -eq 1 ] || framework.console.args::invalid "Give one directory or Markdown file."
+  [ $# -eq 1 ] || framework.console.args::invalid "Please give one directory or Markdown file in $DOTDOT_NAME/."
   label="$1"
   while [ "${label%/}" != "$label" ] && [ "$label" != "/" ]; do
     label="${label%/}"
   done
   target=$(framework.helpers.fs::within "$(paths::in_dotdot "$label")" "$DOTDOT_ROOT") \
-    || framework.console.output::fail "Path resolves outside the dotdot directory: $label"
+    || framework.console.output::fail "$label is outside $DOTDOT_NAME/."
   if [ -d "$target" ]; then
     scan_directory "$target" "$label"
   elif [ -f "$target" ]; then
     case "$label" in
       *.md) print_frontmatter "$target" "$label" ;;
-      *) framework.console.output::fail "Not a Markdown file: $label" ;;
+      *) framework.console.output::fail "$label isn't a Markdown file." ;;
     esac
   else
-    framework.console.output::fail "Not a directory or Markdown file: $label"
+    framework.console.output::fail "$label isn't a directory or Markdown file."
   fi
 }

@@ -3,7 +3,7 @@
 test_update_needs_a_terminal() {
   dot update -y
   assert_failure
-  assert_contains "$ERRORS" "needs a terminal"
+  assert_contains "$ERRORS" "confirmation in a terminal"
 }
 
 test_update_records_the_version() {
