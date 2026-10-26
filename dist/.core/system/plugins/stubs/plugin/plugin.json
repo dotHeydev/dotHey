@@ -1,0 +1,8 @@
+{
+  "requires": __API__,
+  "description": "Describe what the __NAME__ plugin adds.",
+  "depends": [],
+  "settings": {},
+  "link": {},
+  "append": {}
+}

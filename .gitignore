@@ -1,0 +1,12 @@
+/.env
+/dist/Features/*
+/dist/Decisions/*
+/dist/Notes/*
+/dist/Tasks/*
+!/dist/Features/.gitkeep
+!/dist/Decisions/.gitkeep
+!/dist/Notes/.gitkeep
+!/dist/Tasks/.gitkeep
+
+/_release/
+/.ignore/

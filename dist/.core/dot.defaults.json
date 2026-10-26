@@ -1,0 +1,43 @@
+{
+  "general": {
+    "timezone": ""
+  },
+  "tasks": {
+    "service": "file",
+    "githubRepo": ""
+  },
+  "plugins": {
+    "unprefixedCommandOwners": [],
+    "denyLinkOrigin": [],
+    "denyLinkDestination": ["@dot:AGENTS.md", "@dot:RULES.md", "@dot:SECURITY.md", "@dot:USER.md", "AGENTS.md"]
+  },
+  "links": {
+    "@dot:AGENTS.md": ["AGENTS.md"],
+    "@dotdotSkills": [".claude/skills/"],
+    "append": {},
+    "remove": {},
+    "inactive": {}
+  },
+  "release": {
+    "signingKey": "",
+    "authorName": "",
+    "authorEmail": "",
+    "destination": ".ignore/release",
+    "branch": "main",
+    "remotes": {
+      "github": "https://github.com/_USER_/_REPO_.git"
+    },
+    "exclude": [
+      ".claude/",
+      ".devcontainer/",
+      ".dot/",
+      "dot",
+      "AGENTS.md"
+    ]
+  },
+  "state": {
+    "version": "",
+    "isReady": false,
+    "migrations": []
+  }
+}

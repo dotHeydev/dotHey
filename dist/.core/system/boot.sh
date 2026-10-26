@@ -1,0 +1,497 @@
+#!/usr/bin/env bash
+
+DOT_LOADED_MODULES=" "
+DOT_PACKAGES=" framework core plugins "
+DOT_PRIVATE_SEGMENT="internal"
+DOT_MODULE_PATTERN='^[a-z][a-z0-9-]*(\.[a-z0-9][a-z0-9-]*)+$'
+DOT_COMMAND_PATTERN='^[a-z0-9][a-z0-9-]*(:[a-z][a-z0-9-]*){0,2}$'
+DOT_COMMAND_MAX_DEPTH=2
+DOT_RESERVED_COMMANDS=(help list)
+DOT_EXIT_TASKS=()
+DOT_PLUGIN=""
+DOT_COMMAND=""
+DOT_MODULE_FILE=""
+DOT_MODULE_HOME=""
+
+SYSTEM_DIR=$(CDPATH='' cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+CORE_DIR=$(dirname -- "$SYSTEM_DIR")
+FRAMEWORK_DIR="$CORE_DIR/framework"
+MODULES_DIR="$CORE_DIR/modules"
+DOTDOT_ROOT=$(dirname -- "$CORE_DIR")
+BASE=$(CDPATH='' cd -P -- "$DOTDOT_ROOT/.." && pwd)
+DOTDOT_NAME=$(basename -- "$DOTDOT_ROOT")
+
+. "$SYSTEM_DIR/paths.sh"
+. "$SYSTEM_DIR/guards.sh"
+
+# Set when dotdot itself made this call (dot::call, the installer), read once
+# and never passed on: it alone lets -y skip a confirmation off a terminal.
+DOT_INTERNAL=false
+[ "${DOT_INTERNAL_CALL-}" != 1 ] || DOT_INTERNAL=true
+unset DOT_INTERNAL_CALL
+
+# The file a module name loads, into DOT_MODULE_FILE.
+dot::module_file() {
+  local name="$1" path
+  [[ "$name" =~ $DOT_MODULE_PATTERN ]] || return 1
+  path="${name#*.}"
+  path="${path//./\/}.sh"
+  case "${name%%.*}" in
+    framework) DOT_MODULE_FILE="$FRAMEWORK_DIR/$path" ;;
+    core) DOT_MODULE_FILE="$CORE_DIR/$path" ;;
+    plugins) DOT_MODULE_FILE="$PLUGINS_DIR/$path" ;;
+    *) return 1 ;;
+  esac
+}
+
+dot::plugin_of() {
+  local file="$1" relative owner
+  case "$file" in
+    "$PLUGINS_DIR"/*/*/*)
+      relative="${file#"$PLUGINS_DIR"/}"
+      owner="${relative%%/*}"
+      relative="${relative#*/}"
+      printf '%s/%s\n' "$owner" "${relative%%/*}"
+      ;;
+  esac
+}
+
+# The directory a module's own code lives in, the only place that may load
+# it, into DOT_MODULE_HOME: core.system.<part> and core.modules.<module>,
+# plugins.<owner>.<name>, or, for a framework module with an internal/ part,
+# the directory holding internal/; empty when anyone may load it.
+dot::module_home() {
+  local name="$1" path
+  DOT_MODULE_HOME=""
+  case "$name" in
+    framework.*".$DOT_PRIVATE_SEGMENT."*)
+      path="${name#framework.}"
+      path="${path%%".$DOT_PRIVATE_SEGMENT."*}"
+      DOT_MODULE_HOME="$FRAMEWORK_DIR/${path//./\/}"
+      ;;
+    core.* | plugins.*)
+      path="${name#*.}"
+      name="${path#*.}"
+      case "$1" in
+        core.*) DOT_MODULE_HOME="$CORE_DIR/${path%%.*}/${name%%.*}" ;;
+        *) DOT_MODULE_HOME="$PLUGINS_DIR/${path%%.*}/${name%%.*}" ;;
+      esac
+      ;;
+  esac
+}
+
+dot::is_allowed() {
+  local name="$1" importer="$2" home
+  case "$DOT_PACKAGES" in
+    *" ${name%%.*} "*) ;;
+    *) return 1 ;;
+  esac
+  [ -n "$importer" ] || return 0
+  dot::module_home "$name"
+  home="$DOT_MODULE_HOME"
+  [ -z "$home" ] || [ "${importer#"$home"/}" != "$importer" ]
+}
+
+dot::use() {
+  local importer name file
+  dot::physical_to importer "${BASH_SOURCE[1]-}"
+  for name in "$@"; do
+    if ! dot::module_file "$name" || [ ! -f "$DOT_MODULE_FILE" ]; then
+      printf '❌ Unknown dotdot module: %s\n' "$name" >&2
+      exit 1
+    fi
+    if ! dot::is_allowed "$name" "$importer"; then
+      printf '❌ %s may not use the dotdot module %s.\n' "$(dot::relative "${importer:-this script}")" "$name" >&2
+      exit 1
+    fi
+    case "$DOT_LOADED_MODULES" in
+      *" $name "*) continue ;;
+    esac
+    DOT_LOADED_MODULES="$DOT_LOADED_MODULES$name "
+    file="$DOT_MODULE_FILE"
+    . "$file"
+    # dotdot's own modules are sealed as they load; a plugin's stay its own.
+    case "$name" in
+      core.* | framework.*) dot::seal_functions "$name::" ;;
+    esac
+  done
+}
+
+dot::relative() {
+  case "$1" in
+    "$BASE"/*) printf '%s\n' "${1#"$BASE"/}" ;;
+    *) printf '%s\n' "$1" ;;
+  esac
+}
+
+dot::path() {
+  case "$1" in
+    project) printf '%s\n' "$BASE" ;;
+    dotdot) printf '%s\n' "$DOTDOT_ROOT" ;;
+    plugin)
+      [ -n "$DOT_PLUGIN" ] || return 1
+      printf '%s\n' "$PLUGINS_DIR/$DOT_PLUGIN"
+      ;;
+    *) return 1 ;;
+  esac
+}
+
+# A file's path with its directory's links resolved, into the variable named
+# $1; dotdot's own files, already loaded by their real path, are taken as
+# they are.
+dot::physical_to() {
+  local dot_physical_path="$2"
+  if [ -n "$dot_physical_path" ]; then
+    case "$dot_physical_path" in
+      *"/./"* | *"/../"*) dot_physical_path="$(CDPATH='' cd -P -- "$(dirname -- "$dot_physical_path")" 2>/dev/null && pwd)/${dot_physical_path##*/}" ;;
+      "$CORE_DIR"/* | "$PLUGINS_DIR"/*) ;;
+      *) dot_physical_path="$(CDPATH='' cd -P -- "$(dirname -- "$dot_physical_path")" 2>/dev/null && pwd)/${dot_physical_path##*/}" ;;
+    esac
+  fi
+  printf -v "$1" '%s' "$dot_physical_path"
+}
+
+# The .env prefix of a plugin's secrets: DOT_ACME_WIDGETS__ for acme/widgets.
+dot::env_prefix() {
+  printf 'DOT_%s_%s__' "${1%%/*}" "${1#*/}" | tr 'a-z-' 'A-Z_'
+}
+
+# The plugin whose code <file> is, <owner>/<name>, or nothing for dotdot's.
+dot::plugin_of_caller() {
+  local caller="$1"
+  dot::physical_to caller "$caller"
+  dot::plugin_of "$caller"
+}
+
+# Where a settings path lies in dot.json: a plugin's under
+# plugins.<owner>/<name>.
+dot::settings_json_path() {
+  printf '%s.%s\n' "${2:+.plugins[\"$2\"]}" "$1"
+}
+
+# The value at <JSON path> in <file> as JSON: status 1 when the file is
+# missing or the value null, 2 (said why) when the file is not valid JSON or
+# the path does not fit it.
+dot::json_value() {
+  local file="$1" path="$2" value
+  [ -f "$file" ] || return 1
+  value=$(framework.helpers.json::encoded "$(cat -- "$file")" "$path")
+  case "$value" in
+    "") dot::raise "$(dot::relative "$file") is not valid JSON, or ${path#.} does not fit it."; return 2 ;;
+    null) return 1 ;;
+  esac
+  printf '%s\n' "$value"
+}
+
+# A setting's default from dotdot's defaults as JSON; plugin settings have
+# none here, theirs are written into dot.json on install. Defaults never
+# refer to .env. Status 1 when there is none, 2 on an invalid file or a
+# reference.
+dot::default_value() {
+  local path="$1" plugin="$2" value
+  [ -z "$plugin" ] || return 1
+  value=$(dot::json_value "$SETTINGS_DEFAULTS" ".$path") || return
+  [[ "$value" != *'"@env:'* ]] \
+    || { dot::raise "Invalid .env reference for $path in $(dot::relative "$SETTINGS_DEFAULTS"): only $(dot::relative "$SETTINGS_FILE") may refer to .env."; return 2; }
+  printf '%s\n' "$value"
+}
+
+# The string <key> stands for in the host project's .env, as env() reads it in
+# any dotenv library: status 1 when .env has no <key> (a commented-out line
+# counts as none), 2 when <key> is not a valid .env key or one dotdot reserves
+# for a secret.
+dot::env_value() {
+  local key="$1" label="$2"
+  guards::env_key "$key" || { dot::raise "Invalid .env reference for $label: $key is not a valid .env key."; return 2; }
+  ! guards::reserved_env_key "$key" \
+    || { dot::raise "Invalid .env reference for $label: the key $key is reserved, use a different one."; return 2; }
+  framework.helpers.kv::value "$HOST_ENV_FILE" "$key" 2>/dev/null
+}
+
+# <key>'s value from .env as JSON, cast by its syntax alone: true, false,
+# and numbers as written, valid JSON in [ ] or { } as that list or object,
+# anything else, or anything written in quotes, as text. Status 1 for null,
+# which counts as unset.
+dot::cast_setting() {
+  local text="$1" key="$2" json
+  if framework.helpers.kv::is_quoted "$HOST_ENV_FILE" "$key"; then
+    framework.helpers.json::string "$text"
+    return
+  fi
+  case "$text" in
+    null) return 1 ;;
+    true | false) printf '%s\n' "$text"; return ;;
+    "["* | "{"*)
+      json=$(framework.helpers.json::encoded "$text" .)
+      case "$json" in
+        "["* | "{"*) printf '%s\n' "$json"; return ;;
+      esac
+      ;;
+  esac
+  if [[ "$text" =~ ^-?(0|[1-9][0-9]*)(\.[0-9]+)?$ ]]; then
+    printf '%s\n' "$text"
+  else
+    framework.helpers.json::string "$text"
+  fi
+}
+
+# The JSON path of a leaf row's steps (json::leaves, tab-separated): a key
+# as ["key"], an index as [N] where its parent in <json> is a list.
+dot::leaf_path() {
+  local json="$1" steps="$2" step path=""
+  while IFS= read -r step; do
+    if [[ "$step" =~ ^[0-9]+$ ]] && [ "$(framework.helpers.json::encoded "$json" "${path:-.}" | cut -c1)" = "[" ]; then
+      path="$path[$step]"
+    else
+      path="$path[$(framework.helpers.json::string "$step")]"
+    fi
+  done < <(printf '%s\n' "$steps" | tr '\t' '\n')
+  printf '%s\n' "$path"
+}
+
+# <json>, the value of a setting in dot.json, with every "@env:<key>" string
+# in it, the whole value or any value or element inside, replaced by what
+# <key> stands for in .env (dot::env_value), cast by its syntax
+# (dot::cast_setting). A missing key, or null, leaves the whole value unset
+# (status 1, so the default applies) and anything inside it null. The
+# settings only JSON holds take no reference at all.
+dot::resolve_setting() {
+  local json="$1" path="$2" plugin="$3" label="$4" row steps text key leaf value status
+  [[ "$json" == *'"@env:'* ]] || { printf '%s\n' "$json"; return 0; }
+  [ -n "$plugin" ] || guards::env_setting "$path" \
+    || { dot::raise "Invalid .env reference for $label: it is set in JSON only."; return 2; }
+  case "$json" in
+    \"@env:*)
+      key=$(framework.helpers.json::values "$json" .) && key="${key#@env:}"
+      text=$(dot::env_value "$key" "$label") || return
+      dot::cast_setting "$text" "$key"
+      return
+      ;;
+  esac
+  while IFS= read -r row; do
+    text="${row##*$'\t'}"
+    [ "${text#@env:}" != "$text" ] || continue
+    key="${text#@env:}"
+    steps="${row%$'\t'*}"
+    leaf=$(dot::leaf_path "$json" "$steps")
+    status=0
+    text=$(dot::env_value "$key" "$label$leaf") || status=$?
+    [ "$status" -ne 2 ] || return 2
+    value=null
+    [ "$status" -ne 0 ] || value=$(dot::cast_setting "$text" "$key") || value=null
+    json=$(framework.helpers.json::set "$json" ".$leaf" "$value") || return 2
+  done < <(framework.helpers.json::leaves "$json")
+  printf '%s\n' "$json"
+}
+
+# A setting's value from dot.json, its .env references resolved
+# (dot::resolve_setting), else from dotdot's defaults; with <plugin> one of
+# that plugin's, under plugins.<owner>/<name> in dot.json only. Strings print
+# raw, anything else as JSON. Status 1 when unset, 2 on an invalid path, file,
+# or reference. Run in a subshell, so callers load the JSON and kv helpers
+# first.
+dot::read_setting() {
+  local path="$1" plugin="$2" json_path value status=0
+  guards::setting "$path" || { dot::raise "Invalid setting path: $path"; return 2; }
+  json_path=$(dot::settings_json_path "$path" "$plugin")
+  value=$(dot::json_value "$SETTINGS_FILE" "$json_path") \
+    && value=$(dot::resolve_setting "$value" "$path" "$plugin" "${json_path#.}") || status=$?
+  [ "$status" -ne 2 ] || return 2
+  [ "$status" -eq 0 ] || value=$(dot::default_value "$path" "$plugin") || return
+  case "$value" in
+    \"*) framework.helpers.json::values "$value" . ;;
+    *) printf '%s\n' "$value" ;;
+  esac
+}
+
+# One setting, read as env() does in any dotenv library: text prints raw,
+# anything else (true, false, a number, a list, an object) as JSON. Unset or
+# empty, it prints <default> when one is given, else stops with how to set
+# it; status 1 too on an invalid path, file, or reference.
+dot::get_setting() {
+  local path="$1" plugin="$2" value status=0
+  dot::use framework.helpers.json framework.helpers.kv
+  value=$(dot::read_setting "$path" "$plugin") || status=$?
+  [ "$status" -ne 2 ] || return 1
+  if [ "$status" -eq 0 ] && [ -n "$value" ]; then
+    printf '%s\n' "$value"
+  elif [ $# -gt 2 ]; then
+    printf '%s\n' "$3"
+  else
+    dot::raise "Setting $(dot::settings_json_path "$path" "$plugin" | cut -c2-) is not set: set it in $(dot::relative "$SETTINGS_FILE") (or to \"@env:<KEY>\" to read it from .env), then try again."
+  fi
+}
+
+# The plugin whose code called (<file>), or a stop: plugin settings are for
+# plugin code only.
+dot::calling_plugin() {
+  local plugin
+  plugin=$(dot::plugin_of_caller "$1")
+  [ -n "$plugin" ] || { dot::raise "Plugin settings are read and saved from a plugin's own code only."; return 1; }
+  printf '%s\n' "$plugin"
+}
+
+# dot::setting <path> [default]: one of dotdot's settings (see
+# dot::get_setting), for any code, a plugin's included.
+dot::setting() {
+  dot::get_setting "$1" "" "${@:2}"
+}
+
+# dot::plugin_setting <key> [default]: one of the calling plugin's own
+# settings, from plugins.<owner>/<name> in dot.json, where installing the
+# plugin wrote its defaults.
+dot::plugin_setting() {
+  local plugin
+  plugin=$(dot::calling_plugin "${BASH_SOURCE[1]-}") || return 1
+  dot::get_setting "$1" "$plugin" "${@:2}"
+}
+
+# Saves <json> at a settings JSON path in dot.json, in place of the old
+# value, the rest of the file left as written.
+dot::write_setting() {
+  local path="$1" json_path="$2" value="$3" document="{}" saved
+  guards::setting "$path" || { dot::raise "Invalid setting path: $path"; return 1; }
+  [[ "$value" != *'"@env:'* ]] || { dot::raise "Invalid value for $path: .env references are written into $(dot::relative "$SETTINGS_FILE") by hand only."; return 1; }
+  dot::use framework.helpers.json framework.helpers.fs
+  [ ! -f "$SETTINGS_FILE" ] || document=$(cat -- "$SETTINGS_FILE")
+  saved=$(framework.helpers.json::set "$document" "$json_path" "$value" --keep-format) \
+    && printf '%s\n' "$saved" | framework.helpers.fs::write "$SETTINGS_FILE" \
+    || dot::raise "Could not save $path in $(dot::relative "$SETTINGS_FILE")."
+}
+
+# Saves one of dotdot's settings; dotdot's own code only, as plugins read
+# them but never write them.
+dot::save_setting() {
+  [ -z "$(dot::plugin_of_caller "${BASH_SOURCE[1]-}")" ] \
+    || { dot::raise "A plugin saves its own settings only, with dot::save_plugin_setting."; return 1; }
+  dot::write_setting "$1" ".$1" "$2"
+}
+
+# Saves one of the calling plugin's own settings.
+dot::save_plugin_setting() {
+  local plugin
+  plugin=$(dot::calling_plugin "${BASH_SOURCE[1]-}") || return 1
+  dot::write_setting "$1" "$(dot::settings_json_path "$1" "$plugin")" "$2"
+}
+
+# A secret is one of the .env keys dotdot reserves (guards::reserved_env_key);
+# one a plugin reads or writes carries that plugin's prefix.
+dot::check_secret() {
+  local key="$1" plugin
+  guards::secret "$key" || { dot::raise "Invalid secret name: $key"; return 1; }
+  plugin=$(dot::plugin_of_caller "$2")
+  [ -z "$plugin" ] || guards::plugin_secret "$plugin" "$key" \
+    || { dot::raise "$plugin's secrets must start with $(dot::env_prefix "$plugin"): $key"; return 1; }
+}
+
+# A secret's value, from the host project's .env alone: never from settings,
+# so a missing one is never filled in from elsewhere. Status 1 when unset or
+# empty.
+dot::secret() {
+  local value
+  dot::check_secret "$1" "${BASH_SOURCE[1]-}" || return 2
+  dot::use framework.helpers.kv
+  value=$(framework.helpers.kv::value "$HOST_ENV_FILE" "$1" 2>/dev/null) && [ -n "$value" ] || return 1
+  printf '%s\n' "$value"
+}
+
+# Saves a secret in the host project's .env, only while git ignores it; a
+# .env it creates is readable by the user alone.
+dot::save_secret() {
+  local created=false
+  dot::check_secret "$1" "${BASH_SOURCE[1]-}" || return 1
+  guards::secrets_file || { dot::raise "$(dot::relative "$HOST_ENV_FILE") is not git-ignored; ignore it before a secret is stored in it."; return 1; }
+  dot::use framework.helpers.kv
+  [ -e "$HOST_ENV_FILE" ] || created=true
+  (umask 077 && framework.helpers.kv::write "$HOST_ENV_FILE" "$1" "$2") && { ! $created || chmod 600 "$HOST_ENV_FILE"; } \
+    || dot::raise "Could not save $1 in $(dot::relative "$HOST_ENV_FILE")."
+}
+
+dot::remove_secret() {
+  dot::check_secret "$1" "${BASH_SOURCE[1]-}" || return 1
+  dot::use framework.helpers.kv
+  framework.helpers.kv::remove "$HOST_ENV_FILE" "$1"
+}
+
+# Runs another dotdot command; one called from dotdot's own code (not a
+# plugin's) counts as dotdot's call for guards::skip_confirmation.
+dot::call() {
+  local internal=""
+  [ -n "$DOT_PLUGIN" ] || internal=1
+  DOT_INTERNAL_CALL="$internal" bash "$DOT_BIN" "$@"
+}
+
+dot::on_exit() {
+  DOT_EXIT_TASKS+=("$1")
+}
+
+dot::raise() {
+  printf '%s\n' "$*" >> "$DOT_ERROR_FILE"
+  return 1
+}
+
+dot::abort() {
+  dot::raise "$@" || exit 1
+}
+
+dot::report_errors() {
+  local message
+  [ -s "$DOT_ERROR_FILE" ] || return 0
+  dot::use framework.console.output
+  while IFS= read -r message; do
+    framework.console.output::error "$message"
+  done < "$DOT_ERROR_FILE"
+}
+
+dot::finish() {
+  local status=$? task
+  [ "$status" -eq 0 ] || dot::report_errors
+  rm -f -- "$DOT_ERROR_FILE"
+  for task in ${DOT_EXIT_TASKS[@]+"${DOT_EXIT_TASKS[@]}"}; do
+    eval "$task" || true
+  done
+  return "$status"
+}
+
+# Applies the project's timezone (general.timezone) to the dates dotdot
+# prints; run as the date helper loads, so only commands that date pay for it.
+dot::use_timezone() {
+  local zone
+  zone=$(dot::setting general.timezone "") && [ -n "$zone" ] || return 0
+  framework.helpers.date::use_timezone "$zone" && return 0
+  dot::use framework.console.output
+  framework.console.output::warn "Ignoring unknown timezone in general.timezone: $zone"
+}
+
+DOT_ERROR_FILE=$(mktemp)
+trap 'dot::finish' EXIT
+trap 'exit 130' INT TERM HUP
+
+# Makes every function named <prefix>… read-only, for each prefix given;
+# without compgen (a bash built without it) the full list is scanned instead.
+dot::seal_functions() {
+  local name prefix names
+  for prefix in "$@"; do
+    names=$(compgen -A function -- "$prefix" 2>/dev/null) \
+      || names=$(declare -F | while read -r _ _ name; do case "$name" in "$prefix"*) printf '%s\n' "$name" ;; esac; done)
+    for name in $names; do
+      readonly -f "$name"
+    done
+  done
+}
+
+# Seals the runtime: dotdot's own functions and the variables that say where
+# things are and what is allowed become read-only, so code loaded later (a
+# plugin's included) can't redefine a guard or point dotdot elsewhere.
+dot::seal() {
+  dot::seal_functions dot:: paths:: guards:: kernel::
+  readonly BASE DOTDOT_ROOT DOTDOT_NAME CORE_DIR SYSTEM_DIR FRAMEWORK_DIR MODULES_DIR BIN_DIR DOT_BIN \
+    PLUGINS_DIR PLUGINS_LOCK SETTINGS_FILE SETTINGS_DEFAULTS HOST_ENV_FILE LINK_MAP_SEPARATOR USER_FILE USER_EXAMPLE_FILE ENTRY_LINK \
+    DOT_PACKAGES DOT_PRIVATE_SEGMENT DOT_MODULE_PATTERN DOT_COMMAND_PATTERN DOT_COMMAND_MAX_DEPTH DOT_INTERNAL \
+    GUARDS_DOCUMENT_PATTERN GUARDS_SEGMENT_PATTERN GUARDS_SETTING_PATTERN GUARDS_RESERVED_ENV_PATTERN GUARDS_ENV_KEY_PATTERN GUARDS_JSON_ONLY_SETTINGS \
+    GUARDS_DOTDOT
+  readonly -a SYSTEM_PARTS CORE_MODULES DOT_RESERVED_COMMANDS
+}
+
+. "$SYSTEM_DIR/kernel.sh"
+dot::seal
