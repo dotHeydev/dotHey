@@ -32,6 +32,21 @@ framework.console.output::is_styled() {
   [ -t "${1:-1}" ] && [ -z "${NO_COLOR-}" ] && [ "${TERM-}" != dumb ] && ! framework.console.output::is_agent
 }
 
+# Whether stdout and stderr take styles, fixed as this loads: paint mostly
+# runs inside $(...), where stdout is the capturing pipe, not the terminal.
+OUTPUT_STYLED_OUT=false
+OUTPUT_STYLED_ERR=false
+! framework.console.output::is_styled 1 || OUTPUT_STYLED_OUT=true
+! framework.console.output::is_styled 2 || OUTPUT_STYLED_ERR=true
+
+# Whether text built for <descriptor> takes styles.
+framework.console.output::paints() {
+  case "${1:-1}" in
+    2) $OUTPUT_STYLED_ERR ;;
+    *) $OUTPUT_STYLED_OUT ;;
+  esac
+}
+
 framework.console.output::style_code() {
   case "$1" in
     bold) printf '\033[1m' ;;
@@ -50,7 +65,7 @@ framework.console.output::style_code() {
 
 framework.console.output::paint() {
   local style="$1" text="$2" descriptor="${3:-1}"
-  if [ -z "$text" ] || ! framework.console.output::is_styled "$descriptor"; then
+  if [ -z "$text" ] || ! framework.console.output::paints "$descriptor"; then
     printf '%s' "$text"
     return
   fi
