@@ -20,6 +20,8 @@ This project is guided by **dotdot**, installed in `.dot`: its context, rules, s
 - Flags in the user's message adjust that one reply only:
   - `--short` / `--s`: the bare minimum — the outcome and blockers, nothing else.
   - `--expand` / `--xp`: slightly more detail than the default, still concise. The default does not change.
+  - `--xray` / `--x`: answer in an xray file instead of the chat, or move this chat into one (the `dot-xray` skill).
+  - `--chat`: bring the xray named into the chat, its open questions only.
 - Every reply to the user — after a task, a skill, or a question — follows this template, with each line only when it has content. Subagent reports to you are exempt.
 
 ```
@@ -32,6 +34,8 @@ This project is guided by **dotdot**, installed in `.dot`: its context, rules, s
 - Success is expected: no step-by-step recap, no restating the request, no file-by-file lists unless asked.
 - A question gets just the answer.
 - Full detail only on request.
+
+An extensive discussion — several questions, options to weigh, a design to agree on — goes in an xray (`.dot/Xrays/`, the `dot-xray` skill), not the chat: reply with its full path only, never its content. Quick questions and short back-and-forth stay in the chat or the question tool; a chat or an interview moves into an xray whenever the user asks (`--x`), and an xray comes back into the chat on request (`--chat`).
 
 If long, extensive, or detailed reporting is necessary, create a structured Reports/reportNNN-{task-or-report-topic}.md file in dotdot's directory instead and give the user the path to it. The report must have a concise and clear TL;DR at the top. Do not overextend in reporting just because is a file; keep it to the point, add only the necessary details the default condensed reporting couldn't have. Do not use tables, preffer well-structured lists and sections.
 

@@ -29,7 +29,7 @@ The harness loaded `AGENTS.md` at session start, and with it your working agreem
 Everything that governs your work lives in dotdot (`.dot/`):
 
 - **Context:** one Markdown file per concern at the top of `.dot/` (product, rules, security, standards, tech stack, data model, schema, design, nomenclature, company).
-- **Records:** feature specifications (`.dot/Features/`), project decisions (`.dot/Decisions/`), notes (`.dot/Notes/`), and tasks (`bash dot tasks:list`: files in `.dot/Tasks/` or GitHub issues), each kept with its own `bash dot` commands.
+- **Records:** feature specifications (`.dot/Features/`), project decisions (`.dot/Decisions/`), notes (`.dot/Notes/`), xrays (`.dot/Xrays/`, discussions held in a file), and tasks (`bash dot tasks:list`: files in `.dot/Tasks/` or GitHub issues), each kept with its own `bash dot` commands.
 - **Tools:** `bash dot` commands and your skills (step 4).
 - **Plugins:** `.dot/.plugins/<owner>/<name>/`, what this project added on top of dotdot from repos the user chose to trust (step 4).
 
@@ -57,6 +57,8 @@ Don't read the other context files upfront: it wastes the context you need for t
 4. `dot-implement-feature` — code written against those failing tests, one at a time, in the codebase's existing conventions.
 
 `dot-build-full-feature` chains all four and enters wherever the work actually is. The order is the point: the specification is what the tests are derived from, and the failing tests are what tells you the implementation is done. Skipping ahead to code means writing tests that describe what you built rather than what was asked for.
+
+**Xrays** hold any extensive discussion with the user, in a file rather than the chat: open one with `dot-xray` when an answer would hold several questions or options, or when the user adds `--x`, and reply with its path only.
 
 **Notes and tasks** are the user's to raise: open them only when the user's request is about them, never on your own initiative. Notes are for discussion and exploration, with no commitment; tasks are work to be done. When working on one, answer inside it (a task through `bash dot tasks:update`), not in the chat; the chat reply is only "✅ Done: <path or link>". This overrides the Reporting template in `AGENTS.md`.
 

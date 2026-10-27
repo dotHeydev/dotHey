@@ -15,3 +15,17 @@ test_note_refuses_an_empty_slug() {
   assert_failure
   assert_contains "$ERRORS" "The name needs at least one letter or digit."
 }
+
+test_xray_opens_numbered_from_the_template() {
+  dot xrays:create "Adoption plan" --description "How dotdot moves in."
+  assert_success
+  assert_contains "$OUTPUT" "Xrays/x001--adoption-plan.md"
+  assert_contains "$(cat "$DOTDOT/Xrays/x001--adoption-plan.md")" "name: adoption-plan
+description: How dotdot moves in.
+status: open"
+  assert_contains "$(cat "$DOTDOT/Xrays/x001--adoption-plan.md")" "# Adoption plan"
+  assert_contains "$(cat "$DOTDOT/Xrays/x001--adoption-plan.md")" "### 1. <Question or decision to make>"
+  dot xrays:create "Second"
+  assert_failure
+  assert_contains "$ERRORS" "An xray needs --description."
+}

@@ -149,7 +149,7 @@ EOF
       namespace="${name%%:*}"
       [ "$name" = "$namespace" ] || [ "$namespace" = "$previous" ] || printf '\n'
       previous="$namespace"
-      printf '  %-*s %s\n' "$KERNEL_COLUMN_WIDTH" "$name" "$(kernel::description "$file")"
+      printf '  %s %s\n' "$(framework.console.output::paint green "$(printf '%-*s' "$KERNEL_COLUMN_WIDTH" "$name")")" "$(kernel::description "$file")"
     done < <(kernel::commands | awk -F'|' '{ print ($1 ~ /:/ ? 1 : 0) "|" $0 }' | sort | cut -d'|' -f2-)
     cat <<EOF
 

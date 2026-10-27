@@ -100,7 +100,7 @@ framework.console.output::line() {
   framework.console.output::emit 1 "$*"
 }
 
-# A help page on stdin, styled at a terminal: section headings bold, the
+# A help page on stdin, styled at a terminal: section headings bold yellow, the
 # options and arguments column cyan, and commands, paths, and values as every
 # line is.
 framework.console.output::help() {
@@ -108,7 +108,7 @@ framework.console.output::help() {
     cat
     return
   fi
-  awk -f "$OUTPUT_HIGHLIGHTER" | awk -v bold="$(framework.console.output::style_code bold)" -v cyan="$(framework.console.output::style_code cyan)" -v reset="$(framework.console.output::style_code reset)" '
+  awk -f "$OUTPUT_HIGHLIGHTER" | awk -v bold="$(framework.console.output::style_code bold)$(framework.console.output::style_code yellow)" -v cyan="$(framework.console.output::style_code cyan)" -v reset="$(framework.console.output::style_code reset)" '
     /^[A-Z][A-Za-z ()".,-]*:$/ { print bold $0 reset; next }
     /^  (-|<|@)/ {
       rest = substr($0, 3)

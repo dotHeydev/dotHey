@@ -4,7 +4,7 @@ BIN_DIR="$SYSTEM_DIR/bin"
 DOT_BIN="$BIN_DIR/dot"
 SYSTEM_PARTS=(plugins link update migrations)
 MIGRATIONS_DIR="$SYSTEM_DIR/migrations"
-CORE_MODULES=(onboarding ready frontmatter housekeeping notes features decisions tasks release)
+CORE_MODULES=(onboarding ready frontmatter housekeeping notes xrays features decisions tasks release)
 MODULE_COMMANDS_DIR="commands"
 KEEP_FILE=".gitkeep"
 
@@ -29,6 +29,8 @@ DECISIONS_DIR="$DOTDOT_ROOT/Decisions"
 DECISION_PREFIX="d"
 NOTES_DIR="$DOTDOT_ROOT/Notes"
 NOTE_PREFIX="n"
+XRAYS_DIR="$DOTDOT_ROOT/Xrays"
+XRAY_PREFIX="x"
 TASKS_DIR="$DOTDOT_ROOT/Tasks"
 TASK_PREFIX="t"
 PLUGINS_DIR="$DOTDOT_ROOT/.plugins"
