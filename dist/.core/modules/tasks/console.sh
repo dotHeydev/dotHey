@@ -5,7 +5,7 @@ dot::use framework.console.args core.modules.tasks.service framework.console.out
 core.modules.tasks.console::section_flags_help() {
   local section
   while IFS= read -r section; do
-    printf '  --%-26s %s\n' "$(framework.helpers.template::key "$section")" "$section"
+    framework.console.output::option "--$(framework.helpers.template::key "$section") <text>" "$section." 25
   done < <(core.modules.tasks.service::sections)
 }
 
@@ -58,14 +58,19 @@ core.modules.tasks.console::edit_body() {
 core.modules.tasks.console::status_usage() {
   local status="$1"
   cat <<USAGE
-bash dot tasks:$status — move a task to $status, in whichever service keeps the tasks.
-The same as bash dot tasks:update <id> --status $status.
+Moves a task to $status; the same as tasks:update <id> --status $status.
 
 Usage:
   bash dot tasks:$status <id>
-  bash dot tasks:$status --help
 
-<id> is what bash dot tasks:list shows (t004, #12).
+Arguments:
+  <id>         The task, as tasks:list shows it (t004, #12).
+
+Options:
+  -h, --help   Show this help.
+
+Examples:
+  bash dot tasks:$status t004
 USAGE
 }
 

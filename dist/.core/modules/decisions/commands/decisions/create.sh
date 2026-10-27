@@ -1,76 +1,54 @@
 #!/usr/bin/env bash
 
-DESCRIPTION="Create a new decision from the decision template."
+DESCRIPTION="Document a new decision from the template."
 
 dot::use framework.console.args core.modules.decisions.console core.modules.decisions.service framework.helpers.fs framework.console.output framework.helpers.template framework.helpers.text
 
 usage() {
-  local status heading key
+  local heading key
   cat <<EOF
-bash dot decisions:create — create a new decision in Decisions/ from the
-bundled decision template, numbering and naming it automatically.
-
-The template ($(dot::relative "$DECISION_TEMPLATE")) is the
-single source of truth: this command reads it at run time and derives one flag
-per section from its headings, plus the status vocabulary from its frontmatter,
-so editing the template is all it takes. It also scans Decisions/ for
-the highest existing number and takes the next one — which is why the filename
-and number are never to be constructed by hand.
+Creates the next numbered decision in Decisions/ from the decision template;
+one flag per template section. To change a decision afterwards, use
+bash dot decisions:update, or edit its prose and bump "modified".
 
 Usage:
-  bash dot decisions:create <name> --statement <text> --elaboration <text> [-s, --status <status>] [--superseded-by <decision>] [--<section> <text>]...
-  bash dot decisions:create --help
+  bash dot decisions:create <name> --statement <text> --elaboration <text>
+                            [options]
 
-This command only creates. To change a decision's status afterwards, use
-bash dot decisions:update; to change its prose, edit the file directly, keeping its
-number and bumping the frontmatter "modified" stamp.
+Arguments:
+  <name>                       Short name for the file (e.g. "JWT in httpOnly
+                               cookie"); not the rule itself.
 
-Required:
-  <name>                 Short name for the filename slug (e.g. "JWT in httpOnly cookie").
-                         Not the rule itself — that is --statement.
-  --statement <text>     The decision as a first-person rule. Becomes the H1 and,
-                         verbatim, the frontmatter description — so write it to stand
-                         alone: someone reading only that line must be able to obey it.
-                         E.g. "We store the session JWT in an httpOnly cookie so that ..."
-  --elaboration <text>   The single plain paragraph under the H1: what must happen,
-                         to whom, and what outcomes and side effects exist.
-
-Status (default $DECISION_DEFAULT_STATUS):
-  -s, --status <status>  $(core.modules.decisions.service::statuses | paste -sd ' ' -)
-  --$DECISION_SUPERSEDED_FLAG-by <decision>
-                         record it as already replaced by another decision.
-                         The status string is built here and <decision> is
-                         checked to exist, so the link cannot be typed wrong.
-
-Section flags (derived live from $(basename -- "$DECISION_TEMPLATE")):
+Options:
+  --statement <text>           Required. The decision as a first-person rule,
+                               able to stand alone; becomes the title and the
+                               description.
+  --elaboration <text>         Required. One plain paragraph: what must happen,
+                               to whom, and with what side effects.
+  -s, --status <status>        $(core.modules.decisions.service::statuses | paste -sd ' ' -)
+                               (default: $DECISION_DEFAULT_STATUS).
+  --$DECISION_SUPERSEDED_FLAG-by <decision>   Record it as already replaced by <decision>.
 EOF
   while IFS= read -r heading; do
     key=$(framework.helpers.template::key "$heading")
     case "$(core.modules.decisions.service::kind "$key")" in
-      decision | feature)
-        printf '  --%-24s %s\n' "$key" "$heading"
-        printf '  %-26s Repeatable, one %s reference each: "2", "002", or the\n' "" "$(core.modules.decisions.service::kind "$key")"
-        printf '  %-26s file name. The link is built for you and the reference is\n' ""
-        printf '  %-26s checked to exist.\n' ""
-        ;;
-      *)
-        printf '  --%-24s %s — repeatable, one line per use.\n' "$key" "$heading"
-        ;;
+      decision | feature) printf '  --%-27s %s: a %s per use.\n' "$key <ref>" "$heading" "$(core.modules.decisions.service::kind "$key")" ;;
+      *) printf '  --%-27s %s: a line per use.\n' "$key <text>" "$heading" ;;
     esac
   done < <(framework.helpers.template::headings "$DECISION_TEMPLATE")
   cat <<EOF
+  -h, --help                   Show this help.
 
 Examples:
   bash dot decisions:create "JWT in httpOnly cookie" \\
-    --statement "We store the session JWT in an httpOnly cookie so that a XSS foothold cannot read it." \\
-    --elaboration "Every authenticated response sets the token as an httpOnly, Secure, SameSite=Lax cookie ..." \\
-    --status accepted \\
-    --influenced-by 002 \\
-    --impacts 7
+    --statement "We keep the session JWT in an httpOnly cookie." \\
+    --elaboration "Every authenticated response sets it as one." \\
+    --status accepted --influenced-by 002 --impacts 7
 
-Which sections take references and which take prose is read from the template's
-placeholders, not their names — so renaming a heading changes only the flag
-name, and the link checking follows it.
+Notes:
+  - The section flags and statuses come from the decision template.
+  - A <ref> is a number (2, 002) or a file name; it's checked to exist, and
+    its link is built for you.
 EOF
 }
 

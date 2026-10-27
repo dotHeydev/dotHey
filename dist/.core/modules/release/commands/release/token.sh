@@ -1,39 +1,32 @@
 #!/usr/bin/env bash
 
-DESCRIPTION="Store, encrypted, the personal access token a release remote pushes with."
+DESCRIPTION="Save or remove the token a release remote pushes with."
 
 dot::use framework.console.args core.modules.release.console core.modules.release.service framework.console.output framework.console.prompt
 
 usage() {
   cat <<EOF
-bash dot release:token — store the personal access token that bash dot
-release pushes to a remote with, or remove it.
-
-Give the token write access to the release repo and nothing else. It is
-asked for without echo, never taken as an argument, and stored encrypted for
-that remote's exact url: in the macOS keychain, in the desktop keyring
-(libsecret), or, where neither exists, in the git-ignored $(dot::relative "$HOST_ENV_FILE") as
-${RELEASE_TOKEN_PREFIX}<NAME>, encrypted by gpg together with the url, with a
-passphrase you choose and are asked for on every push (see --keep-tokens in
-bash dot release:push --help). Storing again replaces the token, and storing
-or removing one drops it from that cache; a changed remote url needs a new
-one.
+Asks for a remote's personal access token (never as an argument) and saves it
+encrypted for that remote's url: in the macOS keychain, the desktop keyring,
+or, without either, gpg-encrypted in $(dot::relative "$HOST_ENV_FILE") with a passphrase you choose.
 
 Usage:
-  bash dot release:token <remote>
-  bash dot release:token <remote> --remove
-  bash dot release:token --help
+  bash dot release:token <remote> [--remove]
 
 Arguments:
-  <remote>    Remote name, a key of release.remotes in
-              $(dot::relative "$SETTINGS_FILE").
+  <remote>     The remote, a key of release.remotes in $(dot::relative "$SETTINGS_FILE").
 
-Optional:
-  --remove    Remove the stored token instead.
+Options:
+  --remove     Remove its saved token instead.
+  -h, --help   Show this help.
 
 Examples:
   bash dot release:token github
   bash dot release:token github --remove
+
+Notes:
+  - Give the token write access to the release repo, and nothing else.
+  - Saving again replaces it; a changed remote url needs a new one.
 EOF
 }
 

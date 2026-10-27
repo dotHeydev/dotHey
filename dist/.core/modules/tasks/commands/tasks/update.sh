@@ -1,38 +1,38 @@
 #!/usr/bin/env bash
 
-DESCRIPTION="Change a task's title, content, or status."
+DESCRIPTION="Change a task's title, content or status."
 
 dot::use framework.console.args framework.helpers.fs framework.console.output core.modules.tasks.console core.modules.tasks.service
 
 usage() {
   core.modules.tasks.service::require_template
   cat <<USAGE
-bash dot tasks:update — change an existing task: its title, its content,
-and/or its status, in one step.
+Changes a task's title, content and status, in one step. At a terminal, with
+nothing to change given, your editor opens on its current body.
 
 Usage:
-  bash dot tasks:update <id> [<title>] [-s, --status <status>] [content] [-e, --edit | --no-edit]
-  bash dot tasks:update --help
+  bash dot tasks:update <id> [<title>] [options]
 
-<id> is what bash dot tasks:list shows (t004, #12).
+Arguments:
+  <id>                     The task, as tasks:list shows it (t004, #12).
+  <title>                  Its new title.
 
-Content, any of:
-  --body <markdown>          Replaces the whole body.
-  --body-file <path>|-       Replaces the whole body, from a file inside the project or stdin.
-  section flags              Replace that section only, the rest stays as it is.
+Options:
+  -s, --status <status>    $(core.modules.tasks.service::statuses | paste -sd ' ' -).
+  --body <markdown>        Replace the whole body.
+  --body-file <path>|-     Replace the whole body, from a project file or stdin.
 $(core.modules.tasks.console::section_flags_help)
-
-Statuses (from the template): $(core.modules.tasks.service::statuses | paste -sd ' ' -)
-
-At a terminal, with nothing to change given, your editor (\$VISUAL, \$EDITOR)
-opens on the task's current body. --edit opens it on top of the changes
-given too; --no-edit never opens it. Without a terminal (an agent, a script)
-the editor never opens.
+  -e, --edit               Open your editor on top of the changes, too.
+  --no-edit                Never open the editor.
+  -h, --help               Show this help.
 
 Examples:
   bash dot tasks:update t004 --status doing
   bash dot tasks:update t004 --done-when "- [x] lock after 5" --status done
   bash dot tasks:update '#12' "Throttle failed logins"
+
+Notes:
+  - A section flag replaces that section only; the rest stays as it is.
 USAGE
 }
 

@@ -113,3 +113,14 @@ test_a_missing_plugin_never_means_every_plugin() {
   assert_success
   assert_contains "$OUTPUT" "No plugins installed yet."
 }
+
+test_every_help_page_has_usage_and_fits_80_columns() {
+  local name long
+  while read -r name; do
+    dot "$name" --help
+    assert_success "$name --help"
+    assert_contains "$OUTPUT" "Usage:"
+    long=$(printf '%s\n' "$OUTPUT" | awk 'length($0) > 80')
+    [ -z "$long" ] || fail "$name --help has lines over 80 columns: $long"
+  done < <(dot; printf '%s\n' "$OUTPUT" | awk '/^  [a-z]+(:[a-z]+)?  / { print $1 }')
+}

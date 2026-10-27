@@ -1,25 +1,28 @@
 #!/usr/bin/env bash
 
-DESCRIPTION="List the project's tasks, filtered by status and sorted by date."
+DESCRIPTION="List the project's tasks."
 
 dot::use framework.console.args framework.helpers.fs framework.console.output core.modules.tasks.console core.modules.tasks.service framework.helpers.text
 
 usage() {
-  core.modules.tasks.service::require_template
   cat <<USAGE
-bash dot tasks:list — list the project's tasks, oldest first by default,
-in pages of $TASK_PAGE_SIZE: -n, --limit sets the page size (0 lists them all on one page),
--p, --page picks the page (1 by default).
+Lists the project's tasks, oldest first, $TASK_PAGE_SIZE to a page.
 
 Usage:
-  bash dot tasks:list [-s, --status <status>[,…]] [--sort created|updated] [--order asc|desc] [-n, --limit <n>] [-p, --page <n>]
-  bash dot tasks:list --help
+  bash dot tasks:list [options]
 
-Statuses (from the template): $(core.modules.tasks.service::statuses | paste -sd ' ' -)
+Options:
+  -s, --status <status>    Only these, comma-separated:
+                           $(core.modules.tasks.service::statuses | paste -sd ' ' -).
+  --sort <date>            created or updated (default: created).
+  --order <order>          asc or desc (default: asc).
+  -n, --limit <n>          Tasks per page (default: $TASK_PAGE_SIZE; 0 for all).
+  -p, --page <n>           The page to show (default: 1).
+  -h, --help               Show this help.
 
 Examples:
   bash dot tasks:list --status todo,doing,paused
-  bash dot tasks:list --sort updated --order desc -n 5 -p 2
+  bash dot tasks:list --sort updated --order desc -n 5
 USAGE
 }
 

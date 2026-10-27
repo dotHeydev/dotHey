@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-DESCRIPTION="Find what a decision touches: citing features, related docs, and the decisions citing it."
+DESCRIPTION="Find what a decision touches."
 
 dot::use framework.console.args core.modules.decisions.service framework.helpers.frontmatter framework.helpers.fs framework.console.output framework.helpers.record framework.helpers.text
 
@@ -9,65 +9,36 @@ IMPACT_SCOPES=" all features decisions "
 
 usage() {
   cat <<EOF
-bash dot decisions:impact — find the documented features a proposed decision would
-affect, and the existing decisions that bear on it.
-
-A decision is only safe to write down once you know what it collides with, and
-only stays trustworthy while its links still point at real files. This answers it three ways (decisions:check keeps the links honest):
-
-  <decision>    Which features cite these decisions in their "$FEATURE_DECISIONS_HEADING"
-                section? That is a declared link rather than a guess, so run it
-                first: once you know which existing decisions influence the new
-                one, the features already built against them are the ones most
-                likely to be contradicted.
-
-  --term        Which features and decisions mention these things at all? The
-                wider net for what declared links miss — nothing forces a
-                feature to cite the decision it actually depends on.
-
-  --cited-by    Which decisions point at <decision> — because it superseded
-                them, or because it shaped them? Every edge between decisions is
-                stored once, on the decision that declares it, so the reverse
-                direction is derived here rather than written into both files
-                where the two copies could disagree.
-
-They combine in one invocation. The output is bounded either way: a raw grep
-over Features/ and Decisions/ returns either everything or nothing useful, and
-reading whole feature docs to find out costs far more context than the answer
-is worth.
+Finds the features that cite decisions, the docs that mention its terms, and
+the decisions that cite it, so you know what a new decision collides with.
 
 Usage:
-  bash dot decisions:impact <decision>[,<decision>...] [--term <text>[,...]]... [--scope all|features|decisions] [--lines <n>]
-  bash dot decisions:impact --term <text>[,<text>...]... [--scope all|features|decisions] [--lines <n>]
+  bash dot decisions:impact <decision>[,...] [--term <text>[,...]]... [options]
+  bash dot decisions:impact --term <text>[,...]... [options]
   bash dot decisions:impact <decision> --cited-by
-  bash dot decisions:impact --help
 
 Arguments:
-  <decision>        Decision references, comma-separated or one per argument.
-                    Accepts "2", "002", or "d002--no-soft-deletes.md".
+  <decision>       Decisions, as 2, 002, or their file name; comma-separated or
+                   one per argument. Lists the features citing them under
+                   "$FEATURE_DECISIONS_HEADING".
 
-Optional:
-  --term <text>     Search terms, comma-separated. Repeatable.
-  --cited-by        Report the decisions listing <decision> in any of their
-                    link sections, with the section that names it.
-  --scope <what>    features | decisions | all   (default: all). Applies to
-                    the term search only.
-  --lines <n>       Matching lines to show per file (default: $IMPACT_DEFAULT_LINES, 0 for none).
+Options:
+  --term <text>    Terms to look for in features and decisions, comma-separated;
+                   repeatable. Case-insensitive, and "auth" also finds "OAuth".
+  --cited-by       List the decisions that point at <decision> instead.
+  --scope <what>   all, features or decisions (default: all), for --term.
+  --lines <n>      Matching lines shown per file (default: $IMPACT_DEFAULT_LINES; 0 for none).
+  -h, --help       Show this help.
 
 Examples:
   bash dot decisions:impact 002,005
   bash dot decisions:impact --term session,jwt,cookie --scope features
   bash dot decisions:impact 004 --cited-by
-  bash dot decisions:impact 002 --term session,jwt
 
 Notes:
-  - A decision reference is resolved against Decisions/ and must exist,
-    so a typo is reported rather than silently returning no citations.
-  - Terms match as case-insensitive literal substrings, so "auth" also hits
-    "authorize" and "OAuth". Prefer several precise terms over one broad one:
-    files are ranked by how many distinct terms they match.
-  - A file matching nothing is not listed. No output at all means the decision
-    touches nothing already documented — a real answer, and a useful one.
+  - Files are ranked by how many terms they match; prefer several precise terms.
+  - No output means nothing documented is touched: a real answer.
+  - bash dot decisions:check checks the links between decisions.
 EOF
 }
 

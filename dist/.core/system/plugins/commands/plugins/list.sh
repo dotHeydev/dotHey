@@ -1,17 +1,18 @@
 #!/usr/bin/env bash
 
-DESCRIPTION="List the installed plugins, where they came from, and their versions."
+DESCRIPTION="List the installed plugins."
 
 dot::use framework.console.args framework.console.output core.system.plugins.manifest
 
 usage() {
   cat <<USAGE
-bash dot plugins:list — list the installed plugins: <owner>/<name>, source,
-ref, and commit.
+Lists each installed plugin with its source, version and commit.
 
 Usage:
   bash dot plugins:list
-  bash dot plugins:list --help
+
+Options:
+  -h, --help   Show this help.
 USAGE
 }
 

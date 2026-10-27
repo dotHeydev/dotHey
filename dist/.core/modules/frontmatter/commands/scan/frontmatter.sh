@@ -1,40 +1,32 @@
 #!/usr/bin/env bash
 
-DESCRIPTION="Print only the frontmatter of dotdot Markdown docs."
+DESCRIPTION="Print just the frontmatter of dotdot's docs."
 
 dot::use framework.console.args framework.helpers.frontmatter framework.helpers.fs framework.console.output
 
 SCAN_MISSING_FRONTMATTER="(no frontmatter)"
 
 usage() {
-  cat <<'EOF'
-bash dot scan:frontmatter — print each *.md file's frontmatter block verbatim,
-one file at a time, without the rest of the body.
-
-Lets a skill or agent survey a directory of dotdot *.md-style files (e.g.
-Features/, Decisions/) cheaply — enough to judge relevance or
-spot duplicates without spending context on the full bodies. Read a file in
-full only once its frontmatter says it's worth it.
-
-Dumps whatever fields a file actually declares rather than picking out a
-fixed set, so files with extra keys (ignore, status, tags, ...) survey
-just as well as ones with only name/description.
+  cat <<EOF
+Prints each Markdown file's frontmatter, without its body, so a directory of
+docs can be surveyed cheaply before reading any of them in full.
 
 Usage:
   bash dot scan:frontmatter <path>
-  bash dot scan:frontmatter --help
 
 Arguments:
-  <path>        A directory: scans every *.md directly inside it, separated by a
-                rule. A Markdown file: scans just that one.
+  <path>       A directory (every *.md directly in it) or one Markdown file,
+               inside $DOTDOT_NAME/; relative to $DOTDOT_NAME/ wherever you run it.
+
+Options:
+  -h, --help   Show this help.
+
+Examples:
+  bash dot scan:frontmatter Features
+  bash dot scan:frontmatter Decisions/d002--no-soft-deletes.md
 
 Notes:
-  - A relative path is dotdot-relative, so "Features" and
-    ".dot/Features" mean the same thing from any working directory.
-    A path that resolves outside dotdot is rejected, not scanned.
-  - Output paths are printed dotdot-relative, ready to pass to another tool.
-  - A file with no frontmatter is reported as "(no frontmatter)" rather than
-    skipped, which is how you spot docs still missing one.
+  - A file without frontmatter shows as $SCAN_MISSING_FRONTMATTER.
 EOF
 }
 

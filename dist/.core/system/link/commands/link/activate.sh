@@ -1,23 +1,29 @@
 #!/usr/bin/env bash
 
-DESCRIPTION="Activate a plugin's links: move them from inactive into its own group, for bash dot link to apply."
+DESCRIPTION="Take a plugin's suggested links."
 
 dot::use framework.console.args framework.console.output core.system.link.service
 
 usage() {
   cat <<USAGE
-bash dot link:activate — take a plugin's links: move its group from "inactive"
-into "links" in $(dot::relative "$SETTINGS_FILE"), as "<owner>/<name>": {...} right before
-"inactive", where the next bash dot link applies them. Nothing is linked or
-appended here; bash dot link:deactivate moves them back.
-
-Adding or updating a plugin writes its links under "inactive" only. A group
-already active is kept unless --replace-active is given, which replaces it with the
-inactive one (after an update, to take its new links).
+Moves a plugin's links from "inactive" into its own active group in
+$(dot::relative "$SETTINGS_FILE"), where the next bash dot link applies them. It links nothing
+itself.
 
 Usage:
   bash dot link:activate <owner>/<name> [--replace-active]
-  bash dot link:activate --help
+
+Arguments:
+  <owner>/<name>     The plugin.
+
+Options:
+  --replace-active   Replace a group that is already active (after an update,
+                     to take its new links).
+  -h, --help         Show this help.
+
+Examples:
+  bash dot link:activate acme/widgets
+  bash dot link:activate acme/widgets --replace-active
 USAGE
 }
 

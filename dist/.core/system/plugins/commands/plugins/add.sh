@@ -1,50 +1,39 @@
 #!/usr/bin/env bash
 
-DESCRIPTION="Add a plugin from a GitHub repo you trust: its dotdot/ directory, its commands, skills, and context."
+DESCRIPTION="Add a plugin from a GitHub repo you trust."
 
 dot::use framework.console.args framework.console.output core.system.plugins.console core.system.plugins.manifest
 
 usage() {
   cat <<USAGE
-bash dot plugins:add — add a plugin from a GitHub repo, <owner>/<name>.
-
-Only the repo's dotdot/ folder is installed, into
-$(dot::relative "$PLUGINS_DIR")/<owner>/<name>/. Its commands run as
-bash dot <owner>:<command> (also bare, for an owner the plugins.unprefixedCommandOwners
-setting lists). It is refused when its owner is one of dotdot's
-own command names or when another plugin has one of its commands; a skill or
-agent with the name of dotdot's or another plugin's is only reported, the
-first declared linking wherever both go. Its code loads as
-plugins.<owner>.<name>.*.
-
-Plugins are not vetted by anyone: you decide whom to trust. Everything the
-plugin brings is previewed, scripts flagged, and nothing changes until you
-confirm at a terminal. -y, --yes skips the question, but still needs a
-terminal, so no agent or script can add a plugin.
-
-Adding creates, links, and appends nothing: dependencies are reported, never
-installed, and what it suggests is written into the links of
-$(dot::relative "$SETTINGS_FILE") under "inactive", never applied. They are its plugin.json "link" and
-"append", plus, for each of its folders no origin there lies in, what
-dotdot finds: skills/ and agents/ into .agents/skills/ and .agents/agents/,
-context/*.md appended to dotdot's docs, and stubs/*.stub appended to the
-project. Take them with bash dot link:activate <owner>/<name>, then run bash dot link.
-
-Private repos need gh logged in, or DOT_GH_TOKEN in $(dot::relative "$HOST_ENV_FILE").
+Installs the repo's $PLUGIN_ROOT/ directory into $(dot::relative "$PLUGINS_DIR")/<owner>/<name>/,
+after previewing every file and asking. Nothing gets linked: its links wait
+in $(dot::relative "$SETTINGS_FILE") under "inactive" until you take them.
 
 Usage:
-  bash dot plugins:add <owner>/<name>[@<version>] [--from <directory>] [-y, --yes]
-  bash dot plugins:add --help
+  bash dot plugins:add <owner>/<name>[@<version>] [options]
 
-The <version> (a branch, tag, or commit) defaults to $PLUGIN_DEFAULT_REF. --from takes a
-local copy of the repo inside the project, for developing a plugin: a git
-repo of its own is installed as committed at the ref (its current branch by
-default), and its commit recorded, as for GitHub; any other folder as it is
-on disk.
+Arguments:
+  <owner>/<name>       The plugin's GitHub repo.
+  @<version>           A branch, tag or commit (default: $PLUGIN_DEFAULT_REF).
+
+Options:
+  --from <directory>   Install from a local copy inside the project, to develop
+                       a plugin: as committed when it's a git repo, else as is.
+  -y, --yes            Add without asking. It still needs a terminal.
+  -h, --help           Show this help.
 
 Examples:
   bash dot plugins:add acme/laravel
   bash dot plugins:add acme/svelte@v1.0.0
+  bash dot plugins:add acme/widgets --from ./widgets
+
+Notes:
+  - Plugins aren't vetted by anyone: only add one whose source you trust.
+  - Its commands run as bash dot <owner>:<command>. A plugin whose owner is a
+    dotdot command name, or whose commands are taken, is refused.
+  - Private repos need gh signed in, or DOT_GH_TOKEN in $(dot::relative "$HOST_ENV_FILE").
+  - Next: bash dot link:activate <owner>/<name>, then bash dot link.
 USAGE
 }
 

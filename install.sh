@@ -59,7 +59,7 @@ main() {
   printf "   → Tell your coding agent that you're using %s and it'll take it from there.\n" "$name"
   printf "     Or fill in your project's context manually in %s%s/%s.\n" "$BOLD" "$DOTDOT_DIR" "$RESET"
   printf '   → Using Claude Code? %sbash %s plugins:add dotdot-sh/claude-code%s\n' "$BOLD" "$ENTRY_LINK" "$RESET"
-  printf '   → All commands: %sbash %s%s\n' "$BOLD" "$ENTRY_LINK" "$RESET"
+  printf '   → See all commands: %sbash %s%s\n' "$BOLD" "$ENTRY_LINK" "$RESET"
   printf '\n%s🚀 Build something amazing!%s\n\n' "$BOLD" "$RESET"
 }
 

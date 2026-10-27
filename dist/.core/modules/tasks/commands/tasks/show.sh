@@ -1,23 +1,26 @@
 #!/usr/bin/env bash
 
-DESCRIPTION="Show one task, frontmatter and body, in less or printed."
+DESCRIPTION="Show a task."
 
 dot::use framework.console.args framework.helpers.fs framework.console.output core.modules.tasks.console core.modules.tasks.service framework.console.terminal
 
 usage() {
   cat <<USAGE
-bash dot tasks:show — show one task: a frontmatter built from its fields
-(id, title, status, created, updated), then its body. The same shape whichever
-service keeps the tasks.
-
-At a terminal it opens in less; anywhere else (an agent, a script) it is
-printed between two full-width rules. --no-pager prints at a terminal too.
+Shows a task as Markdown: its fields as frontmatter, then its body. At a
+terminal it opens in less; anywhere else it's printed.
 
 Usage:
   bash dot tasks:show <id> [--no-pager]
-  bash dot tasks:show --help
 
-<id> is what bash dot tasks:list shows (t004, #12).
+Arguments:
+  <id>                     The task, as tasks:list shows it (t004, #12).
+
+Options:
+  --no-pager               Print it, even at a terminal.
+  -h, --help               Show this help.
+
+Examples:
+  bash dot tasks:show t004
 USAGE
 }
 

@@ -1,39 +1,33 @@
 #!/usr/bin/env bash
 
-DESCRIPTION="Change a decision's status and refresh its timestamp."
+DESCRIPTION="Change a decision's status."
 
 dot::use framework.console.args core.modules.decisions.console core.modules.decisions.service framework.helpers.frontmatter framework.console.output
 
 usage() {
   cat <<EOF
-bash dot decisions:update — set an existing decision's status and refresh its
-"modified" timestamp in one step.
-
-The timestamp is not a flag: it is the whole reason this exists rather than
-being left to a hand edit, so it is always set to now.
+Sets a decision's status and refreshes its "modified" date, in one step.
 
 Usage:
   bash dot decisions:update <decision> <status>
   bash dot decisions:update <decision> $DECISION_SUPERSEDED_FLAG --by <decision>
-  bash dot decisions:update --help
 
 Arguments:
-  <decision>         The decision to update. Accepts "2", "002", or
-                     "d002--no-soft-deletes.md" — whichever you have to hand.
-  <status>           $(core.modules.decisions.service::statuses | paste -sd ' ' -), or $DECISION_SUPERSEDED_FLAG.
+  <decision>        The decision, as 2, 002, or its file name.
+  <status>          $(core.modules.decisions.service::statuses | paste -sd ' ' -), or $DECISION_SUPERSEDED_FLAG.
 
-Optional:
-  --by <decision>    With $DECISION_SUPERSEDED_FLAG: the decision that replaces it, in any of
-                     the forms above. The status string — "superseded by
-                     [dNNN](dNNN--slug.md)" — is built here, and <decision> is
-                     checked to exist, so the link cannot be typed wrong.
+Options:
+  --by <decision>   With $DECISION_SUPERSEDED_FLAG: the decision that replaces it (checked
+                    to exist; the link is built for you).
+  -h, --help        Show this help.
 
 Examples:
   bash dot decisions:update 002 accepted
   bash dot decisions:update 002 $DECISION_SUPERSEDED_FLAG --by 007
 
-Only the status and the timestamp change. To edit a decision's prose, edit the
-file directly — and bump "modified" yourself if you do.
+Notes:
+  - Only the status and the date change. To change the prose, edit the file
+    and bump "modified".
 EOF
 }
 

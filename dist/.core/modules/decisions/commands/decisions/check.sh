@@ -1,21 +1,19 @@
 #!/usr/bin/env bash
 
-DESCRIPTION="Check that every link between decisions resolves to a decision that exists."
+DESCRIPTION="Check that every link between decisions resolves."
 
 dot::use framework.console.args core.modules.decisions.service framework.console.output framework.helpers.text
 
 usage() {
   cat <<EOF
-bash dot decisions:check — check that every reference in every decision
-resolves to a file that exists, including the "superseded by" link in a status.
-
-Links are written once and read for years; a rename or a deletion turns them
-into dead ends that nothing else notices. It exits non-zero when any is broken,
-so it can gate a commit.
+Checks every reference in every decision, the "superseded by" link included,
+and exits non-zero when any is broken, so it can gate a commit.
 
 Usage:
   bash dot decisions:check
-  bash dot decisions:check --help
+
+Options:
+  -h, --help   Show this help.
 EOF
 }
 

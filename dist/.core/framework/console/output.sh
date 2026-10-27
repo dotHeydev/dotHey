@@ -100,6 +100,38 @@ framework.console.output::line() {
   framework.console.output::emit 1 "$*"
 }
 
+# A help page on stdin, styled at a terminal: section headings bold, the
+# options and arguments column cyan, and commands, paths, and values as every
+# line is.
+framework.console.output::help() {
+  if ! framework.console.output::paints 1; then
+    cat
+    return
+  fi
+  awk -f "$OUTPUT_HIGHLIGHTER" | awk -v bold="$(framework.console.output::style_code bold)" -v cyan="$(framework.console.output::style_code cyan)" -v reset="$(framework.console.output::style_code reset)" '
+    /^[A-Z][A-Za-z ()".,-]*:$/ { print bold $0 reset; next }
+    /^  (-|<|@)/ {
+      rest = substr($0, 3)
+      split_at = index(rest, "  ")
+      if (split_at == 0) { print "  " cyan rest reset; next }
+      print "  " cyan substr(rest, 1, split_at - 1) reset substr(rest, split_at)
+      next
+    }
+    { print }
+  '
+}
+
+# One row of a help page's options: <option> in a column <width> wide, then
+# <text>, or on the next line when <option> doesn't fit.
+framework.console.output::option() {
+  local option="$1" text="$2" width="$3"
+  if [ "${#option}" -lt "$width" ]; then
+    printf '  %-*s%s\n' "$width" "$option" "$text"
+  else
+    printf '  %s\n  %-*s%s\n' "$option" "$width" "" "$text"
+  fi
+}
+
 framework.console.output::newline() {
   printf '\n'
 }

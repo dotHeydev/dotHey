@@ -1,24 +1,27 @@
 #!/usr/bin/env bash
 
-DESCRIPTION="Remove a plugin: its files, lock entry, links, and appends; what is left of it is listed for you to review."
+DESCRIPTION="Remove a plugin and everything it linked."
 
 dot::use framework.console.args framework.console.output framework.console.prompt core.system.plugins.console core.system.plugins.manifest core.system.plugins.service
 
 usage() {
   cat <<USAGE
-bash dot plugins:remove — remove a plugin: $(dot::relative "$PLUGINS_DIR")/<owner>/<name>/,
-its lock entry, its entries in the links of $(dot::relative "$SETTINGS_FILE") (active and
-inactive), its links, and what it appended (the regions between its markers, in
-the files the links append to). The rest is listed for you to review and remove
-yourself: the directories it created that still hold records, its settings
-(plugins.<owner>/<name> in $(dot::relative "$SETTINGS_FILE")), and its secrets
-(DOT_<OWNER>_<NAME>__* in $(dot::relative "$HOST_ENV_FILE")). Empty directories it created are removed.
-
-Needs a y on a terminal (piped input is refused).
+Removes the plugin's files and lock entry, its links in $(dot::relative "$SETTINGS_FILE"),
+everything it linked, and the sections it appended. Its settings, secrets and
+records are listed for you to review.
 
 Usage:
   bash dot plugins:remove <owner>/<name> [-y, --yes]
-  bash dot plugins:remove --help
+
+Arguments:
+  <owner>/<name>   The plugin.
+
+Options:
+  -y, --yes        Remove without asking. It still needs a terminal.
+  -h, --help       Show this help.
+
+Examples:
+  bash dot plugins:remove acme/widgets
 USAGE
 }
 

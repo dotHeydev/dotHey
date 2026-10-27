@@ -1,21 +1,26 @@
 #!/usr/bin/env bash
 
-DESCRIPTION="Delete a task for good, after a confirmation at a terminal."
+DESCRIPTION="Delete a task for good."
 
 dot::use framework.console.args framework.helpers.fs framework.console.output framework.console.prompt core.modules.tasks.console core.modules.tasks.service
 
 usage() {
   cat <<USAGE
-bash dot tasks:delete — delete a task for good. It asks for confirmation at
-a terminal (piped input is refused), so only a person can delete; moving a
-task to done or discarded (bash dot tasks:update <id> --done) is the usual
-way to end it.
+Deletes a task for good, after asking at a terminal. Moving it to done or
+discarded is the usual way to end one.
 
 Usage:
   bash dot tasks:delete <id> [-y, --yes]
-  bash dot tasks:delete --help
 
--y, --yes deletes without asking; it still needs a terminal.
+Arguments:
+  <id>                     The task, as tasks:list shows it (t004, #12).
+
+Options:
+  -y, --yes                Delete without asking. It still needs a terminal.
+  -h, --help               Show this help.
+
+Examples:
+  bash dot tasks:delete t004
 USAGE
 }
 

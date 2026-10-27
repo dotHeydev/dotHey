@@ -1,43 +1,39 @@
 #!/usr/bin/env bash
 
-DESCRIPTION="Create a task from the task template, in the selected task service."
+DESCRIPTION="Create a task."
 
 dot::use framework.console.args framework.helpers.fs framework.console.output framework.console.prompt core.modules.tasks.console core.modules.tasks.service framework.helpers.text
 
 usage() {
   core.modules.tasks.service::require_template
   cat <<USAGE
-bash dot tasks:create — create a task in the project's task service (plain
-files in $(dot::relative "$TASKS_DIR")/, GitHub issues, ...), with its body built from the
-task template.
+Creates a task in the project's task service, its body built from the task
+template. At a terminal, a missing title is asked for, and your editor opens
+when no content is given.
 
 Usage:
-  bash dot tasks:create [<title>] [-s, --status <status>] [content] [-e, --edit | --no-edit]
-  bash dot tasks:create --help
+  bash dot tasks:create [<title>] [options]
 
-Content, any of:
-  --body <markdown>          The whole body, as text.
-  --body-file <path>|-       The whole body, from a file inside the project or stdin.
-  section flags              One template section each; on top of --body or
-                             --body-file when given. Sections left out read "None".
+Arguments:
+  <title>                  One line. Required without a terminal.
+
+Options:
+  -s, --status <status>    $(core.modules.tasks.service::statuses | paste -sd ' ' -) (default: $(core.modules.tasks.service::default_status)).
+  --body <markdown>        The whole body.
+  --body-file <path>|-     The whole body, from a project file or stdin.
 $(core.modules.tasks.console::section_flags_help)
-
-Statuses (from the template): $(core.modules.tasks.service::statuses | paste -sd ' ' -); new tasks are $(core.modules.tasks.service::default_status).
-
-At a terminal, a missing title is asked for, and with no content given your
-editor (\$VISUAL, \$EDITOR) opens on the template, guidance included.
---edit opens it on whatever was given too; --no-edit never opens it.
-Without a terminal (an agent, a script) the editor never opens and <title>
-is required. On first use it runs tasks:initialize, which needs a terminal.
+  -e, --edit               Open your editor on what was given, too.
+  --no-edit                Never open the editor.
+  -h, --help               Show this help.
 
 Examples:
-  bash dot tasks:create "Throttle failed logins on the login route" \\
-    --description "Brute-force attempts are not throttled." \\
-    --done-when "- [ ] 5 failed attempts lock the route for a minute" \\
-    --related-features "f012--auth-login.md"
-  bash dot tasks:create "Rewrite the README" --body "## Description
+  bash dot tasks:create "Throttle failed logins" \\
+    --description "Brute-force attempts aren't throttled." \\
+    --done-when "- [ ] 5 failed attempts lock the route for a minute"
+  bash dot tasks:create "Rewrite the README" --status doing
 
-Make it shorter."
+Notes:
+  - Sections left out read "None"; a section flag goes on top of --body.
 USAGE
 }
 

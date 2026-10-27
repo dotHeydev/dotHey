@@ -1,28 +1,34 @@
 #!/usr/bin/env bash
 
-DESCRIPTION="Update installed plugins from where they were added, after a review."
+DESCRIPTION="Update a plugin, after a review."
 
 dot::use framework.console.args framework.console.output core.system.plugins.console core.system.plugins.manifest
 
 usage() {
   cat <<USAGE
-bash dot plugins:update — update a plugin, or every installed one (--all), from the
-repo and ref it was added from (or its local --from directory).
-
-An update brings new code from the plugin's author, so it gets the same
-warning and review as plugins:add: changed, added, and removed files are
-listed, scripts flagged, and nothing changes until you confirm at a terminal.
--y, --yes skips the question but still needs a terminal.
-
-Its files are replaced, and its block in the links of $(dot::relative "$SETTINGS_FILE") is
-written afresh under "inactive"; its active group stays as it is. Take the new
-links with bash dot link:activate <owner>/<name> --replace-active, then run bash dot
-link.
+Updates a plugin from where it was added, after previewing what changes and
+asking, like plugins:add. Its new links go under "inactive"; the active ones
+stay as they are.
 
 Usage:
   bash dot plugins:update <owner>/<name> [-y, --yes]
   bash dot plugins:update --all [-y, --yes]
-  bash dot plugins:update --help
+
+Arguments:
+  <owner>/<name>   The plugin.
+
+Options:
+  --all            Update every installed plugin, each reviewed in turn.
+  -y, --yes        Update without asking. It still needs a terminal.
+  -h, --help       Show this help.
+
+Examples:
+  bash dot plugins:update acme/widgets
+  bash dot plugins:update --all
+
+Notes:
+  - Take the new links: bash dot link:activate <owner>/<name> --replace-active,
+    then bash dot link.
 USAGE
 }
 

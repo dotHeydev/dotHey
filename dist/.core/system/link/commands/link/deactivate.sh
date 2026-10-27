@@ -1,22 +1,27 @@
 #!/usr/bin/env bash
 
-DESCRIPTION="Deactivate a plugin's links: move its group back under inactive, so bash dot link no longer applies them."
+DESCRIPTION="Set a plugin's links aside."
 
 dot::use framework.console.args framework.console.output core.system.link.service
 
 usage() {
   cat <<USAGE
-bash dot link:deactivate — the opposite of link:activate: move a plugin's
-group from "links" back to the end of "inactive" in $(dot::relative "$SETTINGS_FILE"), where
-bash dot link no longer applies it. Nothing is unlinked here: what it linked
-stays until you remove it ("remove") or it breaks and the next run prunes it.
-
-Inactive links already there are kept unless --replace-inactive is given, which
-replaces them with the active group.
+Moves a plugin's active links back under "inactive" in $(dot::relative "$SETTINGS_FILE"),
+so bash dot link no longer applies them. What they already linked stays until
+you remove it.
 
 Usage:
   bash dot link:deactivate <owner>/<name> [--replace-inactive]
-  bash dot link:deactivate --help
+
+Arguments:
+  <owner>/<name>       The plugin.
+
+Options:
+  --replace-inactive   Replace the inactive links already there.
+  -h, --help           Show this help.
+
+Examples:
+  bash dot link:deactivate acme/widgets
 USAGE
 }
 

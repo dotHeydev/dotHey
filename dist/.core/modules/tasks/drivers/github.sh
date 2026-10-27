@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-DESCRIPTION="GitHub issues labelled \"task\", through gh or, with DOT_GH_TOKEN, GitHub's API."
+DESCRIPTION="GitHub issues with the task label, through gh or DOT_GH_TOKEN."
 
 dot::use framework.helpers.date framework.helpers.json framework.integrations.github.service
 

@@ -2,7 +2,7 @@
 
 dot::use framework.console.output
 
-KERNEL_COLUMN_WIDTH=26
+KERNEL_COLUMN_WIDTH=18
 KERNEL_FILE=""
 KERNEL_UNPREFIXED_SETTING="plugins.unprefixedCommandOwners"
 KERNEL_UNPREFIXED=""
@@ -132,25 +132,31 @@ kernel::description() {
   sed -n 's/^DESCRIPTION="\(.*\)"$/\1/p' "$1" | head -n 1
 }
 
+# Every command with its description, grouped by namespace.
 kernel::list() {
   local name file namespace previous=""
-  framework.console.output::line "$(framework.console.output::paint bold dotdot)"
-  framework.console.output::newline
-  framework.console.output::line "$(framework.console.output::paint yellow Usage:)"
-  framework.console.output::line "  bash dot <command> [arguments]"
-  framework.console.output::line "  bash dot help <command>"
-  framework.console.output::newline
-  framework.console.output::line "$(framework.console.output::paint yellow 'Commands:')"
-  while IFS='|' read -r name file; do
-    namespace="${name%%:*}"
-    if [ "$name" != "$namespace" ] && [ "$namespace" != "$previous" ]; then
-      framework.console.output::line " $(framework.console.output::paint yellow "$namespace")"
-    fi
-    previous="$namespace"
-    printf '  %s %s\n' "$(framework.console.output::paint green "$(printf "%-${KERNEL_COLUMN_WIDTH}s" "$name")")" "$(kernel::description "$file")"
-  done < <(kernel::commands | awk -F'|' '{ print ($1 ~ /:/ ? 1 : 0) "|" $0 }' | sort | cut -d'|' -f2-)
-  framework.console.output::newline
-  framework.console.output::line "Add --help to any command for details."
+  {
+    cat <<EOF
+dotdot: the context, rules, and tools your coding agents work by.
+
+Usage:
+  bash dot <command> [arguments]
+  bash dot <command> --help
+
+Commands:
+EOF
+    while IFS='|' read -r name file; do
+      namespace="${name%%:*}"
+      [ "$name" = "$namespace" ] || [ "$namespace" = "$previous" ] || printf '\n'
+      previous="$namespace"
+      printf '  %-*s %s\n' "$KERNEL_COLUMN_WIDTH" "$name" "$(kernel::description "$file")"
+    done < <(kernel::commands | awk -F'|' '{ print ($1 ~ /:/ ? 1 : 0) "|" $0 }' | sort | cut -d'|' -f2-)
+    cat <<EOF
+
+Options:
+  --agent   Plain output for AI agents (automatic under AI_AGENT or CLAUDECODE).
+EOF
+  } | framework.console.output::help
 }
 
 # The command closest to <name> (at most 2 edits away), or nothing.
@@ -213,7 +219,7 @@ kernel::run() {
   set -- ${arguments[@]+"${arguments[@]}"}
   case "${1-}" in
     -h | --help)
-      usage
+      usage | framework.console.output::help
       return 0
       ;;
   esac

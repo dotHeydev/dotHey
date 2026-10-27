@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-DESCRIPTION="Plain Markdown files in dotdot's Tasks/ directory (t001--slug.md)."
+DESCRIPTION="Plain Markdown files in .dot/Tasks/ (t001--slug.md)."
 
 dot::use framework.helpers.date framework.helpers.frontmatter framework.helpers.fs framework.helpers.record framework.helpers.text
 

@@ -1,49 +1,41 @@
 #!/usr/bin/env bash
 
-DESCRIPTION="Create a new feature from the feature template."
+DESCRIPTION="Document a new feature from the template."
 
 dot::use framework.console.args core.modules.features.service framework.helpers.fs framework.console.output framework.helpers.template framework.helpers.text
 
 usage() {
   local heading key
   cat <<EOF
-bash dot features:create — create a new feature file in Features/ from the
-bundled feature template, numbering and naming it automatically.
-
-The template ($(dot::relative "$FEATURE_TEMPLATE")) is the
-single source of truth: this command reads it at run time and derives one
-flag per section from its headings, so adding a section there makes the flag
-appear here with nothing to keep in sync by hand. It also scans
-Features/ for the highest existing number and takes the next one —
-which is why the filename and number are never to be constructed by hand.
+Creates the next numbered feature in Features/ from the feature template;
+one flag per template section, and sections left out read "None". To change
+it afterwards, edit its file.
 
 Usage:
   bash dot features:create <name> --description <text> [--<section> <text>]...
-  bash dot features:create --help
 
-Every flag but --description is optional; sections left unset
-are written as "None", the convention for a section with nothing relevant in
-it. This command only creates — to change an existing feature, edit its file
-directly, preserving its frontmatter name and number.
+Arguments:
+  <name>                         The feature's name; becomes its file name.
 
-Required:
-  <name>                 Feature name/title — becomes the file's slug and frontmatter name.
-  --description <text>   One-line summary — used as the frontmatter description and the Description section.
-
-Section flags (derived live from $(basename -- "$FEATURE_TEMPLATE")):
+Options:
+  --description <text>           Required. A one-line summary.
 EOF
   while IFS= read -r heading; do
     key=$(framework.helpers.template::key "$heading")
     [ "$key" != "$FEATURE_DESCRIPTION_KEY" ] || continue
-    printf '  --%-28s %s\n' "$key" "$heading"
+    printf '  --%-29s %s\n' "$key <text>" "$heading"
   done < <(framework.helpers.template::headings "$FEATURE_TEMPLATE")
   cat <<EOF
+  -h, --help                     Show this help.
 
 Examples:
   bash dot features:create "Password reset" \\
-    --description "Lets a user reset a forgotten password via an emailed link." \\
-    --specification "Given a registered user ... When ... Then ..." \\
-    --related-features "7"
+    --description "Lets a user reset a forgotten password by email." \\
+    --specification "Given a registered user… When… Then…" \\
+    --related-features 7
+
+Notes:
+  - The section flags come from the feature template.
 EOF
 }
 

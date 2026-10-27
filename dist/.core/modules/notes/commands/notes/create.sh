@@ -1,32 +1,27 @@
 #!/usr/bin/env bash
 
-DESCRIPTION="Create a new, empty note in Notes/ with the next number."
+DESCRIPTION="Create a new, numbered note."
 
 dot::use framework.console.args core.modules.notes.service framework.console.output framework.helpers.text
 
 usage() {
   cat <<EOF
-bash dot notes:create — create a new, empty note file in Notes/, numbering
-and naming it automatically.
-
-It scans Notes/ for the highest existing number and takes the next one —
-which is why the filename and number are never to be constructed by hand.
-The file is created empty; write the note into it afterwards.
+Creates the next numbered, empty note in Notes/; write the note into it
+afterwards.
 
 Usage:
   bash dot notes:create [<name>]
-  bash dot notes:create --help
 
 Arguments:
-  <name>   Short name for the file, turned into a slug ("Cache idea"
-           becomes "cache-idea"). Without one, a random one is picked
-           ("swift-otter").
+  <name>       A short name for the file ("Cache idea" becomes cache-idea).
+               Without one, it gets a random one, like swift-otter.
+
+Options:
+  -h, --help   Show this help.
 
 Examples:
-  bash dot notes:create
-    → Notes/${NOTE_PREFIX}004${RECORD_SEPARATOR}swift-otter.md
   bash dot notes:create "Cache idea"
-    → Notes/${NOTE_PREFIX}004${RECORD_SEPARATOR}cache-idea.md
+  bash dot notes:create
 EOF
 }
 

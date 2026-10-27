@@ -1,49 +1,36 @@
 #!/usr/bin/env bash
 
-DESCRIPTION="Push the release repo to its remotes, each with its own stored access token."
+DESCRIPTION="Push the release to its remotes."
 
 dot::use framework.console.args core.modules.release.console core.modules.release.service framework.console.output framework.console.prompt
 
 usage() {
   cat <<EOF
-bash dot release:push — push the release repo's branch and all its tags to the
-configured remotes. bash dot release:create ends with it; run it alone to retry or
-finish a push.
-
-Each remote is pushed over https with the personal access token stored for
-it (bash dot release:token <remote>); no other credential is used. It asks,
-remote by remote, whether to push (default no); without a terminal it pushes
-only to the remotes given, or every one with --all.
+Pushes the release repo's branch and tags, asking remote by remote; use it to
+retry or finish what release:create started. Each remote uses its own token.
 
 Usage:
-  bash dot release:push [<remote>...] [--all] [--keep-tokens <minutes>] [-f, --force]
-  bash dot release:push --help
+  bash dot release:push [<remote>...] [--all] [options]
 
 Arguments:
-  <remote>              Push to that remote without asking. Repeatable, or
-                        comma-separated. Remote names are the keys of
-                        release.remotes.
+  <remote>                  Push to that remote without asking; repeatable or
+                            comma-separated. Names are release.remotes' keys.
 
-Optional:
-  --all                 Push to every configured remote without asking.
-  -f, --force           Force push, overwriting the remotes' branch and tags.
-                        Asks first ([y/N]: only y or yes goes ahead), and only
-                        at a terminal.
-  --keep-tokens <minutes>
-                        Keep the decrypted tokens in memory for that many
-                        minutes from now, so pushes until then ask no
-                        passphrase; given again, the minutes restart. 0 forgets
-                        them. By default nothing is kept.
-
-Settings, from $(dot::relative "$SETTINGS_FILE") (see bash dot release:create --help):
-  release.destination  release repo directory, from the project root
-  release.branch       branch in the release repo
-  release.remotes      {<name>: <https url>}, at least one
+Options:
+  --all                     Push to every remote without asking.
+  --keep-tokens <minutes>   Keep the unlocked tokens that many minutes (0
+                            forgets them).
+  -f, --force               Force-push, replacing the remotes' history. Asks
+                            first, and only at a terminal.
+  -h, --help                Show this help.
 
 Examples:
   bash dot release:push
   bash dot release:push github
-  bash dot release:push github --keep-tokens 15
+  bash dot release:push --all --keep-tokens 15
+
+Notes:
+  - Without a terminal it pushes only to the remotes given, or all with --all.
 EOF
 }
 

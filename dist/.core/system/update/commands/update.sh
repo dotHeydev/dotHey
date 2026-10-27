@@ -1,42 +1,30 @@
 #!/usr/bin/env bash
 
-DESCRIPTION="Update dotdot's core (.core/) to the latest dotdot; plugins and context files are untouched."
+DESCRIPTION="Update dotdot's core to its latest version."
 
 dot::use framework.console.args framework.helpers.fs framework.console.output framework.console.prompt core.system.update.service
 
 usage() {
   cat <<EOF
-bash dot update — update dotdot's core ($DOTDOT_NAME/${UPDATE_TREES[0]}/) to the latest dotdot, downloaded from
-$UPDATE_REPOSITORY_URL ($UPDATE_BRANCH), then optionally run bash dot link.
-
-Plugins ($(dot::relative "$PLUGINS_DIR")/) are left to bash dot plugins:update.
-Every context file (AGENTS.md, RULES.md, PRODUCT.md, Features/, Decisions/,
-Notes/, USER.md, …) is never read or written.
-
-$UPDATE_VERSION_SETTING in $(dot::relative "$SETTINGS_FILE") holds the commit dotdot was
-last installed or updated from. The update fetches that commit and the latest
-one with git (only those two, into a temporary repo nothing of yours touches),
-shows both, asks, and:
-  - copies every file of the latest commit over dotdot's
-  - removes a file only when it existed at the recorded commit and no longer
-    exists at the latest (a move counts as removed here, added there). A
-    removed file that was edited locally is kept and reported, never deleted
-  - leaves every other file alone: your own skills, agents, and scripts
-  - records the latest commit, only once everything else succeeded
-
-Without a recorded version, or with a recorded commit the public repo doesn't
-have, nothing is removed: files the latest commit lacks are listed for you to
-review instead.
-
--y, --yes answers yes to the update's own question; link is still asked,
-since it changes files outside dotdot.
-
-Every run needs a terminal (piped input is refused), --yes included, so only a
-person can start an update.
+Updates dotdot's core ($(dot::relative "$CORE_DIR")/) from
+$UPDATE_REPOSITORY_URL ($UPDATE_BRANCH), after showing both
+versions and asking. Plugins and your context files are never touched; then
+it offers to run bash dot link.
 
 Usage:
   bash dot update [-y, --yes]
-  bash dot update --help
+
+Options:
+  -y, --yes    Update without asking (bash dot link still asks). It still needs
+               a terminal.
+  -h, --help   Show this help.
+
+Notes:
+  - A file is deleted only when the installed version had it and the latest
+    doesn't; one you edited is kept and listed.
+  - Without a known installed version ($UPDATE_VERSION_SETTING in $(dot::relative "$SETTINGS_FILE")), nothing
+    is deleted: the files the latest no longer has are listed instead.
+  - Plugins update with bash dot plugins:update.
 EOF
 }
 

@@ -1,32 +1,27 @@
 #!/usr/bin/env bash
 
-DESCRIPTION="Bring dotdot's own files (the link map, the plugins lock) up to this version's format."
+DESCRIPTION="Upgrade dotdot's own files to this version's format."
 
 dot::use framework.console.args framework.console.output framework.console.prompt framework.helpers.json framework.helpers.text
 
 usage() {
   cat <<USAGE
-bash dot $DOT_COMMAND — run the migrations still pending: each moves or
-converts a file dotdot keeps (in $(dot::relative "$DOTDOT_ROOT")/) from an older version's
-format into this one's. They live in $(dot::relative "$SYSTEM_DIR")/migrations/,
-one per file, and run in order. state.migrations in $(dot::relative "$SETTINGS_FILE") lists those
-applied; a migration it doesn't list is pending (all of them when it is
-missing, as in an install from before migrations; the installer lists every
-one).
-
-While one is pending, every other command but update stops and asks for this
-one, so nothing reads a file in a format it no longer knows. bash dot update
-offers to run it afterwards.
-
-Previews what would run, then asks [y/N] at a terminal; -y, --yes skips the question
-at a terminal or when dotdot itself makes the call.
-
---if-pending prints nothing when there is nothing to migrate; bash dot
-update calls it right after updating the core.
+Runs the migrations still pending, in order: each converts a file dotdot keeps
+in $DOTDOT_NAME/ from an older format. While one is pending, every command but
+update asks for this one first.
 
 Usage:
-  bash dot $DOT_COMMAND [-y, --yes] [--if-pending]
-  bash dot $DOT_COMMAND --help
+  bash dot migrate [-y, --yes] [--if-pending]
+
+Options:
+  -y, --yes      Run without asking. Only at a terminal, or when dotdot itself
+                 runs it.
+  --if-pending   Print nothing when there is nothing to migrate (bash dot
+                 update uses it).
+  -h, --help     Show this help.
+
+Notes:
+  - state.migrations in $(dot::relative "$SETTINGS_FILE") lists the migrations applied.
 USAGE
 }
 

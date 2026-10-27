@@ -1,72 +1,51 @@
 #!/usr/bin/env bash
 
-DESCRIPTION="Export the project minus an exclude list and make a signed release commit in a separate repo."
+DESCRIPTION="Make a signed release commit in the release repo."
 
 dot::use framework.console.args core.modules.release.console core.modules.release.service framework.console.output framework.console.prompt
 
 usage() {
   cat <<EOF
-bash dot release:create — prepare one signed release commit, tagged v<version>, in
-a separate release repo, so the public history holds release commits and
-nothing else.
-
-Every file tracked in HEAD is exported except the paths release.exclude
-lists. Git-ignored files are left out, unless the list names one with a
-leading "!" (a build you made, e.g. !dist): that one is copied from disk.
-The project's .env never ships.
-It runs no project commands (no build, test, or install), so it works the
-same for any project: build and test in your own workflow first. It refuses on
-uncommitted changes in what it ships (changes elsewhere don't count), a missing or mismatched signing key, anything that looks like a
-secret, or a remote --push names that has no token stored. Then it asks,
-remote by remote, whether to push (default no); without a terminal it pushes
-only where --push or --push-all says so. bash dot release:push pushes the same way later.
-Each remote is pushed over https with its own personal access token, stored
-encrypted with bash dot release:token <remote>.
+Exports every file committed in HEAD, minus release.exclude, into the release
+repo as one signed commit tagged v<version>; then asks, remote by remote,
+whether to push. It runs no build or tests: do those first.
 
 Usage:
-  bash dot release:create <version> [--push <remote>]... [--push-all] [--keep-tokens <minutes>] [-f, --force]
-  bash dot release:create --help
+  bash dot release:create <version> [--push <remote>]... [--push-all] [options]
 
 Arguments:
-  <version>   Semantic version, e.g. 1.2.0 or 1.2.0-rc.1.
+  <version>                 A semantic version, like 1.2.0 or 1.2.0-rc.1.
 
-Optional:
-  --push <remote>       Push to that remote without asking, e.g. --push github.
-                        Repeatable, or comma-separated. Remote names are the
-                        keys of release.remotes.
-  --push-all            Push to every configured remote without asking.
-  -f, --force           Force push, overwriting the remotes' branch and tags.
-                        Asks first ([y/N]: only y or yes goes ahead), and only
-                        at a terminal.
-  --keep-tokens <minutes>
-                        Keep the decrypted tokens in memory for that many
-                        minutes from now, so pushes until then ask no
-                        passphrase; given again, the minutes restart. 0 forgets
-                        them. By default nothing is kept.
-
-Settings, from $(dot::relative "$SETTINGS_FILE") (over dotdot's defaults); any value may be
-"@env:<KEY>" to read it from $(dot::relative "$HOST_ENV_FILE"):
-  release.destination  release repo directory, from the project root
-  release.exclude      paths left out, from the project root; "!path" includes a
-                       git-ignored path (from .env, a JSON list)
-  release.branch       branch in the release repo
-  release.remotes      {<name>: <https url>}, at least one
-  release.signingKey   private SSH key file name in \$HOME/.ssh/; its .pub sits next to it
-  release.authorName   name on the release commits
-  release.authorEmail  email on the release commits; must belong to the account holding
-                       the signing key for GitHub to show "Verified"
-
-Secrets, from $(dot::relative "$HOST_ENV_FILE") alone:
-  ${RELEASE_TOKEN_PREFIX}<NAME>  remote <name>'s token, encrypted, where there is no keychain;
-                           written by bash dot release:token, never by hand
-
-Every setting is required; a missing or empty one stops the release.
+Options:
+  --push <remote>           Push to that remote without asking; repeatable or
+                            comma-separated. Names are release.remotes' keys.
+  --push-all                Push to every remote without asking.
+  --keep-tokens <minutes>   Keep the unlocked tokens that many minutes, so
+                            pushes until then don't ask for the passphrase
+                            (0 forgets them).
+  -f, --force               Force-push, replacing the remotes' history. Asks
+                            first, and only at a terminal.
+  -h, --help                Show this help.
 
 Examples:
   bash dot release:create 1.2.0
   bash dot release:create 1.2.0 --push github
-  bash dot release:create 1.2.0 --push-all
-  bash dot release:create 1.2.0 --push github --keep-tokens 15
+  bash dot release:create 1.2.0 --push-all --keep-tokens 15
+
+Settings (in $(dot::relative "$SETTINGS_FILE"); any may be "@env:<KEY>"):
+  release.destination   The release repo's directory, from the project root.
+  release.exclude       Paths left out; "!<path>" ships a git-ignored one.
+  release.branch        The release repo's branch.
+  release.remotes       {"<name>": "<https url>"}, at least one.
+  release.signingKey    The private SSH key's file name in ~/.ssh/.
+  release.authorName    The name on release commits.
+  release.authorEmail   The email on release commits; GitHub only shows
+                        "Verified" when the signing key's account owns it.
+
+Notes:
+  - It stops on uncommitted changes in what it ships, a key that doesn't match,
+    anything that looks like a secret, or a --push remote with no token.
+  - The project's .env never ships. Tokens: bash dot release:token <remote>.
 EOF
 }
 
