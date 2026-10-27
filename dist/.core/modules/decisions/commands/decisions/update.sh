@@ -10,14 +10,15 @@ Sets a decision's status and refreshes its "modified" date, in one step.
 
 Usage:
   bash dot decisions:update <decision> <status>
-  bash dot decisions:update <decision> $DECISION_SUPERSEDED_FLAG --by <decision>
+  bash dot decisions:update <decision> $DECISION_SUPERSEDED_FLAG --by <replacement>
 
 Arguments:
   <decision>        The decision, as 2, 002, or its file name.
   <status>          $(core.modules.decisions.service::statuses | paste -sd ' ' -), or $DECISION_SUPERSEDED_FLAG.
 
 Options:
-  --by <decision>   With $DECISION_SUPERSEDED_FLAG: the decision that replaces it (checked
+  --by <replacement>
+                    With $DECISION_SUPERSEDED_FLAG: the decision that replaces it (checked
                     to exist; the link is built for you).
   -h, --help        Show this help.
 

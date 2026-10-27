@@ -14,7 +14,7 @@ Usage:
   bash dot tasks:update <id> [<title>] [options]
 
 Arguments:
-  <id>                     The task, as tasks:list shows it (t004, #12).
+  <id>                     The task's id (t004, #12).
   <title>                  Its new title.
 
 Options:

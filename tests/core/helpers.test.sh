@@ -487,8 +487,22 @@ test_json_keep_format_edits_only_the_member() {
 }
 
 test_output_highlights_commands_paths_and_values_only_at_a_terminal() {
-  core "dot::use framework.console.output; printf '%s\n' 'Run bash dot link:activate acme/widgets, then edit .dot/dot.json for \"x\".' | awk -f \"\$OUTPUT_HIGHLIGHTER\""
-  assert_equal "$OUTPUT" $'Run \033[1;36mbash dot link:activate acme/widgets\033[22;39m, then edit \033[90m.dot/dot.json\033[39m for \033[3m"x"\033[23m.'
+  core "dot::use framework.console.output; printf '%s\n' 'Run bash dot link:activate acme/widgets, then edit .dot/dot.json for \"x\".' | awk -f \"\$OUTPUT_HIGHLIGHTER\" | awk -v styled=1 -f \"\$OUTPUT_RENDERER\""
+  assert_equal "$OUTPUT" $'Run \033[1mbash dot link:activate acme/widgets\033[0m, then edit \033[90m.dot/dot.json\033[0m for \033[3m"x"\033[0m.'
   core "dot::use framework.console.output; framework.console.output::line 'Run bash dot link.'"
   assert_equal "$OUTPUT" "Run bash dot link."
+}
+
+test_styles_nest_and_carry_across_lines() {
+  core "dot::use framework.console.output; printf '%s\n' \"\$(framework.console.output::yellow \"warn \$(framework.console.output::path .dot/x) on\")\" | awk -v styled=1 -f \"\$OUTPUT_RENDERER\""
+  assert_equal "$OUTPUT" $'\033[33mwarn \033[90m.dot/x\033[0m\033[33m on\033[0m'
+  core "dot::use framework.console.output; printf '%s\n' \"\$(framework.console.output::note \"\$(printf 'one\ntwo')\")\" | awk -v styled=1 -f \"\$OUTPUT_RENDERER\""
+  assert_equal "$OUTPUT" $'\033[94m\033[3mone\033[0m\n\033[94m\033[3mtwo\033[0m'
+  core "dot::use framework.console.output; framework.console.output::warn \"kept \$(framework.console.output::command 'bash dot link')\""
+  assert_equal "$ERRORS" "! kept bash dot link"
+}
+
+test_bright_brightens_the_colors_inside_it() {
+  core "dot::use framework.console.output; printf '%s\n' \"\$(framework.console.output::bright \"\$(framework.console.output::red x) y\")\" | awk -v styled=1 -f \"\$OUTPUT_RENDERER\""
+  assert_equal "$OUTPUT" $'\033[91mx\033[0m y'
 }

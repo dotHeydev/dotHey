@@ -32,7 +32,9 @@ Examples:
   bash dot release:create 1.2.0 --push github
   bash dot release:create 1.2.0 --push-all --keep-tokens 15
 
-Settings (in $(dot::relative "$SETTINGS_FILE"); any may be "@env:<KEY>"):
+Settings:
+  In $(dot::relative "$SETTINGS_FILE"); any of them may be "@env:<KEY>".
+
   release.destination   The release repo's directory, from the project root.
   release.exclude       Paths left out; "!<path>" ships a git-ignored one.
   release.branch        The release repo's branch.
@@ -45,7 +47,7 @@ Settings (in $(dot::relative "$SETTINGS_FILE"); any may be "@env:<KEY>"):
 Notes:
   - It stops on uncommitted changes in what it ships, a key that doesn't match,
     anything that looks like a secret, or a --push remote with no token.
-  - The project's .env never ships. Tokens: bash dot release:token <remote>.
+  - The project's .env never ships. Save tokens with bash dot release:token.
 EOF
 }
 
@@ -84,9 +86,9 @@ handle() {
   core.modules.release.console::print_warnings
   core.modules.release.service::prepare_repository "$branch" "$tag"
   core.modules.release.service::configure_signing
-  framework.console.output::title "🔏 Signing — please enter your signing key's passphrase"
+  framework.console.output::title "Signing — please enter your signing key's passphrase"
   core.modules.release.service::start_agent
-  framework.console.output::title "📦 Exporting the release…"
+  framework.console.output::title "Exporting the release…"
   core.modules.release.service::export
   core.modules.release.service::scan_secrets
   core.modules.release.service::commit "$tag"

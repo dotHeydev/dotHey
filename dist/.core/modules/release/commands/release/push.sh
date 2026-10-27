@@ -7,7 +7,7 @@ dot::use framework.console.args core.modules.release.console core.modules.releas
 usage() {
   cat <<EOF
 Pushes the release repo's branch and tags, asking remote by remote; use it to
-retry or finish what release:create started. Each remote uses its own token.
+retry or finish a release's push. Each remote uses its own token.
 
 Usage:
   bash dot release:push [<remote>...] [--all] [options]

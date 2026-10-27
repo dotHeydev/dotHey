@@ -1,10 +1,14 @@
-# Styles a line of dotdot's output at a terminal: commands (bash dot <name>
-# and the arguments after it) bold cyan, paths gray, "quoted values" italic.
-# Each style is closed with its own reset, so the line's other styles stay.
+# Marks up a line of dotdot's output for render.awk, by what its words look
+# like: commands (bash dot <name> and the arguments after it) bold bright,
+# paths gray, "quoted values" italic, plugin ids (acme/widgets) and record and
+# task references (d002, t004, #12) bold. A word already marked up is left as
+# it is.
 BEGIN {
-  COMMAND = "\033[1;36m"; COMMAND_OFF = "\033[22;39m"
-  PATH_ON = "\033[90m"; PATH_OFF = "\033[39m"
-  VALUE = "\033[3m"; VALUE_OFF = "\033[23m"
+  OPEN = sprintf("%c", 1); NAME_END = sprintf("%c", 2); CLOSE = sprintf("%c", 3)
+  COMMAND = OPEN "bold" NAME_END OPEN "bright" NAME_END; COMMAND_OFF = CLOSE CLOSE
+  PATH_ON = OPEN "gray" NAME_END; PATH_OFF = CLOSE
+  VALUE = OPEN "italic" NAME_END; VALUE_OFF = CLOSE
+  REFERENCE = OPEN "bold" NAME_END; REFERENCE_OFF = CLOSE
 }
 
 function is_argument(word) {
@@ -26,9 +30,22 @@ function is_path(word,   last) {
   return word ~ /^[~.]/ || word ~ /\/$/ || last ~ /\./
 }
 
+# A line holding only a command (a usage line, an example) is all command,
+# whatever its arguments look like; a trailing "# comment" stays as it is.
+/^ *bash dot [a-z]/ {
+  line = $0
+  indent = line
+  sub(/[^ ].*$/, "", indent)
+  rest = substr(line, length(indent) + 1)
+  comment = ""
+  if (match(rest, / +# /)) { comment = substr(rest, RSTART); rest = substr(rest, 1, RSTART - 1) }
+  print indent COMMAND rest COMMAND_OFF comment
+  next
+}
+
 {
   line = $0
-  gsub(/"[^"]*"/, VALUE "&" VALUE_OFF, line)
+  gsub(/"[^"\001\002\003]*"/, VALUE "&" VALUE_OFF, line)
   count = split(line, words, / /)
   out = ""
   command = 0
@@ -36,14 +53,20 @@ function is_path(word,   last) {
     word = words[i]
     core = word
     tail = ""
-    while (core ~ /[.,;:)!?]$/ && core !~ /^\.\.?$/) {
+    while ((core ~ /[.,;:)!?]$/ && core !~ /^\.\.?$/) || substr(core, length(core)) == CLOSE) {
       tail = substr(core, length(core)) tail
       core = substr(core, 1, length(core) - 1)
     }
     head = ""
-    while (core ~ /^[(]/) {
-      head = head substr(core, 1, 1)
-      core = substr(core, 2)
+    while (core ~ /^[(]/ || substr(core, 1, 1) == OPEN) {
+      if (substr(core, 1, 1) == OPEN) {
+        ends = index(core, NAME_END)
+        head = head substr(core, 1, ends)
+        core = substr(core, ends + 1)
+      } else {
+        head = head substr(core, 1, 1)
+        core = substr(core, 2)
+      }
     }
     if (!command && core == "bash" && words[i + 1] == "dot" && words[i + 2] ~ /^[a-z0-9][a-z0-9:-]*[.,;:)]*$/) {
       command = 1
@@ -62,6 +85,7 @@ function is_path(word,   last) {
       }
     }
     if (!command && word == words[i] && is_path(core)) word = head PATH_ON core PATH_OFF tail
+    else if (!command && word == words[i] && (core ~ /^[dfntx][0-9][0-9][0-9]$/ || core ~ /^#[0-9]+$/ || core ~ /^[a-z0-9][a-z0-9-]*\/[a-z0-9][a-z0-9-]*$/)) word = head REFERENCE core REFERENCE_OFF tail
     out = out (i > 1 ? " " : "") word
   }
   if (command) out = out COMMAND_OFF

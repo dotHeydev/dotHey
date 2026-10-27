@@ -9,13 +9,13 @@ usage() {
 Updates dotdot's core ($(dot::relative "$CORE_DIR")/) from
 $UPDATE_REPOSITORY_URL ($UPDATE_BRANCH), after showing both
 versions and asking. Plugins and your context files are never touched; then
-it offers to run bash dot link.
+it offers to refresh the links.
 
 Usage:
   bash dot update [-y, --yes]
 
 Options:
-  -y, --yes    Update without asking (bash dot link still asks). It still needs
+  -y, --yes    Update without asking (refreshing the links still asks). It still needs
                a terminal.
   -h, --help   Show this help.
 
@@ -52,7 +52,7 @@ handle() {
   esac
   [ $# -eq 0 ] || framework.console.args::unexpected "$1"
   framework.console.prompt::can_ask || framework.console.output::fail "This needs your confirmation in a terminal, so nothing changed." "$OUTPUT_MANUAL_RUN bash dot update"
-  command -v git >/dev/null || framework.console.output::fail "bash dot update needs git, which isn't installed here."
+  command -v git >/dev/null || framework.console.output::fail "Updating needs git, which isn't installed here."
   old=$(core.system.update.service::installed_commit)
   framework.helpers.fs::make_temp_dir UPDATE_WORKSPACE || framework.console.output::fail "Couldn't create a temporary directory; please check free space and \$TMPDIR."
   UPDATE_REPOSITORY="$UPDATE_WORKSPACE/repository"
@@ -99,7 +99,7 @@ handle() {
   # process, asks only when a migration is pending here.
   dot::call migrate --if-pending || true
   report "$new"
-  if framework.console.prompt::confirm "Do you want to refresh the links now with bash dot link?"; then
+  if framework.console.prompt::confirm "Do you want to refresh the links now?"; then
     dot::call link || true
   else
     framework.console.output::next "Run bash dot link when you're ready."

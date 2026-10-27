@@ -133,7 +133,7 @@ handle() {
   done
   [ -s "$terms" ] || [ -s "$references" ] \
     || framework.console.args::invalid "What should it look for? Please give a decision, or --term."
-  ! $cited_by || [ -s "$references" ] || framework.console.args::invalid "--cited-by needs the decision it looks for, e.g. bash dot decisions:impact 004 --cited-by."
+  ! $cited_by || [ -s "$references" ] || framework.console.args::invalid "--cited-by needs a decision to look for."
   [[ "$IMPACT_SCOPES" == *" $scope "* ]] || framework.console.args::invalid "--scope takes all, features or decisions (got $scope)."
   framework.console.args::is_number "$lines" || framework.console.args::invalid "--lines takes a whole number (got $lines)."
   if $cited_by; then

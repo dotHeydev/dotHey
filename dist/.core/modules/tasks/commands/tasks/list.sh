@@ -101,5 +101,5 @@ handle() {
   print_rows "$work/rows" "$first" "$last"
   [ "$pages" -gt 1 ] || return 0
   [ "$page" -ge "$pages" ] || next=" · next: --page $((page + 1))"
-  framework.console.output::line "$(framework.console.output::paint gray "Showing $first–$last of $total • page $page of $pages")$next"
+  framework.console.output::line "$(framework.console.output::gray "Showing $first–$last of $total • page $page of $pages")$next"
 }

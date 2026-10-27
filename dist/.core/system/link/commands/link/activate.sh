@@ -7,7 +7,7 @@ dot::use framework.console.args framework.console.output core.system.link.servic
 usage() {
   cat <<USAGE
 Moves a plugin's links from "inactive" into its own active group in
-$(dot::relative "$SETTINGS_FILE"), where the next bash dot link applies them. It links nothing
+$(dot::relative "$SETTINGS_FILE"), where the next linking applies them. It links nothing
 itself.
 
 Usage:
@@ -24,6 +24,9 @@ Options:
 Examples:
   bash dot link:activate acme/widgets
   bash dot link:activate acme/widgets --replace-active
+
+Notes:
+  - Apply them with bash dot link.
 USAGE
 }
 
@@ -40,7 +43,12 @@ handle() {
   [ -n "$plugin" ] || framework.console.args::invalid "Which plugin? Please give it as <owner>/<name>."
   guards::plugin_id "$plugin" || framework.console.args::invalid "\"$plugin\" isn't a plugin name; please use <owner>/<name>."
   core.system.link.service::move_group "$plugin" active "$replace"
-  [ "$LINK_FAILURES" -eq 0 ] || framework.console.output::fail "${LINK_ERRORS[0]}"
+  if [ "$LINK_FAILURES" -gt 0 ]; then
+    if [ "${LINK_ERRORS[0]#*$LINK_TAB}" != "${LINK_ERRORS[0]}" ]; then
+      framework.console.output::fail "${LINK_ERRORS[0]%%$LINK_TAB*}" "${LINK_ERRORS[0]#*$LINK_TAB}"
+    fi
+    framework.console.output::fail "${LINK_ERRORS[0]}"
+  fi
   framework.console.output::success "Activated the links of $plugin."
   framework.console.output::next "Apply them: bash dot link"
 }

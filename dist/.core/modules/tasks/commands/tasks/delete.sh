@@ -13,7 +13,7 @@ Usage:
   bash dot tasks:delete <id> [-y, --yes]
 
 Arguments:
-  <id>                     The task, as tasks:list shows it (t004, #12).
+  <id>                     The task's id (t004, #12).
 
 Options:
   -y, --yes                Delete without asking. It still needs a terminal.

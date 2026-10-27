@@ -15,7 +15,7 @@ framework.console.prompt::is_interactive() {
 # A question: a blank line above it, then the question in bold.
 framework.console.prompt::question() {
   printf '\n' >&2
-  framework.console.output::paint bold "$1" 2
+  framework.console.output::render 2 "$(framework.console.output::bold "$(framework.console.output::blue "$1")")"
 }
 
 # A question answered without asking, as the flag that answered it.

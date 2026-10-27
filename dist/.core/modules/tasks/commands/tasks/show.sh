@@ -13,7 +13,7 @@ Usage:
   bash dot tasks:show <id> [--no-pager]
 
 Arguments:
-  <id>                     The task, as tasks:list shows it (t004, #12).
+  <id>                     The task's id (t004, #12).
 
 Options:
   --no-pager               Print it, even at a terminal.

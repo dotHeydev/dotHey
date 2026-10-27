@@ -58,19 +58,22 @@ core.modules.tasks.console::edit_body() {
 core.modules.tasks.console::status_usage() {
   local status="$1"
   cat <<USAGE
-Moves a task to $status; the same as tasks:update <id> --status $status.
+Moves a task to $status.
 
 Usage:
   bash dot tasks:$status <id>
 
 Arguments:
-  <id>         The task, as tasks:list shows it (t004, #12).
+  <id>         The task's id (t004, #12).
 
 Options:
   -h, --help   Show this help.
 
 Examples:
   bash dot tasks:$status t004
+
+Notes:
+  - The same as bash dot tasks:update <id> --status $status.
 USAGE
 }
 

@@ -8,8 +8,7 @@ usage() {
   local heading key
   cat <<EOF
 Creates the next numbered decision in Decisions/ from the decision template;
-one flag per template section. To change a decision afterwards, use
-bash dot decisions:update, or edit its prose and bump "modified".
+one flag per template section.
 
 Usage:
   bash dot decisions:create <name> --statement <text> --elaboration <text>
@@ -27,7 +26,8 @@ Options:
                                to whom, and with what side effects.
   -s, --status <status>        $(core.modules.decisions.service::statuses | paste -sd ' ' -)
                                (default: $DECISION_DEFAULT_STATUS).
-  --$DECISION_SUPERSEDED_FLAG-by <decision>   Record it as already replaced by <decision>.
+  --$DECISION_SUPERSEDED_FLAG-by <replacement>
+                               Record it as already replaced by <replacement>.
 EOF
   while IFS= read -r heading; do
     key=$(framework.helpers.template::key "$heading")
@@ -46,6 +46,8 @@ Examples:
     --status accepted --influenced-by 002 --impacts 7
 
 Notes:
+  - To change its status afterwards, use bash dot decisions:update; to change
+    its prose, edit the file and bump "modified".
   - The section flags and statuses come from the decision template.
   - A <ref> is a number (2, 002) or a file name; it's checked to exist, and
     its link is built for you.

@@ -22,9 +22,11 @@ Options:
 
 Examples:
   bash dot plugins:new acme/widgets
-  bash dot plugins:add acme/widgets --from ./widgets
+  bash dot plugins:new acme/widgets packages/widgets
 
-Layout (all under $PLUGIN_ROOT/; the rest of the repo is yours):
+Layout:
+  Everything below lives under $PLUGIN_ROOT/; the rest of the repo is yours.
+
   plugin.json   "requires" (plugin API $PLUGIN_API), "description", "depends",
                 "settings" (camelCase keys, with defaults), and its suggested
                 "link" and "append" ({"<origin>": ["<destination>"]})
@@ -35,6 +37,7 @@ Layout (all under $PLUGIN_ROOT/; the rest of the repo is yours):
   stubs/        <path>.stub appended to <path> in the project
 
 Notes:
+  - Try it with bash dot plugins:add <owner>/<name> --from ./<directory>.
   - Code may use framework.helpers.*, framework.console.* and
     framework.integrations.<name>.service, plus its own files.
   - Settings: dot::plugin_setting <key>. Secrets: dot::secret, named

@@ -24,7 +24,7 @@ core.system.plugins.console::warn() {
 # A plugin as previewed: its id in bold, then where it comes from.
 core.system.plugins.console::header() {
   local detail="${2% @ -}"
-  framework.console.output::line "$(framework.console.output::paint bold "$1") $OUTPUT_SEPARATOR $detail"
+  framework.console.output::line "$(framework.console.output::bold "$1") $OUTPUT_SEPARATOR $detail"
 }
 
 core.system.plugins.console::preview() {
@@ -34,7 +34,7 @@ core.system.plugins.console::preview() {
   while IFS=$'\t' read -r kind first second; do
     [ "$kind" = file ] || continue
     case "$first" in
-      *.sh) framework.console.output::change "$second" "$first $(framework.console.output::paint yellow "$OUTPUT_WARNING_ICON script, runs on your machine")" ;;
+      *.sh) framework.console.output::change "$second" "$first $(framework.console.output::yellow "$OUTPUT_WARNING_ICON script, runs on your machine")" ;;
       *) framework.console.output::change "$second" "$first" ;;
     esac
   done <<< "$rows"

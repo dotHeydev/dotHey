@@ -21,7 +21,9 @@ Options:
                        itself runs it.
   -h, --help           Show this help.
 
-For dotdot's own plugin commands:
+Internal options:
+  For dotdot's own plugin commands.
+
   --refresh-plugin <owner>/<name>   Write the plugin's suggested links afresh,
                                     under "inactive".
   --settings-only                   Write $(dot::relative "$SETTINGS_FILE") only; link nothing.
@@ -32,14 +34,14 @@ Examples:
   bash dot link --replace-existing
   bash dot link -v
 
-The links:
+Links:
   "<origin>": ["<destination>", ...]   symlink each destination to the origin
   "append": {"<origin>": [...]}        append the file to each destination,
                                        between markers naming its owner
   "remove": {"<origin>": [...]}        unlink, and take back what it appended
   "<owner>/<name>": {...}              a plugin's active links, same shape
   "inactive": {"<owner>/<name>": ...}  a plugin's links, never applied until
-                                       bash dot link:activate takes them
+                                       they are activated
 
   Origins: @dot:<path>, @module:<name>:<path>, @plugin:<owner>.<name>:<path>,
   @dotdotSkills, @dotdotAgents, @pluginsSkills, @pluginsAgents; a /* ending
@@ -48,6 +50,7 @@ The links:
   claim one destination, your own links win, then the first declared.
 
 Notes:
+  - Activate a plugin's links with bash dot link:activate.
   - Run it after installing dotdot, creating a git worktree, or adding,
     renaming or removing anything the links cover. Re-running is safe.
   - Links are relative, so they survive a clone, a move or a rebuild.
@@ -132,7 +135,11 @@ print_notices() {
 print_errors() {
   local message
   for message in ${LINK_ERRORS[@]+"${LINK_ERRORS[@]}"}; do
-    framework.console.output::error "$message"
+    if [ "${message#*$LINK_TAB}" != "$message" ]; then
+      framework.console.output::error "${message%%$LINK_TAB*}" "${message#*$LINK_TAB}"
+    else
+      framework.console.output::error "$message"
+    fi
   done
   LINK_ERRORS=()
 }
@@ -187,7 +194,7 @@ map_only() {
     framework.console.output::success "The links are up to date."
     return 0
   fi
-  framework.console.output::line "bash dot link will:"
+  framework.console.output::line "This will:"
   for note in "${LINK_MAP_NOTES[@]}"; do
     map_entry "$note"
   done
@@ -248,7 +255,7 @@ handle() {
     [ "$LINK_FAILURES" -eq 0 ]
     return
   fi
-  framework.console.output::line "bash dot link will:"
+  framework.console.output::line "This will:"
   print_changes
   print_notices
   if $confirmed; then

@@ -42,7 +42,7 @@ handle() {
     $quiet || framework.console.output::success "Everything is up to date; nothing to migrate."
     return 0
   fi
-  framework.console.output::line "bash dot migrate will run:"
+  framework.console.output::line "These migrations will run:"
   for file in "${pending[@]}"; do
     framework.console.output::entry blue "$OUTPUT_SEPARATOR" "${file##*/}" "$(kernel::description "$file")"
   done

@@ -258,7 +258,7 @@ core.system.link.service::prepare_map() {
   local refresh=" $1 " map_only="${2:-false}" rows group kind origin destination id plugin kept installed
   framework.helpers.fs::make_temp_dir LINK_WORK || { core.system.link.service::fail "Couldn't create a temporary directory; please check free space and \$TMPDIR."; return; }
   if ! rows=$(core.system.link.service::read_map); then
-    core.system.link.service::fail "The links in $(dot::relative "$SETTINGS_FILE") can't be read (invalid JSON, or \"links\" isn't an object). Please fix it, then run bash dot link again."
+    core.system.link.service::fail "The links in $(dot::relative "$SETTINGS_FILE") can't be read (invalid JSON, or \"links\" isn't an object)." "Please fix it, then run bash dot link again."
     return 0
   elif core.system.link.service::has_map; then
     [[ "$(framework.helpers.json::encoded "$(cat -- "$SETTINGS_FILE")" .links)" != *'"@env:'* ]] \
@@ -269,7 +269,7 @@ core.system.link.service::prepare_map() {
     LINK_MAP_NOTES+=("add dotdot's default links")
   fi
   while IFS="$LINK_TAB" read -r group kind; do
-    [ "$group" = "!" ] && core.system.link.service::fail "This entry in the links of $(dot::relative "$SETTINGS_FILE") doesn't fit their shape (see bash dot link --help): ${kind//$LINK_TAB/ }"
+    [ "$group" = "!" ] && core.system.link.service::fail "This entry in the links of $(dot::relative "$SETTINGS_FILE") doesn't fit their shape: ${kind//$LINK_TAB/ }" "See their shape: bash dot link --help"
   done <<< "$rows"
   [ "$LINK_FAILURES" -eq 0 ] || return 0
   installed=" $(paths::plugins | sed "s|^$PLUGINS_DIR/||" | tr '\n' ' ') "
@@ -543,8 +543,9 @@ core.system.link.service::mappings() {
   done < <(core.system.link.service::rows link)
 }
 
+# A failure, with its next step, when it has one, after a tab.
 core.system.link.service::fail() {
-  LINK_ERRORS+=("$1")
+  LINK_ERRORS+=("$1${2:+$LINK_TAB$2}")
   LINK_FAILURES=$((LINK_FAILURES + 1))
 }
 
@@ -1057,7 +1058,7 @@ core.system.link.service::apply_appends() {
 # it takes the place of a group already there.
 core.system.link.service::move_group() {
   local plugin="$1" to="$2" replace="$3" document key from_path to_path group placement=()
-  core.system.link.service::has_map || { core.system.link.service::fail "$(dot::relative "$SETTINGS_FILE") has no links yet. Please run bash dot link first."; return; }
+  core.system.link.service::has_map || { core.system.link.service::fail "$(dot::relative "$SETTINGS_FILE") has no links yet." "Please run bash dot link first."; return; }
   document=$(cat -- "$SETTINGS_FILE")
   key=$(framework.helpers.json::string "$plugin")
   if [ "$to" = active ]; then

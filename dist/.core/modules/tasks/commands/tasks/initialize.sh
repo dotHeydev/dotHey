@@ -7,9 +7,8 @@ dot::use framework.console.args framework.console.output framework.console.promp
 usage() {
   local service
   cat <<USAGE
-Asks where this project keeps its tasks and sets that service up; the first
-tasks:* command runs it for you. Running it again switches services; existing
-tasks stay where they are.
+Asks where this project keeps its tasks and sets that service up. Running it
+again switches services; existing tasks stay where they are.
 
 Usage:
   bash dot tasks:initialize
@@ -25,6 +24,7 @@ USAGE
   cat <<USAGE
 
 Notes:
+  - The first task command runs it for you.
   - The choice is saved as $TASK_SERVICE_SETTING in $(dot::relative "$SETTINGS_FILE"), shared by the
     project; set it to "@env:<KEY>" to let each person choose in $(dot::relative "$HOST_ENV_FILE").
   - It asks at a terminal only, so only a person can choose.
@@ -42,7 +42,7 @@ handle() {
   done < <(core.modules.tasks.service::services)
   [ ${#services[@]} -gt 0 ] || framework.console.output::fail "No task services found in $(dot::relative "$TASK_DRIVERS_DIR")/."
   if current=$(core.modules.tasks.service::selected_service); then
-    framework.console.output::line "Tasks are now kept in $(framework.console.output::paint bold "$current"); switching leaves existing ones where they are."
+    framework.console.output::line "Tasks are now kept in $(framework.console.output::bold "$current"); switching leaves existing ones where they are."
   fi
   framework.console.output::newline
   choice=$(framework.console.prompt::choice "Where should this project keep its tasks?" "${labels[@]}") || { framework.console.output::aborted; exit 1; }

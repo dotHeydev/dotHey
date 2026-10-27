@@ -7,7 +7,7 @@ dot::use framework.console.args framework.console.output core.system.plugins.con
 usage() {
   cat <<USAGE
 Updates a plugin from where it was added, after previewing what changes and
-asking, like plugins:add. Its new links go under "inactive"; the active ones
+asking. Its new links go under "inactive"; the active ones
 stay as they are.
 
 Usage:
