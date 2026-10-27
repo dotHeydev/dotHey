@@ -48,7 +48,7 @@ core.system.plugins.console::preview() {
 
 core.system.plugins.console::confirm() {
   local question="$1" confirmed="$2" command="$3"
-  framework.console.prompt::can_ask || framework.console.output::fail "Plugins can only be added or updated by you, in a terminal." "$OUTPUT_MANUAL_RUN $command"
+  framework.console.prompt::can_ask || framework.console.output::fail "Plugins can only be added, updated or removed by you, in a terminal." "$OUTPUT_MANUAL_RUN $command"
   if $confirmed; then
     framework.console.prompt::answered "$question" "yes (--yes)"
     return 0
@@ -75,7 +75,7 @@ core.system.plugins.console::install() {
 
 # Writes the plugins' blocks into the links; links and appends nothing.
 core.system.plugins.console::suggest() {
-  dot::call link --map-only -y "$@" >/dev/null || framework.console.output::fail "Couldn't write the plugin's links to $(dot::relative "$SETTINGS_FILE")." "Please try again with: bash dot link --map-only"
+  dot::call link --settings-only -y "$@" >/dev/null || framework.console.output::fail "Couldn't write the plugin's links to $(dot::relative "$SETTINGS_FILE")." "Please try again with: bash dot link --settings-only"
 }
 
 core.system.plugins.console::installed() {

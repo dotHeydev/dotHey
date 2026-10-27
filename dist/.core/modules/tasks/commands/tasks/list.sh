@@ -8,18 +8,18 @@ usage() {
   core.modules.tasks.service::require_template
   cat <<USAGE
 bash dot tasks:list — list the project's tasks, oldest first by default,
-in pages of $TASK_PAGE_SIZE: --limit sets the page size (0 lists them all on one page),
---page picks the page (1 by default).
+in pages of $TASK_PAGE_SIZE: -n, --limit sets the page size (0 lists them all on one page),
+-p, --page picks the page (1 by default).
 
 Usage:
-  bash dot tasks:list [--status <status>[,<status>...]] [--sort created|updated] [--asc|--desc] [--limit <n>] [--page <n>]
+  bash dot tasks:list [-s, --status <status>[,…]] [--sort created|updated] [--order asc|desc] [-n, --limit <n>] [-p, --page <n>]
   bash dot tasks:list --help
 
 Statuses (from the template): $(core.modules.tasks.service::statuses | paste -sd ' ' -)
 
 Examples:
   bash dot tasks:list --status todo,doing,paused
-  bash dot tasks:list --sort updated --desc --limit 5 --page 2
+  bash dot tasks:list --sort updated --order desc -n 5 -p 2
 USAGE
 }
 
@@ -37,13 +37,13 @@ handle() {
   limit=$TASK_PAGE_SIZE
   while [ $# -gt 0 ]; do
     case "$1" in
-      --page)
+      -p | --page)
         framework.console.args::require_value "$@"
         framework.console.args::is_number "$2" && [ "$((10#$2))" -ge 1 ] || framework.console.args::invalid "--page takes a number from 1."
         page=$((10#$2))
         shift 2
         ;;
-      --status)
+      -s | --status)
         framework.console.args::require_value "$@"
         statuses=""
         while IFS= read -r status; do
@@ -60,14 +60,20 @@ handle() {
         sort="$2"
         shift 2
         ;;
-      --limit)
+      -n | --limit)
         framework.console.args::require_value "$@"
         framework.console.args::is_number "$2" || framework.console.args::invalid "--limit takes a number (0 for all)."
         limit=$((10#$2))
         shift 2
         ;;
-      --asc) order=asc; shift ;;
-      --desc) order=desc; shift ;;
+      --order)
+        framework.console.args::require_value "$@"
+        case "$2" in
+          asc | desc) order="$2" ;;
+          *) framework.console.args::invalid "--order takes asc or desc." ;;
+        esac
+        shift 2
+        ;;
       *) framework.console.args::unexpected "$1" ;;
     esac
   done

@@ -36,7 +36,7 @@ ending takes each entry inside one by one. Destinations are project paths
 outside dotdot and .git, never .env; appends may also go to @dot:<Doc>.md.
 
 A plugin's inactive links are written when it is added and afresh when it is
-updated (--refresh <owner>/<name>); its active group stays. The first run after
+updated (--refresh-plugin <owner>/<name>); its active group stays. The first run after
 a plugin is removed drops its groups and the entries taken from it, its
 broken links, and what it appended.
 
@@ -55,34 +55,33 @@ changing anything (piped input is refused, unless -y is given):
                                  → removed ("broken dotdot link; will remove")
   - anything else                → "existing; will skip"
 
--y / --yes applies the previewed changes without asking: at a terminal, or
+-y, --yes applies the previewed changes without asking: at a terminal, or
 when dotdot itself makes the call (the installer, plugin commands). Anywhere
 else it is refused, so an agent can't approve changes for the user.
 
---override changes only what happens to existing destinations once confirmed:
+--replace-existing changes only what happens to existing destinations once confirmed:
   - a symlink pointing elsewhere → replaced ("existing; will override")
   - a real file                  → renamed to <name>.bak-<timestamp>, then
                                    linked ("existing; will back up and override")
   - a real directory             → still skipped; remove it yourself
 
--v / --verbose lists the entries that stay as they are too.
+-v, --verbose lists the entries that stay as they are too.
 
---sweep takes back only what removed plugins left: their entries in the links,
+--remove-uninstalled takes back only what removed plugins left: their entries in the links,
 their broken links, and what they appended; plugins:remove runs it.
 
-A plugin's suggestions are written only by --refresh <owner>/<name>, as
-plugins:add and plugins:update do, never by a plain run. --map-only writes
+A plugin's suggestions are written only by --refresh-plugin <owner>/<name>, as
+plugins:add and plugins:update do, never by a plain run. --settings-only writes
 them and links and appends nothing.
 
 Usage:
-  bash dot link
-  bash dot link --override
-  bash dot link --refresh <owner>/<name>
-  bash dot link --map-only [--refresh <owner>/<name>]
-  bash dot link --sweep
-  bash dot link --verbose
-  bash dot link -y
+  bash dot link [--replace-existing] [-v, --verbose] [-y, --yes]
   bash dot link --help
+
+For dotdot's own plugin commands:
+  bash dot link --refresh-plugin <owner>/<name>
+  bash dot link --settings-only [--refresh-plugin <owner>/<name>]
+  bash dot link --remove-uninstalled
 
 Current links (origin->destination, origin relative to dotdot, destination
 relative to the project):
@@ -170,7 +169,7 @@ print_notices() {
     framework.console.output::warn "${LINK_NOTICES[$index]}"
   done
   [ "$LINK_OVERRIDABLE" -eq 0 ] \
-    || framework.console.output::next "To replace the $LINK_OVERRIDABLE taken destination(s) above, run bash dot link --override (files are backed up first)."
+    || framework.console.output::next "To replace the $LINK_OVERRIDABLE taken destination(s) above, run bash dot link --replace-existing (files are backed up first)."
 }
 
 print_errors() {
@@ -238,7 +237,7 @@ map_only() {
   if $confirmed; then
     framework.console.output::line "Writing $(dot::relative "$SETTINGS_FILE") (-y)…"
   else
-    framework.console.prompt::confirm_or_exit "Do you want to write $(dot::relative "$SETTINGS_FILE")?" n "bash dot link --map-only"
+    framework.console.prompt::confirm_or_exit "Do you want to write $(dot::relative "$SETTINGS_FILE")?" n "bash dot link --settings-only"
   fi
   core.system.link.service::save_map
   print_errors
@@ -249,14 +248,14 @@ handle() {
   local override=false confirmed=false refresh="" only_map=false sweep=false
   while [ $# -gt 0 ]; do
     case "$1" in
-      --override) override=true ;;
-      --map-only) only_map=true ;;
-      --sweep) sweep=true ;;
+      --replace-existing) override=true ;;
+      --settings-only) only_map=true ;;
+      --remove-uninstalled) sweep=true ;;
       -v | --verbose) LINK_VERBOSE=true ;;
       -y | --yes) confirmed=true ;;
-      --refresh)
+      --refresh-plugin)
         framework.console.args::require_value "$@"
-        [[ "$2" =~ ^[a-z0-9][a-z0-9-]*/[a-z0-9][a-z0-9-]*$ ]] || framework.console.args::invalid "--refresh needs a plugin as <owner>/<name> (got $2)."
+        [[ "$2" =~ ^[a-z0-9][a-z0-9-]*/[a-z0-9][a-z0-9-]*$ ]] || framework.console.args::invalid "--refresh-plugin needs a plugin as <owner>/<name> (got $2)."
         refresh="$refresh $2"
         shift
         ;;

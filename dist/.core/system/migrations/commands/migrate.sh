@@ -18,14 +18,14 @@ While one is pending, every other command but update stops and asks for this
 one, so nothing reads a file in a format it no longer knows. bash dot update
 offers to run it afterwards.
 
-Previews what would run, then asks [y/N] at a terminal; -y skips the question
+Previews what would run, then asks [y/N] at a terminal; -y, --yes skips the question
 at a terminal or when dotdot itself makes the call.
 
---when-pending prints nothing when there is nothing to migrate; bash dot
+--if-pending prints nothing when there is nothing to migrate; bash dot
 update calls it right after updating the core.
 
 Usage:
-  bash dot $DOT_COMMAND [-y] [--when-pending]
+  bash dot $DOT_COMMAND [-y, --yes] [--if-pending]
   bash dot $DOT_COMMAND --help
 USAGE
 }
@@ -35,7 +35,7 @@ handle() {
   while [ $# -gt 0 ]; do
     case "$1" in
       -y | --yes) confirmed=true ;;
-      --when-pending) quiet=true ;;
+      --if-pending) quiet=true ;;
       *) framework.console.args::unexpected "$1" ;;
     esac
     shift

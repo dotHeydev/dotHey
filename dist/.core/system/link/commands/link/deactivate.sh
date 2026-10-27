@@ -11,11 +11,11 @@ group from "links" back to the end of "inactive" in $(dot::relative "$SETTINGS_F
 bash dot link no longer applies it. Nothing is unlinked here: what it linked
 stays until you remove it ("remove") or it breaks and the next run prunes it.
 
-Inactive links already there are kept unless --replace is given, which
+Inactive links already there are kept unless --replace-inactive is given, which
 replaces them with the active group.
 
 Usage:
-  bash dot link:deactivate <owner>/<name> [--replace]
+  bash dot link:deactivate <owner>/<name> [--replace-inactive]
   bash dot link:deactivate --help
 USAGE
 }
@@ -24,7 +24,7 @@ handle() {
   local plugin="" replace=false
   while [ $# -gt 0 ]; do
     case "$1" in
-      --replace) replace=true ;;
+      --replace-inactive) replace=true ;;
       -*) framework.console.args::unexpected "$1" ;;
       *) [ -z "$plugin" ] || framework.console.args::unexpected "$1"; plugin="$1" ;;
     esac

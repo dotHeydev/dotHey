@@ -131,7 +131,7 @@ test_linked_entries_may_have_any_name_and_a_clash_is_reported() {
 test_linked_entries_that_clash_between_plugins_are_reported_and_the_first_wins() {
   scaffold_plugin acme/widgets
   add_plugin acme/widgets widgets
-  dot plugins:new other/widgets --path other
+  dot plugins:new other/widgets other
   assert_success
   rm -f "$SANDBOX/other/dotdot/commands/hello.sh"
   validate_plugin other/widgets other
@@ -228,7 +228,7 @@ test_plugin_link_destinations_that_clash_are_reported() {
   scaffold_plugin acme/widgets
   manifest "$SANDBOX/widgets" "link:plugin.json->widgets.conf"
   add_plugin acme/widgets widgets
-  dot plugins:new other/gadgets --path gadgets
+  dot plugins:new other/gadgets gadgets
   manifest "$SANDBOX/gadgets" "link:plugin.json->widgets.conf"
   validate_plugin other/gadgets gadgets
   assert_success "a destination another plugin suggests too is only reported"
@@ -237,7 +237,7 @@ test_plugin_link_destinations_that_clash_are_reported() {
 
 test_lock_keeps_plugin_names_apart() {
   scaffold_plugin acme-x/y
-  dot plugins:new acme/x-y --path other
+  dot plugins:new acme/x-y other
   assert_success
   add_plugin acme-x/y y
   add_plugin acme/x-y other
@@ -268,11 +268,11 @@ test_plugin_remove_takes_back_its_links_and_appends_and_keeps_project_records() 
   printf 'kept\n' > "$DOTDOT/Widgets/w001.md"
   dot plugins:remove acme/widgets
   assert_failure
-  assert_contains "$ERRORS" "This needs your confirmation in a terminal"
+  assert_contains "$ERRORS" "Plugins can only be added, updated or removed by you, in a terminal."
   core "dot::use core.system.plugins.service core.system.plugins.manifest
     core.system.plugins.service::uninstall acme/widgets
     core.system.plugins.manifest::unlock acme/widgets"
-  dot link --sweep -y
+  dot link --remove-uninstalled -y
   assert_success
   assert_contains "$OUTPUT" "remove the links of acme/widgets"
   assert_contains "$OUTPUT" ".agents/skills/widgets-example broken; remove"
@@ -297,7 +297,7 @@ test_plugin_remove_without_links_sweeps_nothing() {
   core "dot::use core.system.plugins.service core.system.plugins.manifest
     core.system.plugins.service::uninstall acme/widgets
     core.system.plugins.manifest::unlock acme/widgets"
-  dot link --sweep -y
+  dot link --remove-uninstalled -y
   assert_success
   assert_equal "$OUTPUT" ""
   assert_contains "$(cat "$DOTDOT/STANDARDS.md")" "kept"
@@ -437,7 +437,7 @@ test_plugin_update_lists_what_changed() {
 }
 
 test_plugin_new_stays_inside_the_project() {
-  dot plugins:new acme/widgets --path ../outside
+  dot plugins:new acme/widgets ../outside
   assert_failure
   assert_contains "$ERRORS" "inside the project"
 }
@@ -513,7 +513,7 @@ test_unprefixed_commands_that_clash_keep_their_prefix() {
   add_plugin acme/widgets widgets
   mkdir -p "$DOTDOT/.plugins/acme/widgets/commands/plugins"
   printf '#!/usr/bin/env bash\nDESCRIPTION="Probe."\nusage() { :; }\nhandle() { echo hijacked; }\n' > "$DOTDOT/.plugins/acme/widgets/commands/plugins/list.sh"
-  dot plugins:new other/gadgets --path gadgets
+  dot plugins:new other/gadgets gadgets
   add_plugin other/gadgets gadgets
   sandbox::settings '"plugins": {"unprefixedCommandOwners": ["acme", "other"]}'
   dot

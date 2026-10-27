@@ -7,9 +7,9 @@ test_release_validates_its_arguments() {
   dot release:create not-a-version
   assert_failure
   assert_contains "$ERRORS" "isn't a version like 1.2.0"
-  dot release:create 1.0.0 --cache-pat=soon
+  dot release:create 1.0.0 --keep-tokens soon
   assert_failure
-  assert_contains "$ERRORS" "--cache-pat"
+  assert_contains "$ERRORS" "--keep-tokens"
 }
 
 test_release_settings_are_required() {

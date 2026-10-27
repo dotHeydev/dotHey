@@ -17,24 +17,31 @@ yourself: the directories it created that still hold records, its settings
 Needs a y on a terminal (piped input is refused).
 
 Usage:
-  bash dot plugins:remove <owner>/<name>
+  bash dot plugins:remove <owner>/<name> [-y, --yes]
   bash dot plugins:remove --help
 USAGE
 }
 
 handle() {
-  local plugin directory left
-  [ $# -ge 1 ] || framework.console.args::invalid "Which plugin? Please give it as <owner>/<name>."
-  [ $# -eq 1 ] || framework.console.args::unexpected "$2"
-  plugin=$(core.system.plugins.console::plugin "$1")
+  local plugin="" directory left confirmed=false
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      -y | --yes) confirmed=true ;;
+      -*) framework.console.args::unexpected "$1" ;;
+      *) [ -z "$plugin" ] || framework.console.args::unexpected "$1"; plugin="$1" ;;
+    esac
+    shift
+  done
+  [ -n "$plugin" ] || framework.console.args::invalid "Which plugin? Please give it as <owner>/<name>."
+  plugin=$(core.system.plugins.console::plugin "$plugin")
   core.system.plugins.manifest::lock_entry "$plugin" >/dev/null || framework.console.output::fail "$plugin isn't installed." "See what is: bash dot plugins:list"
-  framework.console.prompt::confirm_or_exit "Do you want to remove $plugin and everything it linked?" n "bash dot plugins:remove $plugin"
+  core.system.plugins.console::confirm "Do you want to remove $plugin and everything it linked?" "$confirmed" "bash dot plugins:remove $plugin" || exit 1
   directory=$(dot::relative "$(core.system.plugins.manifest::directory "$plugin")")
   left=$(core.system.plugins.service::uninstall "$plugin")
   core.system.plugins.manifest::unlock "$plugin"
   framework.console.output::success "Removed $plugin."
   framework.console.output::entry red "-" "$directory/"
-  dot::call link --sweep -y || framework.console.output::fail "Some of $plugin's links or appended sections couldn't be removed (see above)." "Please finish with: bash dot link"
+  dot::call link --remove-uninstalled -y || framework.console.output::fail "Some of $plugin's links or appended sections couldn't be removed (see above)." "Please finish with: bash dot link"
   framework.console.output::newline
   if [ -n "$left" ]; then
     framework.console.output::warn "Left for you to review:"

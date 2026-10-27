@@ -18,7 +18,7 @@ the highest existing number and takes the next one — which is why the filename
 and number are never to be constructed by hand.
 
 Usage:
-  bash dot decisions:create --name <text> --statement <text> --elaboration <text> [<status flag>] [<section flags>]...
+  bash dot decisions:create <name> --statement <text> --elaboration <text> [-s, --status <status>] [--superseded-by <decision>] [--<section> <text>]...
   bash dot decisions:create --help
 
 This command only creates. To change a decision's status afterwards, use
@@ -26,7 +26,7 @@ bash dot decisions:update; to change its prose, edit the file directly, keeping 
 number and bumping the frontmatter "modified" stamp.
 
 Required:
-  --name <text>          Short name for the filename slug (e.g. "JWT in httpOnly cookie").
+  <name>                 Short name for the filename slug (e.g. "JWT in httpOnly cookie").
                          Not the rule itself — that is --statement.
   --statement <text>     The decision as a first-person rule. Becomes the H1 and,
                          verbatim, the frontmatter description — so write it to stand
@@ -35,15 +35,12 @@ Required:
   --elaboration <text>   The single plain paragraph under the H1: what must happen,
                          to whom, and what outcomes and side effects exist.
 
-Status flags (one per run; default $DECISION_DEFAULT_STATUS):
-EOF
-  while IFS= read -r status; do
-    printf '  --%-24s mark the decision %s\n' "$status" "$status"
-  done < <(core.modules.decisions.service::statuses)
-  cat <<EOF
-  --$DECISION_SUPERSEDED_FLAG <ref>        record it as already replaced by another decision.
-                            The status string is built here and <ref> is checked
-                            to exist, so the link cannot be typed wrong.
+Status (default $DECISION_DEFAULT_STATUS):
+  -s, --status <status>  $(core.modules.decisions.service::statuses | paste -sd ' ' -)
+  --$DECISION_SUPERSEDED_FLAG-by <decision>
+                         record it as already replaced by another decision.
+                         The status string is built here and <decision> is
+                         checked to exist, so the link cannot be typed wrong.
 
 Section flags (derived live from $(basename -- "$DECISION_TEMPLATE")):
 EOF
@@ -64,11 +61,10 @@ EOF
   cat <<EOF
 
 Examples:
-  bash dot decisions:create \\
-    --name "JWT in httpOnly cookie" \\
+  bash dot decisions:create "JWT in httpOnly cookie" \\
     --statement "We store the session JWT in an httpOnly cookie so that a XSS foothold cannot read it." \\
     --elaboration "Every authenticated response sets the token as an httpOnly, Secure, SameSite=Lax cookie ..." \\
-    --accepted \\
+    --status accepted \\
     --influenced-by 002 \\
     --impacts 7
 
@@ -82,27 +78,27 @@ handle() {
   local name="" statement="" has_name=false has_statement=false has_elaboration=false
   local status="$DECISION_DEFAULT_STATUS" status_flag="" superseder="" sections_dir key kind link slug path
   [ -f "$DECISION_TEMPLATE" ] || framework.console.output::fail "The template $(dot::relative "$DECISION_TEMPLATE") is missing." "bash dot update restores it."
-  [ $# -gt 0 ] || framework.console.args::invalid "A decision needs --name, --statement and --elaboration."
+  [ $# -gt 0 ] || framework.console.args::invalid "A decision needs a name, --statement and --elaboration."
   framework.helpers.fs::make_temp_dir sections_dir || framework.console.output::fail "Couldn't create a temporary directory; please check free space and \$TMPDIR."
   while [ $# -gt 0 ]; do
     case "$1" in
-      --name) framework.console.args::require_value "$@"; name="$2"; has_name=true; shift 2 ;;
+      -s | --status)
+        framework.console.args::require_value "$@"
+        core.modules.decisions.service::is_status "$2" || framework.console.args::invalid "\"$2\" isn't a decision status; please use one of $(core.modules.decisions.service::statuses | paste -sd ' ' -)."
+        status_flag=$(core.modules.decisions.console::choose_status "$status_flag" "$2")
+        status="$2"
+        shift 2
+        ;;
       --statement) framework.console.args::require_value "$@"; statement="$2"; has_statement=true; shift 2 ;;
       --elaboration) framework.console.args::require_value "$@"; printf '%s' "$2" > "$sections_dir/.elaboration"; has_elaboration=true; shift 2 ;;
-      "--$DECISION_SUPERSEDED_FLAG")
-        [ $# -ge 2 ] || framework.console.args::invalid "--$DECISION_SUPERSEDED_FLAG needs the decision that replaces this one, e.g. --$DECISION_SUPERSEDED_FLAG 007."
+      "--$DECISION_SUPERSEDED_FLAG-by")
+        [ $# -ge 2 ] || framework.console.args::invalid "--$DECISION_SUPERSEDED_FLAG-by needs the decision that replaces this one, e.g. --$DECISION_SUPERSEDED_FLAG-by 007."
         status_flag=$(core.modules.decisions.console::choose_status "$status_flag" "$DECISION_SUPERSEDED_FLAG")
         superseder="$2"
         shift 2
         ;;
       --*)
         key="${1#--}"
-        if core.modules.decisions.service::is_status "$key"; then
-          status_flag=$(core.modules.decisions.console::choose_status "$status_flag" "$key")
-          status="$key"
-          shift
-          continue
-        fi
         framework.helpers.template::has_key "$DECISION_TEMPLATE" "$key" || framework.console.args::invalid "--$key isn't a decision section."
         framework.console.args::require_value "$@"
         kind=$(core.modules.decisions.service::kind "$key")
@@ -114,18 +110,24 @@ handle() {
         fi
         shift 2
         ;;
-      *) framework.console.args::unexpected "$1" ;;
+      -*) framework.console.args::unexpected "$1" ;;
+      *)
+        ! $has_name || framework.console.args::unexpected "$1"
+        name="$1"
+        has_name=true
+        shift
+        ;;
     esac
   done
-  $has_name || framework.console.args::invalid "A decision needs --name."
+  $has_name || framework.console.args::invalid "A decision needs a name."
   $has_statement || framework.console.args::invalid "A decision needs --statement."
   $has_elaboration || framework.console.args::invalid "A decision needs --elaboration."
   if [ "$status_flag" = "$DECISION_SUPERSEDED_FLAG" ]; then
     status=$(core.modules.decisions.service::superseded_status "$superseder") \
-      || framework.console.args::invalid "No decision matches \"$superseder\" (--$DECISION_SUPERSEDED_FLAG)."
+      || framework.console.args::invalid "No decision matches \"$superseder\" (--$DECISION_SUPERSEDED_FLAG-by)."
   fi
   slug=$(framework.helpers.text::slug "$name")
-  [ -n "$slug" ] || framework.console.args::invalid "--name needs at least one letter or digit."
+  [ -n "$slug" ] || framework.console.args::invalid "The name needs at least one letter or digit."
   path=$(core.modules.decisions.service::create "$slug" "$status" "$statement" "$sections_dir") || framework.console.output::fail "Couldn't create the decision; please try again."
   framework.console.output::success "Documented decision $(framework.helpers.record::number "$(basename -- "$path")")."
   framework.console.output::detail "$(dot::relative "$path")"

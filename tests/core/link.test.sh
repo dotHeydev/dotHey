@@ -39,7 +39,7 @@ test_link_never_overwrites_files_without_override() {
   printf 'mine\n' > "$SANDBOX/AGENTS.md"
   dot link -y
   assert_equal "$(cat "$SANDBOX/AGENTS.md")" "mine"
-  dot link -y --override
+  dot link -y --replace-existing
   assert_success
   assert_link_to "$SANDBOX/AGENTS.md" "$DOTDOT/AGENTS.md"
   [ -n "$(find "$SANDBOX" -maxdepth 1 -name 'AGENTS.md.bak-*')" ] || fail "no backup was made"
@@ -98,7 +98,7 @@ test_link_refuses_a_map_outside_its_structure() {
 }
 
 test_link_never_writes_suggestions_back_once_taken() {
-  dot plugins:new acme/widgets --path widgets
+  dot plugins:new acme/widgets widgets
   manifest "$SANDBOX/widgets" "link:plugin.json->widgets.conf"
   add_plugin acme/widgets widgets
   take_suggestions acme/widgets
@@ -111,7 +111,7 @@ test_link_never_writes_suggestions_back_once_taken() {
 }
 
 test_plugin_links_the_user_already_has_never_block_it() {
-  dot plugins:new acme/widgets --path widgets
+  dot plugins:new acme/widgets widgets
   manifest "$SANDBOX/widgets" "link:plugin.json->widgets.conf" "link:@dotdotAgents->.h/agents"
   add_plugin acme/widgets widgets
   take_suggestions acme/widgets
@@ -129,7 +129,7 @@ test_plugin_links_the_user_already_has_never_block_it() {
 
 test_plugins_get_suggestions_in_the_map_that_the_user_can_take() {
   local plugin="$DOTDOT/.plugins/acme/widgets"
-  dot plugins:new acme/widgets --path widgets
+  dot plugins:new acme/widgets widgets
   manifest "$SANDBOX/widgets" "link:plugin.json->widgets.conf"
   add_plugin acme/widgets widgets
   assert_equal "$(map_value '.inactive["acme/widgets"]["@plugin:acme.widgets:plugin.json"]')" '["widgets.conf"]'
@@ -138,7 +138,7 @@ test_plugins_get_suggestions_in_the_map_that_the_user_can_take() {
   dot link -y
   assert_success
   assert_link_to "$SANDBOX/widgets.conf" "$plugin/plugin.json"
-  dot link -y --refresh acme/widgets
+  dot link -y --refresh-plugin acme/widgets
   assert_success
   assert_equal "$(map_value '.inactive["acme/widgets"]["@plugin:acme.widgets:plugin.json"]')" '["widgets.conf"]'
   assert_link_to "$SANDBOX/widgets.conf" "$plugin/plugin.json"
@@ -159,7 +159,7 @@ test_plugins_get_suggestions_in_the_map_that_the_user_can_take() {
 }
 
 test_removals_only_take_back_what_their_origin_made() {
-  dot plugins:new acme/widgets --path widgets
+  dot plugins:new acme/widgets widgets
   add_plugin acme/widgets widgets
   links "link:@dot:AGENTS.md->AGENTS.md" "link:@dot:RULES.md->rules.md" "append:@plugin:acme.widgets:plugin.json->notes.conf"
   dot link -y
@@ -176,20 +176,20 @@ test_removals_only_take_back_what_their_origin_made() {
 }
 
 test_plugin_suggestions_stay_within_the_plugin() {
-  dot plugins:new acme/widgets --path widgets
+  dot plugins:new acme/widgets widgets
   mkdir -p "$SANDBOX/widgets/dotdot/agents" "$SANDBOX/widgets/dotdot/stubs"
   : > "$SANDBOX/widgets/dotdot/agents/widgets-helper.md"
   printf 'x\n' > "$SANDBOX/widgets/dotdot/stubs/widgets.conf.stub"
   manifest "$SANDBOX/widgets" "link:@dotdotSkills->.h/skills" "link:agents/*->.h/agents" "append:context/STANDARDS.md->@dot:NOMENCLATURE.md"
   add_plugin acme/widgets widgets
   assert_equal "$(map_value '.inactive["acme/widgets"]')" '{"@dotdotSkills":[".h/skills"],"@plugin:acme.widgets:agents/*":[".h/agents"],"@plugin:acme.widgets:skills/*":[".agents/skills/"],"append":{"@plugin:acme.widgets:context/STANDARDS.md":["@dot:NOMENCLATURE.md"],"@plugin:acme.widgets:stubs/widgets.conf.stub":["widgets.conf"]}}'
-  dot plugins:new other/gadgets --path gadgets
+  dot plugins:new other/gadgets gadgets
   add_plugin other/gadgets gadgets
   assert_equal "$(map_value '.inactive["other/gadgets"]')" '{"@plugin:other.gadgets:skills/*":[".agents/skills/"],"append":{"@plugin:other.gadgets:context/STANDARDS.md":["@dot:STANDARDS.md"]}}'
 }
 
 test_appended_context_follows_its_entry() {
-  dot plugins:new acme/widgets --path widgets
+  dot plugins:new acme/widgets widgets
   printf -- '---\ndescription: Widget rules.\n---\n\nwidgets rule\n' > "$SANDBOX/widgets/dotdot/context/STANDARDS.md"
   cp "$SANDBOX/widgets/dotdot/context/STANDARDS.md" "$SANDBOX/widgets/dotdot/context/WIDGETS.md"
   add_plugin acme/widgets widgets
@@ -219,7 +219,7 @@ widgets rule
 <!-- /acme/widgets -->"
   dot link -y
   assert_contains "$OUTPUT" "Everything is already linked."
-  dot link -y --refresh acme/widgets
+  dot link -y --refresh-plugin acme/widgets
   assert_success
   assert_contains "$(cat "$DOTDOT/STANDARDS.md")" "widgets rule"
   links "remove:@plugin:acme.widgets:context/WIDGETS.md->@dot:WIDGETS.md" "remove:@plugin:acme.widgets:context/STANDARDS.md->@dot:STANDARDS.md"
@@ -233,7 +233,7 @@ test_plugin_commands_only_write_the_map() {
   core "dot::use core.system.plugins.console; core.system.plugins.console::suggest"
   assert_success
   assert_no_file "$SANDBOX/AGENTS.md"
-  dot link --map-only
+  dot link --settings-only
   assert_success
   assert_contains "$OUTPUT" "The links are up to date."
 }
@@ -249,7 +249,7 @@ test_link_keeps_origins_inside_dotdot() {
 }
 
 test_link_map_shortcuts_resolve_dotdot_modules_plugins_and_sets() {
-  dot plugins:new acme/widgets --path widgets
+  dot plugins:new acme/widgets widgets
   add_plugin acme/widgets widgets
   mkdir -p "$DOTDOT/Notes/deep.er"
   : > "$DOTDOT/Notes/deep.er/n.md"
@@ -288,7 +288,7 @@ test_link_map_removals_win_and_never_touch_real_files() {
 }
 
 test_plugin_links_are_activated_and_lose_to_the_general_ones() {
-  dot plugins:new acme/widgets --path widgets
+  dot plugins:new acme/widgets widgets
   manifest "$SANDBOX/widgets" "link:plugin.json->widgets.conf->rules.md" "append:plugin.json->notes.md"
   add_plugin acme/widgets widgets
   links "link:@dot:RULES.md->rules.md" "append:@dot:STANDARDS.md->notes.md"
@@ -384,7 +384,7 @@ test_an_origin_links_and_appends_to_several_destinations() {
   assert_no_file "$SANDBOX/three.md"
   assert_no_file "$SANDBOX/a.md"
   assert_no_file "$SANDBOX/b.md"
-  dot plugins:new acme/widgets --path widgets
+  dot plugins:new acme/widgets widgets
   manifest "$SANDBOX/widgets" "link:plugin.json->w1.json->w2.json" "append:plugin.json->@dot:STANDARDS.md->notes.md"
   add_plugin acme/widgets widgets
   assert_equal "$(map_value '.inactive["acme/widgets"]["@plugin:acme.widgets:plugin.json"]')" '["w1.json","w2.json"]'
@@ -413,7 +413,7 @@ test_link_edits_only_what_changed_in_the_map() {
   }
 }
 MAP
-  dot plugins:new acme/widgets --path widgets
+  dot plugins:new acme/widgets widgets
   add_plugin acme/widgets widgets
   assert_contains "$(cat "$DOTDOT/dot.json")" '  "@dot:AGENTS.md": ["AGENTS.md"],    "@dot:RULES.md": ["rules.md"],'
   assert_equal "$(map_value '.inactive["acme/widgets"]["@plugin:acme.widgets:skills/*"]')" '[".agents/skills/"]'

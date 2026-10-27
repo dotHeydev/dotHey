@@ -38,7 +38,7 @@ Sort every hit into one case:
 
 - **Duplicate** — already recorded. Show the user (`cat <path>`), ask whether to update it instead, and wait. Updating prose has no tool: edit the file, keep its number, bump `modified`.
 - **Influence** — shaped this one → `## Influenced By`.
-- **Replacement** — this one takes over → retire it with `bash dot decisions:update <NNN> --superseded <new NNN>`, only with the user's agreement and only once the new decision has a number.
+- **Replacement** — this one takes over → retire it with `bash dot decisions:update <NNN> superseded --by <new NNN>`, only with the user's agreement and only once the new decision has a number.
 - **Partial change** — narrows it, adds an exception, makes it conditional → **stop and ask**: edit that decision, or supersede and rewrite it. Never record this as a link; the old decision would go on reading `accepted` while being wrong, in the file people actually read.
 
 Only open a decision in full to corroborate your findings, or when the index cannot settle which case applies.
@@ -47,8 +47,8 @@ Only open a decision in full to corroborate your findings, or when the index can
 Both passes, in this order — declared links first, guesses second (when in doubt run command with `--help` flag for usage):
 
 ```sh
-bash dot decisions:impact --decisions "<the influences from step 3>"
-bash dot decisions:impact --terms "<nouns the decision constrains>"
+bash dot decisions:impact "<the influences from step 3>"
+bash dot decisions:impact --term "<nouns the decision constrains>"
 ```
 The first finds features that cite those decisions, so they were built on ground this decision is moving — the likeliest contradictions. Skip it only if step 3 found no influences. The second catches what nobody declared; precise nouns beat broad ones.
 
@@ -71,7 +71,7 @@ Run it rather than writing the file yourself; never construct the filename or nu
 
 ### 7. Verify, then confirm
 ```sh
-bash dot decisions:impact --check
+bash dot decisions:check
 ```
 Then `cat` the file, print its path, and state which decisions shaped it, which it supersedes, and which features it **contradicts** — named, with the specific conflict.
 
@@ -79,7 +79,7 @@ The contradictions are the only part needing the user's judgment; the rest is fi
 
 ## Criteria
 - **References** — pass numbers (`002`, `7`) and let the scripts resolve and link them. Never hand-write a link.
-- **Reverse lookups** — every relation is stored once, on the decision that declares it. Run `bash dot decisions:impact --inbound <NNN>` before leaning on or changing an existing decision.
+- **Reverse lookups** — every relation is stored once, on the decision that declares it. Run `bash dot decisions:impact <NNN> --cited-by` before leaning on or changing an existing decision.
 - **Length** — a decision needing three screens is two decisions, or an essay. Say so and offer to split it.
 
 ## Interviewing

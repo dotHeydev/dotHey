@@ -17,29 +17,32 @@ The project's .env never ships.
 It runs no project commands (no build, test, or install), so it works the
 same for any project: build and test in your own workflow first. It refuses on
 uncommitted changes in what it ships (changes elsewhere don't count), a missing or mismatched signing key, anything that looks like a
-secret, or a remote a flag names that has no token stored. Then it asks,
+secret, or a remote --push names that has no token stored. Then it asks,
 remote by remote, whether to push (default no); without a terminal it pushes
-only where a flag says so. bash dot release:push pushes the same way later.
+only where --push or --push-all says so. bash dot release:push pushes the same way later.
 Each remote is pushed over https with its own personal access token, stored
 encrypted with bash dot release:token <remote>.
 
 Usage:
-  bash dot release:create <version> [--<remote>...] [--push-all] [--cache-pat=N] [--force]
+  bash dot release:create <version> [--push <remote>]... [--push-all] [--keep-tokens <minutes>] [-f, --force]
   bash dot release:create --help
 
 Arguments:
   <version>   Semantic version, e.g. 1.2.0 or 1.2.0-rc.1.
 
 Optional:
-  --<remote>  Push to that remote without asking, e.g. --github. Repeatable.
-              Remote names are the keys of release.remotes.
-  --push-all  Push to every configured remote without asking.
-  --force     Force push, overwriting the remotes' branch and tags. Asks
-              first ([y/N]: only y or yes goes ahead), and only at a terminal.
-  --cache-pat=N
-              Keep the decrypted tokens in memory for N minutes from now, so
-              pushes until then ask no passphrase; given again, the N minutes
-              restart. 0 forgets them. By default nothing is kept.
+  --push <remote>       Push to that remote without asking, e.g. --push github.
+                        Repeatable, or comma-separated. Remote names are the
+                        keys of release.remotes.
+  --push-all            Push to every configured remote without asking.
+  -f, --force           Force push, overwriting the remotes' branch and tags.
+                        Asks first ([y/N]: only y or yes goes ahead), and only
+                        at a terminal.
+  --keep-tokens <minutes>
+                        Keep the decrypted tokens in memory for that many
+                        minutes from now, so pushes until then ask no
+                        passphrase; given again, the minutes restart. 0 forgets
+                        them. By default nothing is kept.
 
 Settings, from $(dot::relative "$SETTINGS_FILE") (over dotdot's defaults); any value may be
 "@env:<KEY>" to read it from $(dot::relative "$HOST_ENV_FILE"):
@@ -61,21 +64,23 @@ Every setting is required; a missing or empty one stops the release.
 
 Examples:
   bash dot release:create 1.2.0
-  bash dot release:create 1.2.0 --github
+  bash dot release:create 1.2.0 --push github
   bash dot release:create 1.2.0 --push-all
-  bash dot release:create 1.2.0 --github --cache-pat=15
+  bash dot release:create 1.2.0 --push github --keep-tokens 15
 EOF
 }
 
 handle() {
   local version="" tag branch
   while [ $# -gt 0 ]; do
-    if core.modules.release.console::parse_push_option "$1"; then
-      shift
+    if core.modules.release.console::parse_push_option "$@"; then
+      shift "$RELEASE_TAKEN"
       continue
     fi
     case "$1" in
-      -*) framework.console.args::invalid "Unknown argument: $1" ;;
+      --push) framework.console.args::require_value "$@"; core.modules.release.console::add_remotes "$2"; shift 2 ;;
+      --push-all) RELEASE_PUSH_ALL=true; shift ;;
+      -*) framework.console.args::unexpected "$1" ;;
       *) [ -z "$version" ] || framework.console.args::unexpected "$1"; version="$1"; shift ;;
     esac
   done

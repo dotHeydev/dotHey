@@ -37,7 +37,7 @@ Code may load dotdot's framework.helpers.*, framework.console.*, and framework.i
 plus its own files; nothing else.
 
 Usage:
-  bash dot plugins:new <owner>/<name> [--path <directory>]
+  bash dot plugins:new <owner>/<name> [<directory>]
   bash dot plugins:new --help
 
 The repo goes into <directory> (default: <name> in the project root), which
@@ -50,15 +50,23 @@ handle() {
   local plugin="" path="" target
   while [ $# -gt 0 ]; do
     case "$1" in
-      --path) framework.console.args::require_value "$@"; path="$2"; shift 2 ;;
       -*) framework.console.args::unexpected "$1" ;;
-      *) [ -z "$plugin" ] || framework.console.args::unexpected "$1"; plugin="$1"; shift ;;
+      *)
+        if [ -z "$plugin" ]; then
+          plugin="$1"
+        elif [ -z "$path" ]; then
+          path="$1"
+        else
+          framework.console.args::unexpected "$1"
+        fi
+        shift
+        ;;
     esac
   done
   [ -n "$plugin" ] || framework.console.args::invalid "Which plugin? Please give it as <owner>/<name>."
   plugin=$(core.system.plugins.console::plugin "$plugin")
-  target=$(framework.helpers.fs::within "${path:-${plugin#*/}}" "$BASE") || framework.console.output::fail "Plugins are created inside the project; please pick a --path in it."
-  [ ! -e "$target" ] || framework.console.output::fail "$(dot::relative "$target") already exists; please pick another --path."
+  target=$(framework.helpers.fs::within "${path:-${plugin#*/}}" "$BASE") || framework.console.output::fail "Plugins are created inside the project; please pick a <directory> in it."
+  [ ! -e "$target" ] || framework.console.output::fail "$(dot::relative "$target") already exists; please pick another <directory>."
   core.system.plugins.service::scaffold "$plugin" "$target" || framework.console.output::fail "Couldn't create the plugin in $(dot::relative "$target")."
   framework.console.output::success "Created plugin $plugin."
   framework.console.output::detail "$(dot::relative "$target")"

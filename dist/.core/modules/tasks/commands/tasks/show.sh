@@ -11,10 +11,10 @@ bash dot tasks:show — show one task: a frontmatter built from its fields
 service keeps the tasks.
 
 At a terminal it opens in less; anywhere else (an agent, a script) it is
-printed between two full-width rules. --print prints at a terminal too.
+printed between two full-width rules. --no-pager prints at a terminal too.
 
 Usage:
-  bash dot tasks:show <id> [--print]
+  bash dot tasks:show <id> [--no-pager]
   bash dot tasks:show --help
 
 <id> is what bash dot tasks:list shows (t004, #12).
@@ -29,7 +29,7 @@ handle() {
   shift
   while [ $# -gt 0 ]; do
     case "$1" in
-      --print) print=true; shift ;;
+      --no-pager) print=true; shift ;;
       *) framework.console.args::unexpected "$1" ;;
     esac
   done

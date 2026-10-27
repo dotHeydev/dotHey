@@ -14,7 +14,7 @@ asked for without echo, never taken as an argument, and stored encrypted for
 that remote's exact url: in the macOS keychain, in the desktop keyring
 (libsecret), or, where neither exists, in the git-ignored $(dot::relative "$HOST_ENV_FILE") as
 ${RELEASE_TOKEN_PREFIX}<NAME>, encrypted by gpg together with the url, with a
-passphrase you choose and are asked for on every push (see --cache-pat in
+passphrase you choose and are asked for on every push (see --keep-tokens in
 bash dot release:push --help). Storing again replaces the token, and storing
 or removing one drops it from that cache; a changed remote url needs a new
 one.

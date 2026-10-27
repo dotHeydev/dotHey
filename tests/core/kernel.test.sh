@@ -98,3 +98,18 @@ test_agents_get_plain_output_and_hand_over_what_needs_a_person() {
   run env AI_AGENT=some-agent bash ./dot update
   assert_contains "$ERRORS" "Please ask the user to run it in a terminal: bash dot update"
 }
+
+test_flag_values_may_follow_an_equals_sign() {
+  dot tasks:list --order=sideways
+  assert_failure
+  assert_contains "$ERRORS" "--order takes asc or desc."
+}
+
+test_a_missing_plugin_never_means_every_plugin() {
+  dot plugins:update
+  assert_failure
+  assert_contains "$ERRORS" "or --all for every one"
+  dot plugins:update --all
+  assert_success
+  assert_contains "$OUTPUT" "No plugins installed yet."
+}

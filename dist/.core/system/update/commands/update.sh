@@ -28,15 +28,14 @@ Without a recorded version, or with a recorded commit the public repo doesn't
 have, nothing is removed: files the latest commit lacks are listed for you to
 review instead.
 
--y / --yes answers yes to the update's own question; link is still asked,
+-y, --yes answers yes to the update's own question; link is still asked,
 since it changes files outside dotdot.
 
 Every run needs a terminal (piped input is refused), --yes included, so only a
 person can start an update.
 
 Usage:
-  bash dot update
-  bash dot update -y
+  bash dot update [-y, --yes]
   bash dot update --help
 EOF
 }
@@ -110,7 +109,7 @@ handle() {
   core.system.update.service::record_version "$new" || framework.console.output::fail "Files updated, but the new version couldn't be recorded in $(dot::relative "$SETTINGS_FILE") ($UPDATE_VERSION_SETTING)."
   # The new core decides what to migrate: its migrate command, in its own
   # process, asks only when a migration is pending here.
-  dot::call migrate --when-pending || true
+  dot::call migrate --if-pending || true
   report "$new"
   if framework.console.prompt::confirm "Do you want to refresh the links now with bash dot link?"; then
     dot::call link || true

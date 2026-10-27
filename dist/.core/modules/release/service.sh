@@ -11,7 +11,7 @@ RELEASE_TOKEN_CACHE="$HOME/.cache/dotdot-release/socket"
 RELEASE_TOKEN_PREFIX="DOT_RELEASE_TOKEN_"
 RELEASE_REMOTE_NAME_PATTERN='^[a-z0-9][a-z0-9_-]*$'
 RELEASE_REMOTE_URL_PATTERN='^https://[A-Za-z0-9.-]+(:[0-9]+)?/[^[:space:]@]+$'
-RELEASE_RESERVED_REMOTES=" help push-all "
+RELEASE_RESERVED_REMOTES=" help all push-all "
 RELEASE_VERSION_PATTERN='^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'
 RELEASE_SIGNING_NAME_PATTERN='^[A-Za-z0-9_][A-Za-z0-9._-]*$'
 RELEASE_AUTHOR_NAME_PATTERN='^[^[:cntrl:]<>]+$'
@@ -49,7 +49,7 @@ core.modules.release.service::load_remotes() {
   while IFS="$(printf '\t')" read -r name url; do
     [[ ! "$url" =~ $RELEASE_PLACEHOLDER_PATTERN ]] || continue
     [[ "$name" =~ $RELEASE_REMOTE_NAME_PATTERN ]] && [[ "$RELEASE_RESERVED_REMOTES" != *" $name "* ]] \
-      || dot::abort "\"$name\" can't be a remote name; please use letters, digits, _ and - (not help or push-all)."
+      || dot::abort "\"$name\" can't be a remote name; please use letters, digits, _ and - (not help, all or push-all)."
     [[ "$url" =~ $RELEASE_REMOTE_URL_PATTERN ]] \
       || dot::abort "$RELEASE_REMOTES_SETTING.$name must be an https:// url with no credentials in it; pushes use a token."
     RELEASE_REMOTES+=("$name")

@@ -2,7 +2,7 @@
 
 test_feature_is_built_from_the_template() {
   local file
-  dot features:create --name "Password reset" --description "Lets a user reset a password." --specification "Given a user"
+  dot features:create "Password reset" --description "Lets a user reset a password." --specification "Given a user"
   assert_success
   file="$DOTDOT/Features/f001--password-reset.md"
   assert_file "$file"
@@ -11,10 +11,10 @@ test_feature_is_built_from_the_template() {
 }
 
 test_feature_requires_name_and_description() {
-  dot features:create --name "Only a name"
+  dot features:create "Only a name"
   assert_failure
   assert_contains "$ERRORS" "--description"
-  dot features:create --name "Bad" --description "x" --not-a-section "y"
+  dot features:create "Bad" --description "x" --not-a-section "y"
   assert_failure
   assert_contains "$ERRORS" "isn't a feature section"
 }

@@ -12,7 +12,7 @@ files in $(dot::relative "$TASKS_DIR")/, GitHub issues, ...), with its body buil
 task template.
 
 Usage:
-  bash dot tasks:create [--title <text>] [--status <status>] [content] [--editor|--no-editor]
+  bash dot tasks:create [<title>] [-s, --status <status>] [content] [-e, --edit | --no-edit]
   bash dot tasks:create --help
 
 Content, any of:
@@ -26,16 +26,16 @@ Statuses (from the template): $(core.modules.tasks.service::statuses | paste -sd
 
 At a terminal, a missing title is asked for, and with no content given your
 editor (\$VISUAL, \$EDITOR) opens on the template, guidance included.
---editor opens it on whatever was given too; --no-editor never opens it.
-Without a terminal (an agent, a script) the editor never opens and --title
+--edit opens it on whatever was given too; --no-edit never opens it.
+Without a terminal (an agent, a script) the editor never opens and <title>
 is required. On first use it runs tasks:initialize, which needs a terminal.
 
 Examples:
-  bash dot tasks:create --title "Throttle failed logins on the login route" \\
+  bash dot tasks:create "Throttle failed logins on the login route" \\
     --description "Brute-force attempts are not throttled." \\
     --done-when "- [ ] 5 failed attempts lock the route for a minute" \\
     --related-features "f012--auth-login.md"
-  bash dot tasks:create --title "Rewrite the README" --body "## Description
+  bash dot tasks:create "Rewrite the README" --body "## Description
 
 Make it shorter."
 USAGE
@@ -51,18 +51,23 @@ handle() {
   status=$(core.modules.tasks.service::default_status)
   while [ $# -gt 0 ]; do
     case "$1" in
-      --title) framework.console.args::require_value "$@"; title="$2"; has_title=true; shift 2 ;;
-      --status) framework.console.args::require_value "$@"; status="$2"; shift 2 ;;
+      -s | --status) framework.console.args::require_value "$@"; status="$2"; shift 2 ;;
       --body) framework.console.args::require_value "$@"; printf '%s\n' "$2" > "$body"; has_body=true; shift 2 ;;
       --body-file) framework.console.args::require_value "$@"; core.modules.tasks.service::read_body_file "$2" "$body"; has_body=true; shift 2 ;;
-      --editor) editor=yes; shift ;;
-      --no-editor) editor=no; shift ;;
+      -e | --edit) editor=yes; shift ;;
+      --no-edit) editor=no; shift ;;
       --*)
         framework.console.args::require_value "$@"
         core.modules.tasks.service::set_section "$sections" "${1#--}" "$2" || framework.console.args::invalid "$1 isn't a task section."
         shift 2
         ;;
-      *) framework.console.args::unexpected "$1" ;;
+      -*) framework.console.args::unexpected "$1" ;;
+      *)
+        ! $has_title || framework.console.args::unexpected "$1"
+        title="$1"
+        has_title=true
+        shift
+        ;;
     esac
   done
   core.modules.tasks.service::is_status "$status" || framework.console.args::invalid "\"$status\" isn't a task status."

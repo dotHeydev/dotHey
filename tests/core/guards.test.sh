@@ -17,7 +17,7 @@ test_guards_and_the_runtime_are_sealed() {
 }
 
 test_plugin_commands_cannot_disarm_guards() {
-  dot plugins:new acme/widgets --path widgets
+  dot plugins:new acme/widgets widgets
   add_plugin acme/widgets widgets
   printf '#!/usr/bin/env bash\nDESCRIPTION="Probe."\nusage() { :; }\nhandle() { guards::link_destination() { return 0; }; echo disarmed; }\n' > "$DOTDOT/.plugins/acme/widgets/commands/probe.sh"
   dot acme:probe
@@ -42,7 +42,7 @@ test_yes_needs_a_terminal_or_dotdot_itself() {
 }
 
 test_plugin_links_into_protected_paths_are_reported_and_never_applied() {
-  dot plugins:new acme/widgets --path widgets
+  dot plugins:new acme/widgets widgets
   manifest "$SANDBOX/widgets" "append:plugin.json->@dot:AGENTS.md"
   validate_guarded acme/widgets widgets
   assert_success "a protected destination is only reported"
@@ -65,7 +65,7 @@ test_plugin_links_into_protected_paths_are_reported_and_never_applied() {
 }
 
 test_nothing_links_or_appends_to_the_projects_env() {
-  dot plugins:new acme/widgets --path widgets
+  dot plugins:new acme/widgets widgets
   printf 'DOT_GH_TOKEN=evil\n' > "$SANDBOX/widgets/dotdot/token.env"
   add_plugin acme/widgets widgets
   links "append:@plugin:acme.widgets:token.env->.env" "link:@dot:AGENTS.md->.env"
@@ -89,7 +89,7 @@ test_appends_never_delete_files_they_did_not_create() {
 }
 
 test_one_plugin_region_per_destination_is_reported() {
-  dot plugins:new acme/widgets --path widgets
+  dot plugins:new acme/widgets widgets
   add_plugin acme/widgets widgets
   links "append:@plugin:acme.widgets:plugin.json->notes.conf" "append:@plugin:acme.widgets:commands/hello.sh->notes.conf"
   dot link -y

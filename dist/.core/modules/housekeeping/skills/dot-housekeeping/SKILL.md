@@ -37,7 +37,7 @@ Then interview once, batched:
 Use the product doc, accepted decisions, and features. Ask only if drafts or ideas could change the outcome.
 
 ### 2. Audit
-Survey the records first (`bash dot scan:frontmatter` on `.dot/`, `.dot/Features/`, `.dot/Decisions/`) and run `bash dot decisions:impact --check` for broken links between decisions. Then read Context docs, Decisions, and Features in full, and the code module by module. Look for:
+Survey the records first (`bash dot scan:frontmatter` on `.dot/`, `.dot/Features/`, `.dot/Decisions/`) and run `bash dot decisions:check` for broken links between decisions. Then read Context docs, Decisions, and Features in full, and the code module by module. Look for:
 - **Code vs concept:** behaviour that differs from a spec or decision.
 - **Dead code:**
   - unreachable branches (guards the constructor, type system, or defaults already rule out);
@@ -84,13 +84,13 @@ Ensure each section fits its respective template.
 - **Used by:** `file@method` outside Owns that use its code. Generate it from real references (imports plus same-namespace use, mapped to the enclosing method), then drop import-only, constructor-injection, and docblock-only hits. One line per file: `file@a, @b`.
 - Verify every listed path and method exists.
 
-Add decision backlinks to the features each decision affects: `bash dot decisions:impact --decisions <NNN>` shows which already cite it, `--terms` which should.
+Add decision backlinks to the features each decision affects: `bash dot decisions:impact <NNN>` shows which already cite it, `--term` which should.
 
 ### 6. Reconcile decisions
 - **Holds:** leave it.
-- **Too strict for reality:** reword its prose, then refresh its timestamp with `bash dot decisions:update <NNN> --<its current status>`.
-- **Never built:** `bash dot decisions:update <NNN> --draft`.
-- **Replaced by another:** `bash dot decisions:update <NNN> --superseded <newer NNN>`.
+- **Too strict for reality:** reword its prose, then refresh its timestamp with `bash dot decisions:update <NNN> <its current status>`.
+- **Never built:** `bash dot decisions:update <NNN> draft`.
+- **Replaced by another:** `bash dot decisions:update <NNN> superseded --by <newer NNN>`.
 - **Missing:** record cross-cutting rules settled during the cleanup with `dot-document-decision`, then backlink them from the features.
 - **Unrun gates:** a test matrix or real-infrastructure test a decision requires is either run or turned into a test.
 

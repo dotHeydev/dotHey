@@ -21,12 +21,12 @@ fixed set, so files with extra keys (ignore, status, tags, ...) survey
 just as well as ones with only name/description.
 
 Usage:
-  bash dot scan:frontmatter <directory|file.md>
+  bash dot scan:frontmatter <path>
   bash dot scan:frontmatter --help
 
 Arguments:
-  <directory>   Scan every *.md directly inside it, separated by a rule.
-  <file.md>     Scan just that one file.
+  <path>        A directory: scans every *.md directly inside it, separated by a
+                rule. A Markdown file: scans just that one.
 
 Notes:
   - A relative path is dotdot-relative, so "Features" and

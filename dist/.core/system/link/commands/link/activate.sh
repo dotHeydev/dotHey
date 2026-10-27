@@ -12,11 +12,11 @@ into "links" in $(dot::relative "$SETTINGS_FILE"), as "<owner>/<name>": {...} ri
 appended here; bash dot link:deactivate moves them back.
 
 Adding or updating a plugin writes its links under "inactive" only. A group
-already active is kept unless --replace is given, which replaces it with the
+already active is kept unless --replace-active is given, which replaces it with the
 inactive one (after an update, to take its new links).
 
 Usage:
-  bash dot link:activate <owner>/<name> [--replace]
+  bash dot link:activate <owner>/<name> [--replace-active]
   bash dot link:activate --help
 USAGE
 }
@@ -25,7 +25,7 @@ handle() {
   local plugin="" replace=false
   while [ $# -gt 0 ]; do
     case "$1" in
-      --replace) replace=true ;;
+      --replace-active) replace=true ;;
       -*) framework.console.args::unexpected "$1" ;;
       *) [ -z "$plugin" ] || framework.console.args::unexpected "$1"; plugin="$1" ;;
     esac

@@ -35,7 +35,7 @@ Output exactly: 💻💻💻 BEGIN IMPLEMENTING
 
 8. **Run the tooling; don't do its job by hand.** Formatting, linting, and code generation are scripted — hand-editing style wastes turns and diverges from the project's config. Use the formatter, generators, and schema workflow `STANDARDS.md` and `TECHSTACK.md` name, and activate other skills when their domain applies.
 
-9. **Document references and relations.** After each test, update the feature doc's File Map per the template, `DATAMODEL.md` if the data model changed, and the `Used by` of the features whose code this one uses. Decisions: record a new cross-cutting one with `dot-document-decision`, change one's status with `bash dot decisions:update` (`dot-tool-decision-update`), and run `bash dot decisions:impact --check` so every link still resolves. Find usages with a plugin's references command when one is installed (`bash dot` lists them). Re-check all of it once done.
+9. **Document references and relations.** After each test, update the feature doc's File Map per the template, `DATAMODEL.md` if the data model changed, and the `Used by` of the features whose code this one uses. Decisions: record a new cross-cutting one with `dot-document-decision`, change one's status with `bash dot decisions:update` (`dot-tool-decision-update`), and run `bash dot decisions:check` so every link still resolves. Find usages with a plugin's references command when one is installed (`bash dot` lists them). Re-check all of it once done.
 
 10. **Clean up.** Once every item of the plan's DoD checklist is done, remove the `Implementation Plan` section.
 

@@ -202,6 +202,15 @@ kernel::run() {
   # Who is running is fixed before the command's code loads.
   readonly DOT_COMMAND DOT_PLUGIN
   . "$file"
+  # --<flag>=<value> is the same as --<flag> <value>.
+  local arguments=() argument
+  for argument in "$@"; do
+    case "$argument" in
+      --[a-z]*=*) arguments+=("${argument%%=*}" "${argument#*=}") ;;
+      *) arguments+=("$argument") ;;
+    esac
+  done
+  set -- ${arguments[@]+"${arguments[@]}"}
   case "${1-}" in
     -h | --help)
       usage

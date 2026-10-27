@@ -124,7 +124,7 @@ The `dot` at your project root is dotdot's handy command line. It gives you and 
 Examples:
 ```sh
 dot link                               # link what the links list into your harness, after adding or renaming skills
-dot notes:create --slug "Cache idea"   # a new note in .dot/Notes/
+dot notes:create "Cache idea"          # a new note in .dot/Notes/
 dot tasks:list                         # the project's tasks
 ```
 
@@ -135,7 +135,7 @@ dotdot ships with what it needs: notes, feature specifications, decisions, tasks
 ```sh
 bash dot plugins:add acme/laravel           # github.com/acme/laravel, its dotdot/ folder
 bash dot plugins:add acme/svelte@v1.0.0     # at a branch, tag, or commit
-bash dot plugins:update                     # every installed plugin, each reviewed again
+bash dot plugins:update --all               # every installed plugin, each reviewed again
 bash dot plugins:remove acme/laravel
 ```
 
@@ -143,7 +143,7 @@ A plugin is code and instructions from its author. It can run anything on your m
 
 Only the repo's `dotdot/` folder is installed, into `.dot/.plugins/<owner>/<name>/`. Its commands run as `bash dot <owner>:<command>`, or without the prefix for an owner listed in the `plugins.unprefixedCommandOwners` setting (one whose name dotdot or an earlier plugin already has keeps its prefix, so dotdot's own are never overridden); a plugin whose owner is one of dotdot's own command names, or whose commands another plugin already has, is refused, each refusal says why. A skill or agent with the name of dotdot's or another plugin's is only reported (first come, first served), as is a link it suggests onto a destination you or another plugin link already, or one `plugins.denyLinkDestination` protects. Wherever two entries link one destination, `bash dot link` keeps the first declared (the general links before any plugin's, then the plugins' groups in their order) and reports the other.
 
-Adding or updating a plugin links and appends nothing. dotdot writes its links into the map under `"inactive"` → `"<owner>/<name>"`, which is never applied. `bash dot link:activate <owner>/<name>` moves them into the plugin's own group, `"<owner>/<name>"`, placed right before `"inactive"`, and the next `bash dot link` applies them; `bash dot link:deactivate <owner>/<name>` moves the group back to the end of `"inactive"` (what it linked stays until removed or broken). An update rewrites only its inactive links; its active group stays, and `bash dot link:activate <owner>/<name> --replace` takes the new ones. Removing a plugin deletes its folder, drops its groups (active or not) and the entries taken from it, prunes its broken links, and removes what it appended to the files the links append to. What is left, its settings, secrets, and the directories holding its records, is listed for you to review and remove yourself.
+Adding or updating a plugin links and appends nothing. dotdot writes its links into the map under `"inactive"` → `"<owner>/<name>"`, which is never applied. `bash dot link:activate <owner>/<name>` moves them into the plugin's own group, `"<owner>/<name>"`, placed right before `"inactive"`, and the next `bash dot link` applies them; `bash dot link:deactivate <owner>/<name>` moves the group back to the end of `"inactive"` (what it linked stays until removed or broken). An update rewrites only its inactive links; its active group stays, and `bash dot link:activate <owner>/<name> --replace-active` takes the new ones. Removing a plugin deletes its folder, drops its groups (active or not) and the entries taken from it, prunes its broken links, and removes what it appended to the files the links append to. What is left, its settings, secrets, and the directories holding its records, is listed for you to review and remove yourself.
 
 ```json
 {
@@ -238,7 +238,7 @@ Plugin code may use, and only use:
 ## Structure
 
 - `.dot/*.md` and `.dot/Features/`, `Decisions/`, `Tasks/`, `Notes/` — the project's context and records, owned by the project.
-- `.dot/dot.json` — the project's settings (see Settings), including the links: every link, append and removal `bash dot link` makes, written from dotdot's default at install. Each plugin's links sit under `"links"` → `"inactive"` until `bash dot link:activate` moves them into its group: written when it is added or updated, and dropped with its group by the first `bash dot link` after it is removed. Edit it freely; `bash dot link --refresh <owner>/<name>` rewrites a plugin's inactive links.
+- `.dot/dot.json` — the project's settings (see Settings), including the links: every link, append and removal `bash dot link` makes, written from dotdot's default at install. Each plugin's links sit under `"links"` → `"inactive"` until `bash dot link:activate` moves them into its group: written when it is added or updated, and dropped with its group by the first `bash dot link` after it is removed. Edit it freely; `bash dot link --refresh-plugin <owner>/<name>` rewrites a plugin's inactive links.
 - `.dot/.core/` — dotdot itself, refreshed by `bash dot update`:
   - `system/` — what dotdot needs to run: `bin/dot`, `boot.sh` (module loading and the `dot::` API, the only API plugins may use), `kernel.sh` (the command registry, listing, and dispatch; it stops every command but `migrate` and `update` while a migration is pending), `paths.sh`, `guards.sh` (the policy every action is checked against: where links and appends may go, what plugins may declare, which settings and secrets code may touch, when `-y` may skip a confirmation), and `plugins`, `link`, `update`, `migrations` (one file per migration, `migrations/NNNN-<slug>.sh`, each with `DESCRIPTION` and `migrate()`, run in order by `bash dot migrate`; `state.migrations` lists those applied, and the installer lists every one), loaded as `core.system.<part>.*`.
   - `modules/` — what dotdot can do: `onboarding`, `ready`, `frontmatter`, `housekeeping`, `notes`, `features`, `decisions`, `tasks`, `release`, each with its commands and skills, loaded as `core.modules.<module>.*`.

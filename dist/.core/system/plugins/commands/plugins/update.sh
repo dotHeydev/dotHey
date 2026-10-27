@@ -6,21 +6,22 @@ dot::use framework.console.args framework.console.output core.system.plugins.con
 
 usage() {
   cat <<USAGE
-bash dot plugins:update — update a plugin, or every installed one, from the
+bash dot plugins:update — update a plugin, or every installed one (--all), from the
 repo and ref it was added from (or its local --from directory).
 
 An update brings new code from the plugin's author, so it gets the same
 warning and review as plugins:add: changed, added, and removed files are
 listed, scripts flagged, and nothing changes until you confirm at a terminal.
--y / --yes skips the question but still needs a terminal.
+-y, --yes skips the question but still needs a terminal.
 
 Its files are replaced, and its block in the links of $(dot::relative "$SETTINGS_FILE") is
 written afresh under "inactive"; its active group stays as it is. Take the new
-links with bash dot link:activate <owner>/<name> --replace, then run bash dot
+links with bash dot link:activate <owner>/<name> --replace-active, then run bash dot
 link.
 
 Usage:
-  bash dot plugins:update [<owner>/<name>] [--yes]
+  bash dot plugins:update <owner>/<name> [-y, --yes]
+  bash dot plugins:update --all [-y, --yes]
   bash dot plugins:update --help
 USAGE
 }
@@ -48,23 +49,29 @@ update_plugin() {
   core.system.plugins.console::install "$plugin" "$PLUGIN_SOURCE"
   framework.console.output::success "Updated $plugin."
   PLUGINS_UPDATED=true
-  PLUGINS_REFRESH+=(--refresh "$plugin")
+  PLUGINS_REFRESH+=(--refresh-plugin "$plugin")
 }
 
 handle() {
-  local plugin confirmed=false selected=()
+  local plugin confirmed=false all=false selected=()
   while [ $# -gt 0 ]; do
     case "$1" in
       -y | --yes) confirmed=true ;;
+      --all) all=true ;;
       -*) framework.console.args::unexpected "$1" ;;
       *) selected+=("$(core.system.plugins.console::plugin "$1")") ;;
     esac
     shift
   done
   [ ${#selected[@]} -le 1 ] || framework.console.args::unexpected "${selected[1]}"
+  if $all; then
+    [ ${#selected[@]} -eq 0 ] || framework.console.args::invalid "Please give one plugin, or --all, not both."
+  else
+    [ ${#selected[@]} -eq 1 ] || framework.console.args::invalid "Which plugin? Please give it as <owner>/<name>, or --all for every one."
+  fi
   PLUGINS_UPDATED=false
   PLUGINS_REFRESH=()
-  if [ ${#selected[@]} -eq 0 ]; then
+  if $all; then
     while IFS= read -r plugin; do
       selected+=("$plugin")
     done < <(core.system.plugins.manifest::installed)
@@ -78,5 +85,5 @@ handle() {
   done
   $PLUGINS_UPDATED || return 0
   core.system.plugins.console::suggest "${PLUGINS_REFRESH[@]}"
-  framework.console.output::next "Take the new links: bash dot link:activate <owner>/<name> --replace, then bash dot link"
+  framework.console.output::next "Take the new links: bash dot link:activate <owner>/<name> --replace-active, then bash dot link"
 }

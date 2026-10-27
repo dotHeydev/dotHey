@@ -19,7 +19,7 @@ plugins.<owner>.<name>.*.
 
 Plugins are not vetted by anyone: you decide whom to trust. Everything the
 plugin brings is previewed, scripts flagged, and nothing changes until you
-confirm at a terminal. -y / --yes skips the question, but still needs a
+confirm at a terminal. -y, --yes skips the question, but still needs a
 terminal, so no agent or script can add a plugin.
 
 Adding creates, links, and appends nothing: dependencies are reported, never
@@ -33,11 +33,10 @@ project. Take them with bash dot link:activate <owner>/<name>, then run bash dot
 Private repos need gh logged in, or DOT_GH_TOKEN in $(dot::relative "$HOST_ENV_FILE").
 
 Usage:
-  bash dot plugins:add <owner>/<name>[@ref] [--yes]
-  bash dot plugins:add <owner>/<name>[@ref] --from ./<repo-directory> [--yes]
+  bash dot plugins:add <owner>/<name>[@<version>] [--from <directory>] [-y, --yes]
   bash dot plugins:add --help
 
-The ref (branch, tag, or commit) defaults to $PLUGIN_DEFAULT_REF. --from takes a
+The <version> (a branch, tag, or commit) defaults to $PLUGIN_DEFAULT_REF. --from takes a
 local copy of the repo inside the project, for developing a plugin: a git
 repo of its own is installed as committed at the ref (its current branch by
 default), and its commit recorded, as for GitHub; any other folder as it is
@@ -71,6 +70,6 @@ handle() {
   core.system.plugins.console::preview "$plugin" "$PLUGIN_SOURCE"
   core.system.plugins.console::confirm "Do you want to add $plugin?" "$confirmed" "bash dot plugins:add $source" || exit 1
   core.system.plugins.console::install "$plugin" "$PLUGIN_SOURCE"
-  core.system.plugins.console::suggest --refresh "$plugin"
+  core.system.plugins.console::suggest --refresh-plugin "$plugin"
   core.system.plugins.console::installed "Added $plugin." "$plugin"
 }

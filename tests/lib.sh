@@ -137,7 +137,7 @@ add_plugin() {
     core.system.plugins.service::fetch $plugin '' $path
     core.system.plugins.manifest::validate \"\$PLUGIN_SOURCE\" $plugin
     core.system.plugins.console::install $plugin \"\$PLUGIN_SOURCE\"
-    core.system.plugins.console::suggest --refresh $plugin"
+    core.system.plugins.console::suggest --refresh-plugin $plugin"
   assert_success "add $plugin"
 }
 

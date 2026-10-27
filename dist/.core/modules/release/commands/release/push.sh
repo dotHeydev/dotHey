@@ -13,22 +13,27 @@ finish a push.
 Each remote is pushed over https with the personal access token stored for
 it (bash dot release:token <remote>); no other credential is used. It asks,
 remote by remote, whether to push (default no); without a terminal it pushes
-only where a flag says so.
+only to the remotes given, or every one with --all.
 
 Usage:
-  bash dot release:push [--<remote>...] [--push-all] [--cache-pat=N] [--force]
+  bash dot release:push [<remote>...] [--all] [--keep-tokens <minutes>] [-f, --force]
   bash dot release:push --help
 
+Arguments:
+  <remote>              Push to that remote without asking. Repeatable, or
+                        comma-separated. Remote names are the keys of
+                        release.remotes.
+
 Optional:
-  --<remote>  Push to that remote without asking, e.g. --github. Repeatable.
-              Remote names are the keys of release.remotes.
-  --push-all  Push to every configured remote without asking.
-  --force     Force push, overwriting the remotes' branch and tags. Asks
-              first ([y/N]: only y or yes goes ahead), and only at a terminal.
-  --cache-pat=N
-              Keep the decrypted tokens in memory for N minutes from now, so
-              pushes until then ask no passphrase; given again, the N minutes
-              restart. 0 forgets them. By default nothing is kept.
+  --all                 Push to every configured remote without asking.
+  -f, --force           Force push, overwriting the remotes' branch and tags.
+                        Asks first ([y/N]: only y or yes goes ahead), and only
+                        at a terminal.
+  --keep-tokens <minutes>
+                        Keep the decrypted tokens in memory for that many
+                        minutes from now, so pushes until then ask no
+                        passphrase; given again, the minutes restart. 0 forgets
+                        them. By default nothing is kept.
 
 Settings, from $(dot::relative "$SETTINGS_FILE") (see bash dot release:create --help):
   release.destination  release repo directory, from the project root
@@ -37,15 +42,23 @@ Settings, from $(dot::relative "$SETTINGS_FILE") (see bash dot release:create --
 
 Examples:
   bash dot release:push
-  bash dot release:push --github
-  bash dot release:push --github --cache-pat=15
+  bash dot release:push github
+  bash dot release:push github --keep-tokens 15
 EOF
 }
 
 handle() {
   local branch tag
   while [ $# -gt 0 ]; do
-    core.modules.release.console::parse_push_option "$1" || framework.console.args::unexpected "$1"
+    if core.modules.release.console::parse_push_option "$@"; then
+      shift "$RELEASE_TAKEN"
+      continue
+    fi
+    case "$1" in
+      --all) RELEASE_PUSH_ALL=true ;;
+      -*) framework.console.args::unexpected "$1" ;;
+      *) core.modules.release.console::add_remotes "$1" ;;
+    esac
     shift
   done
   ! $RELEASE_FORCE || framework.console.prompt::confirm_or_exit "Force-pushing replaces the remotes' history. Do you want to force-push?" n "bash dot release:push --force"

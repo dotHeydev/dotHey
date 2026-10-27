@@ -52,7 +52,7 @@ test_a_failing_migration_stops_the_rest_unrecorded() {
 }
 
 test_when_pending_is_silent_with_nothing_to_migrate() {
-  dot migrate --when-pending
+  dot migrate --if-pending
   assert_success
   assert_equal "$OUTPUT" ""
 }

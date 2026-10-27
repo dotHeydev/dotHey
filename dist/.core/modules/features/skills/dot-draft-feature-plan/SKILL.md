@@ -20,7 +20,7 @@ Output exactly: 🗺️🗺️🗺️ BEGIN DRAFTING PLAN
 
 1. **Find the feature doc.** Named or linked, read it in full. Otherwise, run `bash dot scan:frontmatter .dot/Features/` and ask about any plausible match. If there's no match, confirm with the user if they want to create one, if yes, run the `dot-document-feature` skill first; otherwise proceed with planning a feature or task as you normally do.
 
-2. **Gather only what this feature touches.** Reuse what's already in your context window. Use `bash dot scan:frontmatter .dot/` to read descriptions first, pull full bodies only where they matter. A doc with `ignore: true` was never filled in, and you can skip it. For each decision in the doc's `Related Project Decisions`, run `bash dot decisions:impact --inbound <NNN>` before planning on it: a newer decision may have superseded or narrowed it.
+2. **Gather only what this feature touches.** Reuse what's already in your context window. Use `bash dot scan:frontmatter .dot/` to read descriptions first, pull full bodies only where they matter. A doc with `ignore: true` was never filled in, and you can skip it. For each decision in the doc's `Related Project Decisions`, run `bash dot decisions:impact <NNN> --cited-by` before planning on it: a newer decision may have superseded or narrowed it.
 
 3. **Discover files in this order. Stop as soon as you have what you need.**
    1. **The feature's own File Map** — `filepath@method`, `filepath:lines`.

@@ -13,7 +13,7 @@ bash dot tasks:create --help
 bash dot tasks:update --help
 ```
 
-- Statuses are `todo`, `doing`, `paused`, `done`, `discarded`; move one with `bash dot tasks:<status> <id>` (e.g. `tasks:doing t004`), or with `--<status>` on `tasks:update` alongside other changes. Read a task with `bash dot tasks:show <id>`; without a terminal it prints.
+- Statuses are `todo`, `doing`, `paused`, `done`, `discarded`; move one with `bash dot tasks:<status> <id>` (e.g. `tasks:doing t004`), or with `--status <status>` on `tasks:update` alongside other changes. Read a task with `bash dot tasks:show <id>`; without a terminal it prints.
 - Ids are whatever the list shows (`t004`, `#12`).
 - Working on a task the user hands you: move it to `doing` when you start, record progress and answers in it with `bash dot tasks:update <id> --<section> "..."` (ticking its `Done When` items), and move it to `done` once every item is checked.
 - If tasks are not set up yet, or a task must be deleted, the command says so: both need the user at a terminal (`bash dot tasks:initialize`, `bash dot tasks:delete <id>`). Ask them; never work around it.

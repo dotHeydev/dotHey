@@ -59,7 +59,7 @@ core.modules.tasks.console::status_usage() {
   local status="$1"
   cat <<USAGE
 bash dot tasks:$status — move a task to $status, in whichever service keeps the tasks.
-The same as bash dot tasks:update <id> --$status.
+The same as bash dot tasks:update <id> --status $status.
 
 Usage:
   bash dot tasks:$status <id>
@@ -73,5 +73,5 @@ core.modules.tasks.console::move() {
   local status="$1"
   shift
   [ $# -eq 1 ] || framework.console.args::invalid "Which task? Please give one task id, e.g. t004."
-  dot::call tasks:update "$1" "--$status"
+  dot::call tasks:update "$1" --status "$status"
 }
