@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 DESCRIPTION="Move a task to done."
+DOCS="tasks"
 
 dot::use core.modules.tasks.console core.modules.tasks.service
 

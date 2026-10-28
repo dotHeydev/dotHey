@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 
 DESCRIPTION="Document a new decision from the template."
+JSON=true
+DOCS="decisions"
 
-dot::use framework.console.args core.modules.decisions.console core.modules.decisions.service framework.helpers.fs framework.console.output framework.helpers.template framework.helpers.text
+dot::use framework.console.args core.modules.decisions.console core.modules.decisions.service framework.helpers.fs framework.console.output framework.console.prompt framework.helpers.template framework.helpers.text
 
 usage() {
   local heading key
@@ -11,7 +13,7 @@ Creates the next numbered decision in Decisions/ from the decision template;
 one flag per template section.
 
 Usage:
-  bash dot decisions:create <name> --statement <text> --elaboration <text>
+  bash dot decisions:create <name> --statement <text> --explanation <text>
                             [options]
 
 Arguments:
@@ -22,7 +24,7 @@ Options:
   --statement <text>           Required. The decision as a first-person rule,
                                able to stand alone; becomes the title and the
                                description.
-  --elaboration <text>         Required. One plain paragraph: what must happen,
+  --explanation <text>         Required. One plain paragraph: what must happen,
                                to whom, and with what side effects.
   -s, --status <status>        $(core.modules.decisions.service::statuses | paste -sd ' ' -)
                                (default: $DECISION_DEFAULT_STATUS).
@@ -37,15 +39,17 @@ EOF
     esac
   done < <(framework.helpers.template::headings "$DECISION_TEMPLATE")
   cat <<EOF
+  --json                       Print {"id", "path"}.
   -h, --help                   Show this help.
 
 Examples:
   bash dot decisions:create "JWT in httpOnly cookie" \\
     --statement "We keep the session JWT in an httpOnly cookie." \\
-    --elaboration "Every authenticated response sets it as one." \\
+    --explanation "Every authenticated response sets it as one." \\
     --status accepted --influenced-by 002 --impacts 7
 
 Notes:
+  - At a terminal, a missing name, --statement or --explanation is asked for.
   - To change its status afterwards, use bash dot decisions:update; to change
     its prose, edit the file and bump "modified".
   - The section flags and statuses come from the decision template.
@@ -55,10 +59,9 @@ EOF
 }
 
 handle() {
-  local name="" statement="" has_name=false has_statement=false has_elaboration=false
+  local name="" statement="" has_name=false has_statement=false has_explanation=false
   local status="$DECISION_DEFAULT_STATUS" status_flag="" superseder="" sections_dir key kind link slug path
-  [ -f "$DECISION_TEMPLATE" ] || framework.console.output::fail "The template $(dot::relative "$DECISION_TEMPLATE") is missing." "bash dot update restores it."
-  [ $# -gt 0 ] || framework.console.args::invalid "A decision needs a name, --statement and --elaboration."
+  [ -f "$DECISION_TEMPLATE" ] || framework.console.output::fail "The template $(dot::relative "$DECISION_TEMPLATE") is missing." "bash dot upgrade restores it."
   framework.helpers.fs::make_temp_dir sections_dir || framework.console.output::fail "Couldn't create a temporary directory; please check free space and \$TMPDIR."
   while [ $# -gt 0 ]; do
     case "$1" in
@@ -70,7 +73,7 @@ handle() {
         shift 2
         ;;
       --statement) framework.console.args::require_value "$@"; statement="$2"; has_statement=true; shift 2 ;;
-      --elaboration) framework.console.args::require_value "$@"; printf '%s' "$2" > "$sections_dir/.elaboration"; has_elaboration=true; shift 2 ;;
+      --explanation) framework.console.args::require_value "$@"; printf '%s' "$2" > "$sections_dir/.explanation"; has_explanation=true; shift 2 ;;
       "--$DECISION_SUPERSEDED_FLAG-by")
         [ $# -ge 2 ] || framework.console.args::invalid "--$DECISION_SUPERSEDED_FLAG-by needs the decision that replaces this one, e.g. --$DECISION_SUPERSEDED_FLAG-by 007."
         status_flag=$(core.modules.decisions.console::choose_status "$status_flag" "$DECISION_SUPERSEDED_FLAG")
@@ -99,9 +102,14 @@ handle() {
         ;;
     esac
   done
-  $has_name || framework.console.args::invalid "A decision needs a name."
-  $has_statement || framework.console.args::invalid "A decision needs --statement."
-  $has_elaboration || framework.console.args::invalid "A decision needs --elaboration."
+  local asked=false explanation=""
+  ! $has_explanation || explanation=$(cat -- "$sections_dir/.explanation")
+  $has_name && $has_statement && $has_explanation || asked=true
+  name=$(framework.console.prompt::require "$name" "Short name for the file" "A decision needs a name.")
+  statement=$(framework.console.prompt::require "$statement" "What's the decision statement" "A decision needs --statement.")
+  explanation=$(framework.console.prompt::require "$explanation" "What's the decision explanation" "A decision needs --explanation.")
+  printf '%s' "$explanation" > "$sections_dir/.explanation"
+  ! $asked || framework.console.prompt::hint "bash dot decisions:create \"$name\" --statement \"$statement\" --explanation \"$explanation\""
   if [ "$status_flag" = "$DECISION_SUPERSEDED_FLAG" ]; then
     status=$(core.modules.decisions.service::superseded_status "$superseder") \
       || framework.console.args::invalid "No decision matches \"$superseder\" (--$DECISION_SUPERSEDED_FLAG-by)."
@@ -109,6 +117,5 @@ handle() {
   slug=$(framework.helpers.text::slug "$name")
   [ -n "$slug" ] || framework.console.args::invalid "The name needs at least one letter or digit."
   path=$(core.modules.decisions.service::create "$slug" "$status" "$statement" "$sections_dir") || framework.console.output::fail "Couldn't create the decision; please try again."
-  framework.console.output::success "Documented decision $(framework.helpers.record::number "$(basename -- "$path")")."
-  framework.console.output::detail "$(dot::relative "$path")"
+  framework.console.output::created "Documented decision $(framework.helpers.record::number "$(basename -- "$path")")." "$(basename -- "$path" .md)" "$(dot::relative "$path")"
 }

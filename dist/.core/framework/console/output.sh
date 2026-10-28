@@ -18,18 +18,35 @@ SPINNER_FRAMES=(' ·●' ' •⏺' ' ⏺•' ' ●·' ' ⏺•' ' •⏺' ' ·�
 SPINNER_INTERVAL=0.07
 SPINNER_GRACE_FRAMES=4
 
+# Exit statuses (set by dotdot's boot; these are the defaults).
+: "${EXIT_FAILURE:=1}" "${EXIT_USAGE:=2}" "${EXIT_NOT_FOUND:=4}" "${EXIT_PRECONDITION:=5}"
+
 # Whether an AI agent runs this (AI_AGENT set, or CLAUDECODE=1): the output
-# then stays plain text, without colors, highlighting, or a spinner, and asks
-# the agent to hand over what needs a person.
+# then asks the agent to hand over what needs a person.
 framework.console.output::is_agent() {
   [ -n "${AI_AGENT-}" ] || [ "${CLAUDECODE-}" = 1 ]
+}
+
+# Whether no person is there to answer: an agent, or DOT_NO_INPUT=1 (--no-input,
+# CI). Nothing then prompts, even on a terminal, and the output stays plain text,
+# without colors, highlighting, or a spinner.
+framework.console.output::is_unattended() {
+  framework.console.output::is_agent || [ "${DOT_NO_INPUT-}" = 1 ]
+}
+
+# Whether FORCE_COLOR or CLICOLOR_FORCE asks for colors wherever the output goes.
+framework.console.output::is_color_forced() {
+  case "${FORCE_COLOR-}" in '' | 0 | false) ;; *) return 0 ;; esac
+  case "${CLICOLOR_FORCE-}" in '' | 0) return 1 ;; esac
 }
 
 OUTPUT_MANUAL_RUN="Please run the command manually:"
 ! framework.console.output::is_agent || OUTPUT_MANUAL_RUN="Please ask the user to run it in a terminal:"
 
 framework.console.output::is_styled() {
-  [ -t "${1:-1}" ] && [ -z "${NO_COLOR-}" ] && [ "${TERM-}" != dumb ] && ! framework.console.output::is_agent
+  [ -z "${NO_COLOR-}" ] || return 1
+  framework.console.output::is_color_forced \
+    || { [ -t "${1:-1}" ] && [ "${TERM-}" != dumb ] && ! framework.console.output::is_unattended; }
 }
 
 # Whether stdout and stderr take styles, fixed as this loads: styles are mostly
@@ -85,11 +102,17 @@ framework.console.output::note() { framework.console.output::light_blue "$(frame
 # Marked-up <text> as it prints on <descriptor>: escape codes at a terminal,
 # plain text anywhere else, with no newline added.
 framework.console.output::render() {
-  local descriptor="$1" text="$2" rest
+  local descriptor="$1" text="$2"
   if framework.console.output::paints "$descriptor"; then
     printf '%s' "$(printf '%s\n' "$text" | awk -v styled=1 -f "$OUTPUT_RENDERER")"
     return
   fi
+  framework.console.output::plain "$text"
+}
+
+# Marked-up <text> without its markup, with no newline added.
+framework.console.output::plain() {
+  local text="$1" rest
   while [[ "$text" == *$'\001'* ]]; do
     rest="${text#*$'\001'}"
     text="${text%%$'\001'*}${rest#*$'\002'}"
@@ -225,6 +248,19 @@ framework.console.output::success() {
   framework.console.output::emit 1 "$(framework.console.output::bold "$(framework.console.output::green "$OUTPUT_SUCCESS_ICON")") $*"
 }
 
+# A record just made: <message>, its <path> under it; under --json,
+# {"id", "path"} instead.
+framework.console.output::created() {
+  local message="$1" id="$2" path="$3"
+  if [ "${DOT_JSON-}" = true ]; then
+    dot::use framework.helpers.json
+    printf '{"id":%s,"path":%s}\n' "$(framework.helpers.json::string "$id")" "$(framework.helpers.json::string "$path")"
+    return
+  fi
+  framework.console.output::success "$message"
+  framework.console.output::detail "$path"
+}
+
 # A side note: light blue, its text in italics.
 framework.console.output::info() {
   framework.console.output::emit 1 "$(framework.console.output::light_blue "$(framework.console.output::bold "$OUTPUT_INFO_ICON") $(framework.console.output::italic "$*")")"
@@ -273,9 +309,15 @@ framework.console.output::warn() {
   framework.console.output::emit 2 "$(framework.console.output::bold "$(framework.console.output::yellow "$OUTPUT_WARNING_ICON $*")")"
 }
 
-# <message>, then each further argument as a next step under it.
+# <message>, then each further argument as a next step under it; under --json
+# (DOT_JSON=true), one JSON error on stderr instead, for the exit status in
+# OUTPUT_ERROR_STATUS (fail_as sets it).
 framework.console.output::error() {
   local step
+  if [ "${DOT_JSON-}" = true ]; then
+    framework.console.output::json_error "${OUTPUT_ERROR_STATUS:-$EXIT_FAILURE}" "$@"
+    return
+  fi
   framework.console.output::emit 2 "$(framework.console.output::bold "$(framework.console.output::red "$OUTPUT_ERROR_ICON")") $1"
   shift
   for step in "$@"; do
@@ -283,9 +325,38 @@ framework.console.output::error() {
   done
 }
 
-framework.console.output::fail() {
+# {"error": {"code", "exitCode", "message", "run", "next"}} on stderr: "run" is
+# the first dotdot command among the next steps, or null.
+framework.console.output::json_error() {
+  local status="$1" message="$2" code step run=null next=""
+  shift 2
+  dot::use framework.helpers.json
+  case "$status" in
+    "$EXIT_USAGE") code=USAGE ;;
+    "$EXIT_NOT_FOUND") code=NOT_FOUND ;;
+    "$EXIT_PRECONDITION") code=PRECONDITION ;;
+    *) code=FAILED ;;
+  esac
+  for step in "$@"; do
+    step=$(framework.helpers.secrets::mask "$(framework.console.output::plain "$step")")
+    [ "$run" != null ] || [[ "$step" != *"bash dot "* ]] || run=$(framework.helpers.json::string "bash dot ${step#*bash dot }")
+    next="$next${next:+,}$(framework.helpers.json::string "$step")"
+  done
+  message=$(framework.helpers.secrets::mask "$(framework.console.output::plain "$message")")
+  printf '{"error":{"code":"%s","exitCode":%s,"message":%s,"run":%s,"next":[%s]}}\n' \
+    "$code" "$status" "$(framework.helpers.json::string "$message")" "$run" "$next" >&2
+}
+
+# error, then exit <status> (one of EXIT_*).
+framework.console.output::fail_as() {
+  local OUTPUT_ERROR_STATUS="$1"
+  shift
   framework.console.output::error "$@"
-  exit 1
+  exit "$OUTPUT_ERROR_STATUS"
+}
+
+framework.console.output::fail() {
+  framework.console.output::fail_as "$EXIT_FAILURE" "$@"
 }
 
 framework.console.output::aborted() {
@@ -318,7 +389,7 @@ framework.console.output::spin() {
   local label="$1" errors status=0 process tick=0 drawn=false frame_count=${#SPINNER_FRAMES[@]}
   shift
   errors=$(mktemp) || return 1
-  if [ ! -t 2 ] || framework.console.output::is_agent; then
+  if [ ! -t 2 ] || framework.console.output::is_unattended; then
     [ -z "$label" ] || framework.console.output::emit 2 "$label"
     "$@" 2>"$errors" || status=$?
     framework.console.output::emit_file 2 "$errors"

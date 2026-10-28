@@ -13,9 +13,10 @@ core.modules.tasks.console::ensure_service() {
   local service
   core.modules.tasks.service::require_template
   if ! service=$(core.modules.tasks.service::selected_service); then
-    framework.console.prompt::is_interactive || framework.console.output::fail "Tasks aren't set up yet." "$OUTPUT_MANUAL_RUN bash dot tasks:initialize"
+    framework.console.prompt::is_interactive \
+      || framework.console.output::fail_as "$EXIT_PRECONDITION" "Tasks aren't set up yet." "Choose where they're kept: bash dot tasks:initialize --service <$(core.modules.tasks.service::services | paste -sd '|' -)>"
     framework.console.output::warn "Tasks aren't set up yet."
-    dot::call tasks:initialize || exit 1
+    dot::call tasks:initialize || exit
     service=$(core.modules.tasks.service::selected_service) || framework.console.output::fail "No task service chosen, so nothing changed."
   fi
   core.modules.tasks.service::load_service "$service"

@@ -48,7 +48,7 @@ test_plugin_links_into_protected_paths_are_reported_and_never_applied() {
   assert_success "a protected destination is only reported"
   assert_contains "$ERRORS" "acme/widgets wants to append to .dot/AGENTS.md, which plugins.denyLinkDestination protects; it will never apply."
   add_plugin acme/widgets widgets
-  dot link:activate acme/widgets
+  dot plugins:link acme/widgets -y
   dot link -y
   assert_success
   assert_contains "$ERRORS" "Skipped acme/widgets's append to .dot/AGENTS.md: plugins.denyLinkDestination protects it."

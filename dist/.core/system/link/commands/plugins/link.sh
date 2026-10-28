@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+
+DESCRIPTION="Link a plugin's waiting links, and make them active."
+DOCS="using-plugins"
+
+dot::use core.system.link.console
+
+usage() {
+  cat <<EOF
+Applies a plugin's links waiting under "inactive" in $(dot::relative "$SETTINGS_FILE") — only
+those — after previewing them and asking, then moves them to active.
+With no one at a terminal to ask, it only previews.
+
+Usage:
+  bash dot plugins:link <owner>/<name> [--overwrite] [--preview] [-y, --yes]
+
+Arguments:
+  <owner>/<name>       The plugin.
+
+Options:
+  --overwrite          Take new links over active ones (after a plugin update),
+                       and replace destinations that already exist. Also
+                       --force.
+  --preview            Show the changes, and stop. Also --dry-run.
+  -y, --yes            Apply without asking. Only at a terminal.
+  -h, --help           Show this help.
+
+Examples:
+  bash dot plugins:link acme/widgets
+  bash dot plugins:link acme/widgets --overwrite
+EOF
+}
+
+handle() {
+  core.system.link.console::plugin_links link "$@"
+}

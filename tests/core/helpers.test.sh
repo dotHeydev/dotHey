@@ -126,14 +126,14 @@ unset" "a missing key falls back to the default"
   printf '# MY_SERVICE=commented\nMY_SERVICE=github\nDOT_MY_ZONE=UTC\nMY_FLAG=true\nMY_COUNT=12\nMY_LABEL="12"\nMY_NULL=null\nMY_MAP={"a": 1}\nMY_OWNERS=["one", "two"]\n' > "$SANDBOX/.env"
   core "MY_SERVICE=from-environment dot::setting tasks.service; dot::setting general.timezone; dot::setting general.flag; dot::setting general.count; dot::setting general.label; dot::setting general.none unset; dot::setting general.map; dot::setting plugins.unprefixedCommandOwners"
   assert_success
-  assert_equal "$OUTPUT" '''github
+  assert_equal "$OUTPUT" 'github
 UTC
 true
 12
 12
 unset
 {"a":1}
-["one","two"]'''
+["one","two"]'
   printf 'MY_OWNERS=one, two\n' > "$SANDBOX/.env"
   core "dot::setting plugins.unprefixedCommandOwners"
   assert_equal "$OUTPUT" "one, two" "text that is not JSON stays text"

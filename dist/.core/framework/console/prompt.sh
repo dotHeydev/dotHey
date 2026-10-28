@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 
-dot::use framework.console.output
+dot::use framework.console.output framework.console.args
 
 PROMPT_YES_PATTERN='^[Yy]([Ee][Ss])?$'
 
 framework.console.prompt::can_ask() {
-  [ -t 0 ]
+  [ -t 0 ] && ! framework.console.output::is_unattended
 }
 
 framework.console.prompt::is_interactive() {
-  [ -t 0 ] && [ -t 1 ]
+  framework.console.prompt::can_ask && [ -t 1 ]
 }
 
 # A question: a blank line above it, then the question in bold.
@@ -36,14 +36,36 @@ framework.console.prompt::confirm_or_abort() {
   framework.console.prompt::confirm "$question" "$default" && return 0
   if framework.console.prompt::can_ask; then
     framework.console.output::aborted
-  else
-    framework.console.output::error "This needs your confirmation in a terminal, so nothing changed." "$OUTPUT_MANUAL_RUN $command"
+    return 1
   fi
-  return 1
+  local OUTPUT_ERROR_STATUS="$EXIT_PRECONDITION"
+  framework.console.output::error "This needs your confirmation in a terminal, so nothing changed." "$OUTPUT_MANUAL_RUN $command"
+  return "$EXIT_PRECONDITION"
 }
 
 framework.console.prompt::confirm_or_exit() {
-  framework.console.prompt::confirm_or_abort "$@" || exit 1
+  local status=0
+  framework.console.prompt::confirm_or_abort "$@" || status=$?
+  [ "$status" -eq 0 ] || exit "$status"
+}
+
+# <value> when it isn't empty; else, at a terminal, the answer to <question>;
+# off one (or with no answer), the usage error <missing>.
+framework.console.prompt::require() {
+  local value="$1" question="$2" missing="$3" answer
+  if [ -n "$value" ]; then
+    printf '%s\n' "$value"
+    return
+  fi
+  framework.console.prompt::is_interactive || framework.console.args::invalid "$missing"
+  answer=$(framework.console.prompt::ask "$question")
+  [ -n "$answer" ] || framework.console.args::invalid "$missing"
+  printf '%s\n' "$answer"
+}
+
+# After answers were asked for: the command that gives them as flags, to reuse.
+framework.console.prompt::hint() {
+  framework.console.output::next "Next time: $*" >&2
 }
 
 framework.console.prompt::ask() {

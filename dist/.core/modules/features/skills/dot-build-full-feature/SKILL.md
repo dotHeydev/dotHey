@@ -20,7 +20,7 @@ The feature doc is the handoff between them — each stage reads what the last o
 
 ## Process
 
-1. **Find the entry point.** Run `bash dot scan:frontmatter .dot/Features/` and check what already exists:
+1. **Find the entry point.** Run `bash dot frontmatter:show .dot/Features/` and check what already exists:
    - no matching feature doc → start at `dot-document-feature`
    - doc exists, `Implementation Plan` empty → start at `dot-draft-feature-plan`
    - plan exists, no tests for it (no `fNNN--<slug>/` test directory, the structure `dot-write-feature-tests` uses) → start at `dot-write-feature-tests`

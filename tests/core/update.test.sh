@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 test_update_needs_a_terminal() {
-  dot update -y
+  dot upgrade -y
   assert_failure
   assert_contains "$ERRORS" "confirmation in a terminal"
 }

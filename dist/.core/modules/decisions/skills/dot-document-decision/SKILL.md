@@ -32,13 +32,13 @@ Never invent the reason. A missing rationale is better than a plausible one the 
 
 ### 3. Find related decisions
 ```sh
-bash dot scan:frontmatter .dot/Decisions/
+bash dot frontmatter:show .dot/Decisions/
 ```
 Sort every hit into one case:
 
 - **Duplicate** — already recorded. Show the user (`cat <path>`), ask whether to update it instead, and wait. Updating prose has no tool: edit the file, keep its number, bump `modified`.
 - **Influence** — shaped this one → `## Influenced By`.
-- **Replacement** — this one takes over → retire it with `bash dot decisions:update <NNN> superseded --by <new NNN>`, only with the user's agreement and only once the new decision has a number.
+- **Replacement** — this one takes over → retire it with `bash dot decisions:update <NNN> --status superseded --by <new NNN>`, only with the user's agreement and only once the new decision has a number.
 - **Partial change** — narrows it, adds an exception, makes it conditional → **stop and ask**: edit that decision, or supersede and rewrite it. Never record this as a link; the old decision would go on reading `accepted` while being wrong, in the file people actually read.
 
 Only open a decision in full to corroborate your findings, or when the index cannot settle which case applies.
@@ -79,7 +79,7 @@ The contradictions are the only part needing the user's judgment; the rest is fi
 
 ## Criteria
 - **References** — pass numbers (`002`, `7`) and let the scripts resolve and link them. Never hand-write a link.
-- **Reverse lookups** — every relation is stored once, on the decision that declares it. Run `bash dot decisions:impact <NNN> --cited-by` before leaning on or changing an existing decision.
+- **Reverse lookups** — every relation is stored once, on the decision that declares it. Run `bash dot decisions:citers <NNN>` before leaning on or changing an existing decision.
 - **Length** — a decision needing three screens is two decisions, or an essay. Say so and offer to split it.
 
 ## Interviewing

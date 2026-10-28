@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 DESCRIPTION="Upgrade dotdot's own files to this version's format."
+DOCS="updating-dotdot"
 
 dot::use framework.console.args framework.console.output framework.console.prompt framework.helpers.json framework.helpers.text
 
@@ -8,16 +9,14 @@ usage() {
   cat <<USAGE
 Runs the migrations still pending, in order: each converts a file dotdot keeps
 in $DOTDOT_NAME/ from an older format. While one is pending, every command but
-update asks for this one first.
+upgrade asks for this one first.
 
 Usage:
-  bash dot migrate [-y, --yes] [--if-pending]
+  bash dot migrate [-y, --yes]
 
 Options:
   -y, --yes      Run without asking. Only at a terminal, or when dotdot itself
                  runs it.
-  --if-pending   Print nothing when there is nothing to migrate (bash dot
-                 update uses it).
   -h, --help     Show this help.
 
 Notes:
@@ -47,7 +46,7 @@ handle() {
     framework.console.output::entry blue "$OUTPUT_SEPARATOR" "${file##*/}" "$(kernel::description "$file")"
   done
   if $confirmed; then
-    guards::skip_confirmation || framework.console.output::fail "-y only works in a terminal, so nothing ran unseen." "$OUTPUT_MANUAL_RUN bash dot migrate"
+    guards::skip_confirmation || framework.console.output::fail_as "$EXIT_PRECONDITION" "-y only works in a terminal, so nothing ran unseen." "$OUTPUT_MANUAL_RUN bash dot migrate"
     framework.console.output::line "Migrating (-y)…"
   else
     framework.console.prompt::confirm_or_exit "Do you want to run $(framework.helpers.text::plural "${#pending[@]}" migration)?" n "bash dot migrate"

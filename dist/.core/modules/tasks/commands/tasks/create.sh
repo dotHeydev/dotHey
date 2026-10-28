@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 
 DESCRIPTION="Create a task."
+DOCS="tasks"
+JSON=true
 
-dot::use framework.console.args framework.helpers.fs framework.console.output framework.console.prompt core.modules.tasks.console core.modules.tasks.service framework.helpers.text
+dot::use framework.console.args framework.helpers.fs framework.console.output framework.console.prompt core.modules.tasks.console core.modules.tasks.service framework.helpers.text framework.helpers.json
 
 usage() {
   core.modules.tasks.service::require_template
@@ -24,6 +26,7 @@ Options:
 $(core.modules.tasks.console::section_flags_help)
   -e, --edit               Open your editor on what was given, too.
   --no-edit                Never open the editor.
+  --json                   Print {"id", "title", "status"}.
   -h, --help               Show this help.
 
 Examples:
@@ -69,7 +72,8 @@ handle() {
   core.modules.tasks.service::is_status "$status" || framework.console.args::invalid "\"$status\" isn't a task status."
   if ! $has_title; then
     framework.console.prompt::is_interactive || framework.console.args::invalid "The task needs a title."
-    title=$(framework.console.prompt::ask "Title")
+    title=$(framework.console.prompt::require "" "Title" "The task needs a title.")
+    framework.console.prompt::hint "bash dot tasks:create \"$title\" ..."
   fi
   core.modules.tasks.service::check_title "$title"
   $has_body || core.modules.tasks.service::compose_body "$sections" > "$body"
@@ -77,7 +81,11 @@ handle() {
   has_content=$has_body
   [ -z "$(core.modules.tasks.service::given_sections "$sections")" ] || has_content=true
   [ "$(core.modules.tasks.console::editor_mode "$editor" "$has_content")" = no ] || core.modules.tasks.console::edit_body "$body"
-  id=$(core.modules.tasks.console::call create "$title" "$status" "$body") || exit 1
+  id=$(core.modules.tasks.console::call create "$title" "$status" "$body") || exit
+  if $DOT_JSON; then
+    printf '{"id":%s,"title":%s,"status":%s}\n' "$(framework.helpers.json::string "$id")" "$(framework.helpers.json::string "$title")" "$(framework.helpers.json::string "$status")"
+    return
+  fi
   framework.console.output::success "Created task $id • $title ($status)"
   core.modules.tasks.console::print_location "$id"
 }

@@ -138,8 +138,8 @@ test_linked_entries_that_clash_between_plugins_are_reported_and_the_first_wins()
   assert_success "a clashing skill is only reported"
   assert_contains "$ERRORS" "other/widgets's skills/widgets-example has the same name as one in .dot/.plugins/acme/widgets"
   add_plugin other/widgets other
-  dot link:activate acme/widgets
-  dot link:activate other/widgets
+  dot plugins:link acme/widgets -y
+  dot plugins:link other/widgets -y
   dot link -y
   assert_success
   assert_link_to "$SANDBOX/.agents/skills/widgets-example" "$DOTDOT/.plugins/acme/widgets/skills/widgets-example"
@@ -561,3 +561,22 @@ test_plugin_manifests_must_be_json_objects_with_lists() {
   done
 }
 
+
+test_plugins_list_json_new_into_and_add_preview() {
+  dot plugins:list --json
+  assert_equal "$OUTPUT" "[]"
+  dot plugins:new acme/widgets --into widgets
+  assert_success
+  assert_file "$SANDBOX/widgets/dotdot/plugin.json"
+  dot plugins:add acme/widgets --from widgets --preview
+  assert_success
+  assert_contains "$OUTPUT" "Preview only — nothing changed."
+  assert_no_file "$DOTDOT/.plugins/acme/widgets/dotdot/plugin.json"
+  dot plugins:list --json
+  assert_equal "$OUTPUT" "[]"
+  add_plugin acme/widgets widgets
+  dot plugins:list --json
+  assert_equal "$(json_value "$OUTPUT" '.[0].name')" acme/widgets
+  dot plugins:update nobody/here
+  assert_equal "$STATUS" 4
+}

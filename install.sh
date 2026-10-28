@@ -164,7 +164,7 @@ record_migrations() {
   set_state migrations "[$list]"
 }
 
-# GitHub archives carry their commit in a pax header; dot update diffs
+# GitHub archives carry their commit in a pax header; dot upgrade diffs
 # against it to know what it may remove. Without it, the first update just
 # removes nothing.
 record_version() {
@@ -173,7 +173,7 @@ record_version() {
   if [ -n "$commit" ]; then
     set_state version "\"$commit\""
   else
-    printf "%s⚠️  Couldn't read the installed version; the first bash dot update won't clean up stale files.%s\n" "$YELLOW" "$RESET"
+    printf "%s⚠️  Couldn't read the installed version; the first bash dot upgrade won't clean up stale files.%s\n" "$YELLOW" "$RESET"
   fi
 }
 

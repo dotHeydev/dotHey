@@ -37,7 +37,7 @@ Then interview once, batched:
 Use the product doc, accepted decisions, and features. Ask only if drafts or ideas could change the outcome.
 
 ### 2. Audit
-Survey the records first (`bash dot scan:frontmatter` on `.dot/`, `.dot/Features/`, `.dot/Decisions/`) and run `bash dot decisions:check` for broken links between decisions. Then read Context docs, Decisions, and Features in full, and the code module by module. Look for:
+Survey the records first (`bash dot frontmatter:show` on `.dot/`, `.dot/Features/`, `.dot/Decisions/`) and run `bash dot decisions:check` for broken links between decisions. Then read Context docs, Decisions, and Features in full, and the code module by module. Look for:
 - **Code vs concept:** behaviour that differs from a spec or decision.
 - **Dead code:**
   - unreachable branches (guards the constructor, type system, or defaults already rule out);
@@ -89,8 +89,8 @@ Add decision backlinks to the features each decision affects: `bash dot decision
 ### 6. Reconcile decisions
 - **Holds:** leave it.
 - **Too strict for reality:** reword its prose, then refresh its timestamp with `bash dot decisions:update <NNN> <its current status>`.
-- **Never built:** `bash dot decisions:update <NNN> draft`.
-- **Replaced by another:** `bash dot decisions:update <NNN> superseded --by <newer NNN>`.
+- **Never built:** `bash dot decisions:update <NNN> --status draft`.
+- **Replaced by another:** `bash dot decisions:update <NNN> --status superseded --by <newer NNN>`.
 - **Missing:** record cross-cutting rules settled during the cleanup with `dot-document-decision`, then backlink them from the features.
 - **Unrun gates:** a test matrix or real-infrastructure test a decision requires is either run or turned into a test.
 

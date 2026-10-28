@@ -50,7 +50,7 @@ core.modules.tasks.drivers.github::task_rows() {
         "$TASK_STATUS_LABEL_PREFIX"*) status="${label#"$TASK_STATUS_LABEL_PREFIX"}"; break ;;
       esac
     done
-    [ -n "$status" ] || { [ "$state" = CLOSED ] && status=done || status=todo; }
+    [ -n "$status" ] || { [ "$state" = CLOSED ] && status="done" || status="todo"; }
     printf '#%s\t%s\t%s\t%s\t%s\n' "$number" "$status" "$(framework.helpers.date::from_iso "$created")" "$(framework.helpers.date::from_iso "$updated")" "$title"
   done
 }

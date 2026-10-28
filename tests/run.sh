@@ -3,7 +3,7 @@
 set -uo pipefail
 # Agent mode (AI_AGENT, CLAUDECODE) changes the output; tests ask for it
 # themselves.
-unset AI_AGENT CLAUDECODE
+unset AI_AGENT CLAUDECODE CI DOT_NO_INPUT FORCE_COLOR CLICOLOR_FORCE
 
 . "$(dirname -- "$0")/lib.sh"
 

@@ -28,7 +28,7 @@ A plugin can bring:
 - **Stubs**, appended to files in the project.
 - **Code**, organized as you like and loaded through dotdot's module system.
 
-Everything that touches the project is a *suggestion*: it lands under `"inactive"` in the links, and only the user takes it, with `bash dot link:activate`.
+Everything that touches the project is a *suggestion*: it lands under `"inactive"` in the links, and only the user takes it, with `bash dot plugins:link`.
 
 Harness plugins, like `dotdot-sh/claude-code`, are ordinary plugins that link dotdot's skills, agents, and docs where one agent reads them.
 

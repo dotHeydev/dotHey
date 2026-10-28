@@ -7,15 +7,19 @@ framework.console.args::require_value() {
 }
 
 # <message>, then the command's first usage line as an example, and where
-# its full help is.
+# its full help is; exits EXIT_USAGE.
 framework.console.args::invalid() {
-  local example=""
-  framework.console.output::error "$1"
+  local example="" help="For more, run: bash dot ${DOT_COMMAND:-} --help"
   ! declare -F usage >/dev/null \
     || example=$(usage 2>/dev/null | awk 'found && NF { sub(/^ +/, ""); print; exit } /^Usage:/ { found = 1 }')
-  [ -z "$example" ] || framework.console.output::detail "Usage: $example" >&2
-  framework.console.output::next "For more, run: bash dot ${DOT_COMMAND:-} --help" >&2
-  exit 1
+  if [ "${DOT_JSON-}" = true ]; then
+    framework.console.output::json_error "$EXIT_USAGE" "$1" "$help" ${example:+"Usage: $example"}
+  else
+    framework.console.output::error "$1"
+    [ -z "$example" ] || framework.console.output::detail "Usage: $example" >&2
+    framework.console.output::next "$help" >&2
+  fi
+  exit "$EXIT_USAGE"
 }
 
 framework.console.args::unexpected() {

@@ -1,6 +1,6 @@
 ---
 name: <short kebab-case feature slug>
-description: <one-line summary — this is what bash dot scan:frontmatter matches on for duplicate/relation checks>
+description: <one-line summary — this is what bash dot frontmatter:show matches on for duplicate/relation checks>
 ---
 
 # {Feature Name}

@@ -18,10 +18,18 @@ test_link_is_idempotent() {
   assert_contains "$OUTPUT" "Everything is already linked."
 }
 
-test_link_needs_confirmation_without_yes() {
+test_link_only_previews_without_a_terminal_or_with_preview() {
   dot link
+  assert_success
+  assert_contains "$OUTPUT" "No one at a terminal to confirm, so this is only a preview."
+  assert_contains "$OUTPUT" "Preview only — nothing changed."
+  assert_no_file "$SANDBOX/AGENTS.md"
+  DOT_INTERNAL_CALL="" dot link --preview -y
   assert_failure
-  assert_contains "$ERRORS" "This needs your confirmation in a terminal"
+  assert_equal "$STATUS" 5
+  dot link --dry-run
+  assert_success
+  assert_contains "$OUTPUT" "Preview only — nothing changed."
   assert_no_file "$SANDBOX/AGENTS.md"
 }
 
@@ -39,7 +47,7 @@ test_link_never_overwrites_files_without_override() {
   printf 'mine\n' > "$SANDBOX/AGENTS.md"
   dot link -y
   assert_equal "$(cat "$SANDBOX/AGENTS.md")" "mine"
-  dot link -y --replace-existing
+  dot link -y --overwrite
   assert_success
   assert_link_to "$SANDBOX/AGENTS.md" "$DOTDOT/AGENTS.md"
   [ -n "$(find "$SANDBOX" -maxdepth 1 -name 'AGENTS.md.bak-*')" ] || fail "no backup was made"
@@ -297,8 +305,13 @@ test_plugin_links_are_activated_and_lose_to_the_general_ones() {
   dot link -y
   assert_success
   assert_no_file "$SANDBOX/widgets.conf"
-  dot link:activate acme/widgets
+  dot plugins:link acme/widgets --preview
   assert_success
+  assert_contains "$OUTPUT" "Preview only — nothing changed."
+  assert_no_file "$SANDBOX/widgets.conf"
+  dot plugins:link acme/widgets -y
+  assert_success
+  assert_link_to "$SANDBOX/widgets.conf" "$DOTDOT/.plugins/acme/widgets/plugin.json"
   assert_equal "$(map_value '.inactive')" '{}'
   assert_equal "$(map_value '["acme/widgets"]["@plugin:acme.widgets:plugin.json"]')" '["widgets.conf","rules.md"]'
   assert_equal "$(core "dot::use framework.helpers.json; framework.helpers.json::keys \"\$(cat '$DOTDOT/dot.json')\" .links"; printf '%s' "$OUTPUT")" "@dot:RULES.md
@@ -306,17 +319,20 @@ append
 remove
 acme/widgets
 inactive" "the group lands right before inactive"
-  dot link:activate acme/widgets
+  dot plugins:link acme/widgets -y
   assert_failure
-  assert_contains "$ERRORS" "acme/widgets has no links waiting under"
-  dot link:deactivate acme/widgets
+  assert_equal "$STATUS" 5
+  assert_contains "$ERRORS" "acme/widgets's links are already linked, with none waiting."
+  dot plugins:unlink acme/widgets -y
   assert_success
+  assert_no_file "$SANDBOX/widgets.conf"
+  assert_not_contains "$(cat "$SANDBOX/notes.md" 2>/dev/null)" "<!-- acme/widgets -->"
   assert_equal "$(map_value '.inactive["acme/widgets"]["@plugin:acme.widgets:plugin.json"]')" '["widgets.conf","rules.md"]'
   assert_equal "$(map_value '["acme/widgets"]')" ""
-  dot link:deactivate acme/widgets
+  dot plugins:unlink acme/widgets -y
   assert_failure
-  assert_contains "$ERRORS" "acme/widgets has no active links"
-  dot link:activate acme/widgets
+  assert_contains "$ERRORS" "acme/widgets's links aren't linked."
+  dot plugins:link acme/widgets -y
   dot link -y
   assert_success
   assert_link_to "$SANDBOX/widgets.conf" "$DOTDOT/.plugins/acme/widgets/plugin.json"

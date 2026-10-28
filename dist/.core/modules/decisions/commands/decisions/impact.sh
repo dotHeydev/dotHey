@@ -1,21 +1,22 @@
 #!/usr/bin/env bash
 
 DESCRIPTION="Find what a decision touches."
+DOCS="decisions"
+JSON=true
 
-dot::use framework.console.args core.modules.decisions.service framework.helpers.frontmatter framework.helpers.fs framework.console.output framework.helpers.record framework.helpers.text
+dot::use framework.console.args core.modules.decisions.service framework.helpers.frontmatter framework.helpers.fs framework.console.output framework.helpers.record framework.helpers.text framework.helpers.json
 
 IMPACT_DEFAULT_LINES=3
 IMPACT_SCOPES=" all features decisions "
 
 usage() {
   cat <<EOF
-Finds the features that cite decisions, the docs that mention its terms, and
-the decisions that cite it, so you know what a new decision collides with.
+Finds the features that cite decisions and the docs that mention its terms,
+so you know what a new decision collides with.
 
 Usage:
   bash dot decisions:impact <decision>[,...] [--term <text>[,...]]... [options]
   bash dot decisions:impact --term <text>[,...]... [options]
-  bash dot decisions:impact <decision> --cited-by
 
 Arguments:
   <decision>       Decisions, as 2, 002, or their file name; comma-separated or
@@ -25,19 +26,21 @@ Arguments:
 Options:
   --term <text>    Terms to look for in features and decisions, comma-separated;
                    repeatable. Case-insensitive, and "auth" also finds "OAuth".
-  --cited-by       List the decisions that point at <decision> instead.
   --scope <what>   all, features or decisions (default: all), for --term.
   --lines <n>      Matching lines shown per file (default: $IMPACT_DEFAULT_LINES; 0 for none).
+  --json           {"features": [{"path", "cites", "description"}] or null,
+                   "terms": [{"path", "matched", "lines", "hits", "description",
+                   "matches"}] or null}.
   -h, --help       Show this help.
 
 Examples:
   bash dot decisions:impact 002,005
   bash dot decisions:impact --term session,jwt,cookie --scope features
-  bash dot decisions:impact 004 --cited-by
 
 Notes:
   - Files are ranked by how many terms they match; prefer several precise terms.
   - No output means nothing documented is touched: a real answer.
+  - bash dot decisions:citers lists the decisions that point at one.
   - bash dot decisions:check checks the links between decisions.
 EOF
 }
@@ -50,23 +53,6 @@ add_items() {
   done < <(printf '%s\n' "$@")
 }
 
-report_inbound() {
-  local reference="$1" target file reasons path found=false
-  target=$(core.modules.decisions.service::find "$reference") || framework.console.output::fail "No decision matches \"$reference\"." "See them all: bash dot scan:frontmatter Decisions"
-  framework.console.output::line "Decisions pointing at $target:"
-  while IFS=$'\t' read -r file reasons; do
-    found=true
-    path="$DECISIONS_DIR/$file"
-    framework.console.output::newline
-    framework.console.output::line "  $file"
-    framework.console.output::detail " $reasons"
-    print_field "$path" description
-    print_field "$path" status
-  done < <(core.modules.decisions.service::inbound "$target")
-  $found || framework.console.output::detail "(none)"
-  framework.console.output::newline
-}
-
 print_field() {
   local value
   value=$(framework.helpers.frontmatter::field "$1" "$2")
@@ -76,9 +62,16 @@ print_field() {
 report_citations() {
   local references_file="$1" reference file decisions=() feature cited found=false
   while IFS= read -r reference; do
-    file=$(core.modules.decisions.service::find "$reference") || framework.console.output::fail "No decision matches \"$reference\"." "See them all: bash dot scan:frontmatter Decisions"
+    file=$(core.modules.decisions.service::find "$reference") || framework.console.output::fail_as "$EXIT_NOT_FOUND" "No decision matches \"$reference\"." "See them all: bash dot frontmatter:show Decisions"
     decisions+=("$file")
   done < "$references_file"
+  if $DOT_JSON; then
+    while IFS=$'\t' read -r feature cited; do
+      printf '{"path":%s,"cites":%s,"description":%s}\n' "$(framework.helpers.json::string "$(dot::relative "$FEATURES_DIR")/$feature")" \
+        "$(framework.helpers.json::string "$cited")" "$(framework.helpers.json::string "$(framework.helpers.frontmatter::field "$FEATURES_DIR/$feature" description)")"
+    done < <(core.modules.decisions.service::citing_features "${decisions[@]}")
+    return
+  fi
   framework.console.output::line "Features citing these decisions under \"$FEATURE_DECISIONS_HEADING\":"
   while IFS=$'\t' read -r feature cited; do
     found=true
@@ -97,6 +90,15 @@ report_terms() {
     terms+=("$term")
   done < "$terms_file"
   results=$(core.modules.decisions.service::term_matches "$scope" "${terms[@]}" | sort -t$'\t' -k1,1nr -k2,2nr)
+  if $DOT_JSON; then
+    [ -n "$results" ] || return 0
+    while IFS=$'\t' read -r matched total relative hits; do
+      printf '{"path":%s,"matched":%s,"lines":%s,"hits":%s,"description":%s,"matches":[%s]}\n' "$(framework.helpers.json::string "$relative")" \
+        "$matched" "$total" "$(framework.helpers.json::string "$hits")" "$(framework.helpers.json::string "$(framework.helpers.frontmatter::field "$BASE/$relative" description)")" \
+        "$([ "$lines" -eq 0 ] || core.modules.decisions.service::matching_lines "$BASE/$relative" "$lines" "${terms[@]}" | framework.helpers.json::lines | paste -sd ',' -)"
+    done <<< "$results"
+    return
+  fi
   framework.console.output::line "Files mentioning these terms:"
   if [ -z "$results" ]; then
     framework.console.output::detail "(none)"
@@ -115,7 +117,7 @@ report_terms() {
 }
 
 handle() {
-  local work terms references cited_by=false scope=all lines="$IMPACT_DEFAULT_LINES" reference
+  local work terms references scope=all lines="$IMPACT_DEFAULT_LINES"
   framework.helpers.fs::make_temp_dir work || framework.console.output::fail "Couldn't create a temporary directory; please check free space and \$TMPDIR."
   terms="$work/terms"
   references="$work/references"
@@ -124,7 +126,6 @@ handle() {
   while [ $# -gt 0 ]; do
     case "$1" in
       --term) framework.console.args::require_value "$@"; add_items "$terms" "$(framework.console.args::split "$2")"; shift 2 ;;
-      --cited-by) cited_by=true; shift ;;
       --scope) framework.console.args::require_value "$@"; scope="$2"; shift 2 ;;
       --lines) framework.console.args::require_value "$@"; lines="$2"; shift 2 ;;
       -*) framework.console.args::unexpected "$1" ;;
@@ -133,15 +134,21 @@ handle() {
   done
   [ -s "$terms" ] || [ -s "$references" ] \
     || framework.console.args::invalid "What should it look for? Please give a decision, or --term."
-  ! $cited_by || [ -s "$references" ] || framework.console.args::invalid "--cited-by needs a decision to look for."
   [[ "$IMPACT_SCOPES" == *" $scope "* ]] || framework.console.args::invalid "--scope takes all, features or decisions (got $scope)."
   framework.console.args::is_number "$lines" || framework.console.args::invalid "--lines takes a whole number (got $lines)."
-  if $cited_by; then
-    while IFS= read -r reference; do
-      report_inbound "$reference"
-    done < "$references"
-  elif [ -s "$references" ]; then
-    report_citations "$references"
+  if $DOT_JSON; then
+    local features=null found=null
+    if [ -s "$references" ]; then
+      features=$(report_citations "$references") || exit
+      features="[$(printf '%s\n' "$features" | paste -sd ',' -)]"
+    fi
+    if [ -s "$terms" ]; then
+      found=$(report_terms "$terms" "$scope" "$lines") || exit
+      found="[$(printf '%s\n' "$found" | paste -sd ',' -)]"
+    fi
+    printf '{"features":%s,"terms":%s}\n' "$features" "$found"
+    return
   fi
+  [ ! -s "$references" ] || report_citations "$references"
   [ ! -s "$terms" ] || report_terms "$terms" "$scope" "$lines"
 }

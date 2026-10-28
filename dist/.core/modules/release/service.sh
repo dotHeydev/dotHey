@@ -67,7 +67,7 @@ core.modules.release.service::remote_url() {
       return 0
     fi
   done
-  dot::abort "There's no remote $1 in $RELEASE_REMOTES_SETTING of $(dot::relative "$SETTINGS_FILE")."
+  dot::abort_as "$EXIT_NOT_FOUND" "There's no remote $1 in $RELEASE_REMOTES_SETTING of $(dot::relative "$SETTINGS_FILE")."
 }
 
 core.modules.release.service::check_push_targets() {

@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 
 DESCRIPTION="Check that every link between decisions resolves."
+DOCS="decisions"
+JSON=true
 
-dot::use framework.console.args core.modules.decisions.service framework.console.output framework.helpers.text
+dot::use framework.console.args core.modules.decisions.service framework.console.output framework.helpers.text framework.helpers.json
 
 usage() {
   cat <<EOF
@@ -10,25 +12,32 @@ Checks every reference in every decision, the "superseded by" link included,
 and exits non-zero when any is broken, so it can gate a commit.
 
 Usage:
-  bash dot decisions:check
+  bash dot decisions:check [--json]
 
 Options:
+  --json       {"checked": <n>, "broken": [{"decision", "target", "section", "problem"}]}.
   -h, --help   Show this help.
 EOF
 }
 
 handle() {
-  local kind self target section checked=0 broken=0
+  local kind self target section checked=0 broken=0 rows=""
   [ $# -eq 0 ] || framework.console.args::unexpected "$1"
-  framework.console.output::line "Checking the links between decisions…"
+  $DOT_JSON || framework.console.output::line "Checking the links between decisions…"
   while IFS=$'\t' read -r kind self target section; do
     case "$kind" in
-      checked) checked=$((checked + 1)) ;;
-      missing) framework.console.output::detail "$OUTPUT_ERROR_ICON $self → $target ($section): no such decision"; broken=$((broken + 1)) ;;
-      self) framework.console.output::detail "$OUTPUT_ERROR_ICON $self ($section) points at itself"; broken=$((broken + 1)) ;;
+      checked) checked=$((checked + 1)); continue ;;
+      missing) $DOT_JSON || framework.console.output::detail "$OUTPUT_ERROR_ICON $self → $target ($section): no such decision" ;;
+      self) $DOT_JSON || framework.console.output::detail "$OUTPUT_ERROR_ICON $self ($section) points at itself" ;;
+      *) continue ;;
     esac
+    broken=$((broken + 1))
+    rows="$rows${rows:+,}{\"decision\":$(framework.helpers.json::string "$self"),\"target\":$(framework.helpers.json::string "$target"),\"section\":$(framework.helpers.json::string "$section"),\"problem\":\"$kind\"}"
   done < <(core.modules.decisions.service::broken_links)
-  if [ "$broken" -eq 0 ]; then
+  if $DOT_JSON; then
+    printf '{"checked":%s,"broken":[%s]}\n' "$checked" "$rows"
+    [ "$broken" -eq 0 ] || exit "$EXIT_FAILURE"
+  elif [ "$broken" -eq 0 ]; then
     framework.console.output::success "All $(framework.helpers.text::plural "$checked" link) resolve."
   else
     framework.console.output::fail "$broken of $(framework.helpers.text::plural "$checked" link) are broken."

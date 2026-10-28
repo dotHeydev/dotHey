@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 
 DESCRIPTION="List the project's tasks."
+DOCS="tasks"
+JSON=true
 
-dot::use framework.console.args framework.helpers.fs framework.console.output core.modules.tasks.console core.modules.tasks.service framework.helpers.text
+dot::use framework.console.args framework.helpers.fs framework.console.output core.modules.tasks.console core.modules.tasks.service framework.helpers.text framework.helpers.json
 
 usage() {
   cat <<USAGE
@@ -16,18 +18,35 @@ Options:
                            $(core.modules.tasks.service::statuses | paste -sd ' ' -).
   --sort <date>            created or updated (default: created).
   --order <order>          asc or desc (default: asc).
-  -n, --limit <n>          Tasks per page (default: $TASK_PAGE_SIZE; 0 for all).
+  -l, --limit <n>          Tasks per page (default: $TASK_PAGE_SIZE; 0 for all).
   -p, --page <n>           The page to show (default: 1).
+  --plain                  One task per line, tab-separated: id, status,
+                           created, updated, title; no header.
+  --json                   {"tasks": [...], "total", "page", "pages", "nextPage"}.
   -h, --help               Show this help.
 
 Examples:
   bash dot tasks:list --status todo,doing,paused
-  bash dot tasks:list --sort updated --order desc -n 5
+  bash dot tasks:list --sort updated --order desc -l 5
+  bash dot tasks:list --plain | cut -f1,5
 USAGE
 }
 
+# The tasks in <rows>, from <first> to <last>, as the format asked for.
 print_rows() {
-  local rows="$1" first="$2" last="$3" id status created updated title
+  local rows="$1" first="$2" last="$3" format="$4" id status created updated title
+  if [ "$format" = plain ]; then
+    sed -n "${first},${last}p" "$rows"
+    return
+  fi
+  if [ "$format" = json ]; then
+    sed -n "${first},${last}p" "$rows" | while IFS=$'\t' read -r id status created updated title; do
+      printf '{"id":%s,"status":%s,"created":%s,"updated":%s,"title":%s}\n' "$(framework.helpers.json::string "$id")" \
+        "$(framework.helpers.json::string "$status")" "$(framework.helpers.json::string "$created")" \
+        "$(framework.helpers.json::string "$updated")" "$(framework.helpers.json::string "$title")"
+    done | paste -sd ',' -
+    return
+  fi
   framework.console.output::title "$(printf '%-8s %-10s %-19s  %-19s  %s' ID STATUS CREATED UPDATED TITLE)"
   sed -n "${first},${last}p" "$rows" | while IFS=$'\t' read -r id status created updated title; do
     printf '%-8s %-10s %-19s  %-19s  %s\n' "$id" "$status" "$created" "$updated" "$title"
@@ -35,7 +54,8 @@ print_rows() {
 }
 
 handle() {
-  local work statuses="" sort=created order=asc limit page=1 status total size pages first last next=""
+  local work statuses="" sort=created order=asc limit page=1 status total size pages first last next="" format=table
+  ! $DOT_JSON || format=json
   core.modules.tasks.console::ensure_service
   limit=$TASK_PAGE_SIZE
   while [ $# -gt 0 ]; do
@@ -63,7 +83,8 @@ handle() {
         sort="$2"
         shift 2
         ;;
-      -n | --limit)
+      --plain) format=plain; shift ;;
+      -l | --limit)
         framework.console.args::require_value "$@"
         framework.console.args::is_number "$2" || framework.console.args::invalid "--limit takes a number (0 for all)."
         limit=$((10#$2))
@@ -81,25 +102,34 @@ handle() {
     esac
   done
   framework.helpers.fs::make_temp_dir work || framework.console.output::fail "Couldn't create a temporary directory; please check free space and \$TMPDIR."
-  core.modules.tasks.console::call list > "$work/list" || exit 1
+  core.modules.tasks.console::call list > "$work/list" || exit
   core.modules.tasks.service::sort_rows "$work/list" "$statuses" "$sort" "$order" > "$work/rows"
-  if [ ! -s "$work/rows" ]; then
+  total=$(wc -l < "$work/rows" | tr -d ' ')
+  size=$limit
+  [ "$size" -gt 0 ] || size=$total
+  pages=0
+  [ "$total" -eq 0 ] || pages=$(( (total + size - 1) / size ))
+  first=$(( (page - 1) * size + 1 ))
+  last=$(( page * size < total ? page * size : total ))
+  if [ "$format" = json ]; then
+    [ "$page" -le "$pages" ] || last=0
+    [ "$page" -ge "$pages" ] && next=null || next=$((page + 1))
+    printf '{"tasks":[%s],"total":%s,"page":%s,"pages":%s,"nextPage":%s}\n' \
+      "$([ "$last" -eq 0 ] || print_rows "$work/rows" "$first" "$last" json)" "$total" "$page" "$pages" "$next"
+    return 0
+  fi
+  if [ "$total" -eq 0 ]; then
+    [ "$format" = plain ] && return 0
     statuses=$(framework.helpers.text::trim "$statuses")
     framework.console.output::line "No tasks${statuses:+ with status ${statuses// /, }} yet."
     return 0
   fi
-  total=$(wc -l < "$work/rows" | tr -d ' ')
-  size=$limit
-  [ "$size" -gt 0 ] || size=$total
-  pages=$(( (total + size - 1) / size ))
   if [ "$page" -gt "$pages" ]; then
     framework.console.output::warn "There's no page $page; the last one is --page $pages."
     return 0
   fi
-  first=$(( (page - 1) * size + 1 ))
-  last=$(( page * size < total ? page * size : total ))
-  print_rows "$work/rows" "$first" "$last"
-  [ "$pages" -gt 1 ] || return 0
+  print_rows "$work/rows" "$first" "$last" "$format"
+  [ "$format" = table ] && [ "$pages" -gt 1 ] || return 0
   [ "$page" -ge "$pages" ] || next=" · next: --page $((page + 1))"
   framework.console.output::line "$(framework.console.output::gray "Showing $first–$last of $total • page $page of $pages")$next"
 }

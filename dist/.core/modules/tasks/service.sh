@@ -15,7 +15,7 @@ TASK_CREATED_COLUMN=3
 TASK_UPDATED_COLUMN=4
 
 core.modules.tasks.service::require_template() {
-  [ -f "$TASK_TEMPLATE" ] || dot::abort "The template $(dot::relative "$TASK_TEMPLATE") is missing." "bash dot update restores it."
+  [ -f "$TASK_TEMPLATE" ] || dot::abort "The template $(dot::relative "$TASK_TEMPLATE") is missing." "bash dot upgrade restores it."
 }
 
 core.modules.tasks.service::statuses() {

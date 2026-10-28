@@ -177,5 +177,10 @@ guards::archive() {
 # Whether -y may apply changes unseen: only with a person at a terminal, or
 # when dotdot itself (dot::call outside a plugin, the installer) made this call.
 guards::skip_confirmation() {
-  [ -t 0 ] || $DOT_INTERNAL
+  { [ -t 0 ] && ! guards::is_unattended; } || $DOT_INTERNAL
+}
+
+# Whether no person is there to answer: an AI agent, --no-input, or CI.
+guards::is_unattended() {
+  [ -n "${AI_AGENT-}" ] || [ "${CLAUDECODE-}" = 1 ] || [ "${DOT_NO_INPUT-}" = 1 ]
 }

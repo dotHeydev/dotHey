@@ -33,12 +33,12 @@ test_task_lifecycle_with_files() {
   dot tasks:doing t001
   assert_success
   assert_contains "$(cat "$file")" "status: doing"
-  dot tasks:update 1 "Write more tests" --done-when "- [x] kernel"
+  dot tasks:update 1 --title "Write more tests" --done-when "- [x] kernel"
   assert_success
   assert_contains "$(cat "$file")" "title: Write more tests"
   assert_contains "$(cat "$file")" "- [x] kernel"
   assert_contains "$(cat "$file")" "Cover the kernel."
-  dot tasks:show t001 --no-pager
+  dot tasks:get t001 --no-pager
   assert_success
   assert_contains "$OUTPUT" "id: t001"
   dot tasks:list --status doing
@@ -95,7 +95,48 @@ test_unknown_tasks_fail_without_side_effects() {
   dot tasks:doing t999
   assert_failure
   assert_contains "$ERRORS" "There's no task t999"
-  dot tasks:show t999
+  dot tasks:get t999
   assert_failure
   assert_contains "$ERRORS" "There's no task t999"
+}
+
+test_task_list_and_get_print_for_scripts_and_agents() {
+  use_file_tasks
+  dot tasks:list --plain
+  assert_success
+  assert_equal "$OUTPUT" ""
+  dot tasks:list --json
+  assert_equal "$(json_value "$OUTPUT" .total)" 0
+  assert_equal "$(json_value "$OUTPUT" .nextPage)" ""
+  dot tasks:create "First" --json
+  assert_success
+  assert_equal "$(json_value "$OUTPUT" .id)" t001
+  dot tasks:create "Second"
+  dot tasks:list --plain -l 1
+  assert_equal "$(printf '%s\n' "$OUTPUT" | cut -f1,2,5)" $'t001\ttodo\tFirst'
+  dot tasks:list --json --limit 1
+  assert_equal "$(json_value "$OUTPUT" '.tasks[].title')" First
+  assert_equal "$(json_value "$OUTPUT" .nextPage)" 2
+  dot tasks:list -n 1
+  assert_equal "$STATUS" 2
+  dot tasks:get t002 --json
+  assert_success
+  assert_equal "$(json_value "$OUTPUT" .title)" Second
+  assert_equal "$(json_value "$OUTPUT" .status)" todo
+  dot tasks:update t002 "Positional title"
+  assert_equal "$STATUS" 2
+}
+
+test_tasks_initialize_takes_the_service_as_a_flag() {
+  sandbox::settings '"tasks": {"service": ""}'
+  dot tasks:initialize
+  assert_equal "$STATUS" 2
+  assert_contains "$ERRORS" "--service <"
+  dot tasks:initialize --service nope
+  assert_equal "$STATUS" 2
+  run env AI_AGENT=some-agent bash ./dot tasks:initialize --service file
+  assert_success
+  assert_contains "$OUTPUT" "Tasks will be kept in file."
+  dot tasks:list
+  assert_success
 }

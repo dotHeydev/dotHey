@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 DESCRIPTION="Move a task to paused."
+DOCS="tasks"
 
 dot::use core.modules.tasks.console core.modules.tasks.service
 

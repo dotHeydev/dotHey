@@ -48,12 +48,19 @@ core.system.plugins.console::preview() {
 
 core.system.plugins.console::confirm() {
   local question="$1" confirmed="$2" command="$3"
-  framework.console.prompt::can_ask || framework.console.output::fail "Plugins can only be added, updated or removed by you, in a terminal." "$OUTPUT_MANUAL_RUN $command"
+  framework.console.prompt::can_ask || framework.console.output::fail_as "$EXIT_PRECONDITION" "Plugins can only be added, updated or removed by you, in a terminal." "$OUTPUT_MANUAL_RUN $command"
   if $confirmed; then
     framework.console.prompt::answered "$question" "yes (--yes)"
     return 0
   fi
   framework.console.prompt::confirm "$question" || { framework.console.output::aborted; return 1; }
+}
+
+# After a preview: nothing changed, and the command that does it.
+core.system.plugins.console::previewed() {
+  framework.console.output::line "Preview only — nothing changed."
+  framework.console.output::next "To go ahead: $1"
+  exit 0
 }
 
 # What a removed plugin left behind, under a heading, when it left anything.
@@ -80,5 +87,5 @@ core.system.plugins.console::suggest() {
 
 core.system.plugins.console::installed() {
   framework.console.output::success "$1"
-  framework.console.output::next "Next: bash dot link:activate $2, then bash dot link"
+  framework.console.output::next "Next: bash dot plugins:link $2"
 }

@@ -289,7 +289,7 @@ core.system.plugins.manifest::validate() {
     || { dot::raise "$plugin needs a $PLUGIN_ROOT/$PLUGIN_MANIFEST with at least a \"$PLUGIN_DESCRIPTION_KEY\"."; return 1; }
   requires=$(core.system.plugins.manifest::value "$source" "$PLUGIN_REQUIRES_KEY")
   [ -z "$requires" ] || [ "$requires" = "$PLUGIN_API" ] \
-    || { dot::raise "$plugin is made for plugin API $requires, and this dotdot has $PLUGIN_API." "Please update dotdot (bash dot update) or use a matching plugin version."; return 1; }
+    || { dot::raise "$plugin is made for plugin API $requires, and this dotdot has $PLUGIN_API." "Please upgrade dotdot (bash dot upgrade) or use a matching plugin version."; return 1; }
   [ -z "$(find "$source" -type l -print -quit)" ] || { dot::raise "$plugin contains symlinks, which plugins can't have."; return 1; }
   [ -z "$(find "$source/$PLUGIN_STUBS_DIR" -name .git -print -quit 2>/dev/null)" ] \
     || { dot::raise "$plugin has stubs for .git/, which plugins can't touch."; return 1; }

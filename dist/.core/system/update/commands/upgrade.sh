@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 DESCRIPTION="Update dotdot's core to its latest version."
+DOCS="updating-dotdot"
 
 dot::use framework.console.args framework.helpers.fs framework.console.output framework.console.prompt core.system.update.service
 
@@ -12,7 +13,7 @@ versions and asking. Plugins and your context files are never touched; then
 it offers to refresh the links.
 
 Usage:
-  bash dot update [-y, --yes]
+  bash dot upgrade [-y, --yes]
 
 Options:
   -y, --yes    Update without asking (refreshing the links still asks). It still needs
@@ -51,8 +52,8 @@ handle() {
     -y | --yes) confirmed=true; shift ;;
   esac
   [ $# -eq 0 ] || framework.console.args::unexpected "$1"
-  framework.console.prompt::can_ask || framework.console.output::fail "This needs your confirmation in a terminal, so nothing changed." "$OUTPUT_MANUAL_RUN bash dot update"
-  command -v git >/dev/null || framework.console.output::fail "Updating needs git, which isn't installed here."
+  framework.console.prompt::can_ask || framework.console.output::fail_as "$EXIT_PRECONDITION" "This needs your confirmation in a terminal, so nothing changed." "$OUTPUT_MANUAL_RUN bash dot upgrade"
+  command -v git >/dev/null || framework.console.output::fail_as "$EXIT_PRECONDITION" "Upgrading needs git, which isn't installed here."
   old=$(core.system.update.service::installed_commit)
   framework.helpers.fs::make_temp_dir UPDATE_WORKSPACE || framework.console.output::fail "Couldn't create a temporary directory; please check free space and \$TMPDIR."
   UPDATE_REPOSITORY="$UPDATE_WORKSPACE/repository"
@@ -75,7 +76,7 @@ handle() {
   if $confirmed; then
     framework.console.prompt::answered "Do you want to update dotdot?" "yes (--yes)"
   else
-    framework.console.prompt::confirm_or_exit "Do you want to update dotdot?" n "bash dot update"
+    framework.console.prompt::confirm_or_exit "Do you want to update dotdot?" n "bash dot upgrade"
   fi
   framework.console.output::line "Updating dotdot…"
   source="$UPDATE_SOURCE"
@@ -92,7 +93,7 @@ handle() {
     for failure in "${UPDATE_FAILURES[@]}"; do
       framework.console.output::error "$failure"
     done
-    framework.console.output::fail "The update didn't finish, so your version stays as it was." "Please fix the errors above, then run: bash dot update"
+    framework.console.output::fail "The update didn't finish, so your version stays as it was." "Please fix the errors above, then run: bash dot upgrade"
   fi
   core.system.update.service::record_version "$new" || framework.console.output::fail "Files updated, but the new version couldn't be recorded in $(dot::relative "$SETTINGS_FILE") ($UPDATE_VERSION_SETTING)."
   # The new core decides what to migrate: its migrate command, in its own

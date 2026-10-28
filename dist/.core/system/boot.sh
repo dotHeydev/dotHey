@@ -6,7 +6,21 @@ DOT_PRIVATE_SEGMENT="internal"
 DOT_MODULE_PATTERN='^[a-z][a-z0-9-]*(\.[a-z0-9][a-z0-9-]*)+$'
 DOT_COMMAND_PATTERN='^[a-z0-9][a-z0-9-]*(:[a-z][a-z0-9-]*){0,2}$'
 DOT_COMMAND_MAX_DEPTH=2
-DOT_RESERVED_COMMANDS=(help list)
+# dotdot's own commands may go one level deeper (release:token:delete): a
+# plugin's take their owner as the first part.
+DOT_CORE_COMMAND_MAX_DEPTH=3
+DOT_RESERVED_COMMANDS=(help list version)
+# Where each core command's help points for more: DOT_DOCS_URL#<DOCS>.
+DOT_DOCS_URL="https://github.com/dotdot-sh/dotdot/blob/%s/docs/usage.md"
+DOT_DOCS_DEFAULT="the-dot-command"
+# Was --json given (before --)? Set by the kernel; errors then print as JSON.
+DOT_JSON=false
+# Exit statuses, part of every command's contract: 0 is success, an empty
+# result included; 130, 143 and 129 are an interrupt, a TERM and a hangup.
+EXIT_FAILURE=1
+EXIT_USAGE=2
+EXIT_NOT_FOUND=4
+EXIT_PRECONDITION=5
 DOT_EXIT_TASKS=()
 DOT_PLUGIN=""
 DOT_COMMAND=""
@@ -241,9 +255,9 @@ dot::leaf_path() {
   local json="$1" steps="$2" step path=""
   while IFS= read -r step; do
     if [[ "$step" =~ ^[0-9]+$ ]] && [ "$(framework.helpers.json::encoded "$json" "${path:-.}" | cut -c1)" = "[" ]; then
-      path="$path[$step]"
+      path="${path}[$step]"
     else
-      path="$path[$(framework.helpers.json::string "$step")]"
+      path="${path}[$(framework.helpers.json::string "$step")]"
     fi
   done < <(printf '%s\n' "$steps" | tr '\t' '\n')
   printf '%s\n' "$path"
@@ -444,10 +458,34 @@ dot::abort() {
   dot::raise "$@" || exit 1
 }
 
+# dot::abort, exiting <status> (one of EXIT_*: 4 not found, 5 precondition).
+dot::abort_as() {
+  local status="$1"
+  shift
+  dot::raise "$@" || exit "$status"
+}
+
+# The errors raised, each with its next steps; under --json, each as one JSON
+# error for exit <status>.
 dot::report_errors() {
-  local message
+  local message status="${1:-1}" steps=() error=""
   [ -s "$DOT_ERROR_FILE" ] || return 0
   dot::use framework.console.output
+  if $DOT_JSON; then
+    while IFS= read -r message; do
+      case "$message" in
+        "→ "*) steps+=("${message#→ }") ;;
+        " "*) steps+=("${message# }") ;;
+        *)
+          [ -z "$error" ] || framework.console.output::json_error "$status" "$error" ${steps[@]+"${steps[@]}"}
+          error="$message"
+          steps=()
+          ;;
+      esac
+    done < "$DOT_ERROR_FILE"
+    [ -z "$error" ] || framework.console.output::json_error "$status" "$error" ${steps[@]+"${steps[@]}"}
+    return 0
+  fi
   while IFS= read -r message; do
     case "$message" in
       "→ "*) framework.console.output::next "${message#→ }" >&2 ;;
@@ -459,7 +497,7 @@ dot::report_errors() {
 
 dot::finish() {
   local status=$? task
-  [ "$status" -eq 0 ] || dot::report_errors
+  [ "$status" -eq 0 ] || dot::report_errors "$status"
   rm -f -- "$DOT_ERROR_FILE"
   for task in ${DOT_EXIT_TASKS[@]+"${DOT_EXIT_TASKS[@]}"}; do
     eval "$task" || true
@@ -479,7 +517,9 @@ dot::use_timezone() {
 
 DOT_ERROR_FILE=$(mktemp)
 trap 'dot::finish' EXIT
-trap 'exit 130' INT TERM HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+trap 'exit 129' HUP
 
 # Makes every function named <prefix>… read-only, for each prefix given;
 # without compgen (a bash built without it) the full list is scanned instead.
@@ -501,7 +541,7 @@ dot::seal() {
   dot::seal_functions dot:: paths:: guards:: kernel::
   readonly BASE DOTDOT_ROOT DOTDOT_NAME CORE_DIR SYSTEM_DIR FRAMEWORK_DIR MODULES_DIR BIN_DIR DOT_BIN \
     PLUGINS_DIR PLUGINS_LOCK SETTINGS_FILE SETTINGS_DEFAULTS HOST_ENV_FILE LINK_MAP_SEPARATOR USER_FILE USER_EXAMPLE_FILE ENTRY_LINK \
-    DOT_PACKAGES DOT_PRIVATE_SEGMENT DOT_MODULE_PATTERN DOT_COMMAND_PATTERN DOT_COMMAND_MAX_DEPTH DOT_INTERNAL \
+    EXIT_FAILURE EXIT_USAGE EXIT_NOT_FOUND EXIT_PRECONDITION DOT_PACKAGES DOT_PRIVATE_SEGMENT DOT_MODULE_PATTERN DOT_COMMAND_PATTERN DOT_COMMAND_MAX_DEPTH DOT_CORE_COMMAND_MAX_DEPTH DOT_INTERNAL \
     GUARDS_DOCUMENT_PATTERN GUARDS_SEGMENT_PATTERN GUARDS_SETTING_PATTERN GUARDS_RESERVED_ENV_PATTERN GUARDS_ENV_KEY_PATTERN GUARDS_JSON_ONLY_SETTINGS \
     GUARDS_DOTDOT
   readonly -a SYSTEM_PARTS CORE_MODULES DOT_RESERVED_COMMANDS

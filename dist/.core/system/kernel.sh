@@ -2,11 +2,13 @@
 
 dot::use framework.console.output
 
-KERNEL_COLUMN_WIDTH=18
+KERNEL_COLUMN_WIDTH=20
 KERNEL_FILE=""
 KERNEL_UNPREFIXED_SETTING="plugins.unprefixedCommandOwners"
 KERNEL_UNPREFIXED=""
 KERNEL_UNPREFIXED_READ=false
+# Old names that still run a command, never listed: "<old>=<new>".
+KERNEL_ALIASES=("scan:frontmatter=frontmatter:show")
 
 # Each command in <directory> as "<prefix><name>|<file>|<fallback><name>":
 # the fallback is the name it takes when the first one is already taken.
@@ -33,7 +35,7 @@ kernel::core_commands() {
     name="${name%.sh}"
     name="${name//\//:}"
     [[ "$name" =~ $DOT_COMMAND_PATTERN ]] && printf '%s|%s\n' "$name" "$file"
-  done < <(find "${directories[@]}" -mindepth 1 -maxdepth "$DOT_COMMAND_MAX_DEPTH" -type f -name '*.sh' | sort)
+  done < <(find "${directories[@]}" -mindepth 1 -maxdepth "$DOT_CORE_COMMAND_MAX_DEPTH" -type f -name '*.sh' | sort)
 }
 
 # The plugin owners the plugins.unprefixedCommandOwners setting lists, into
@@ -132,9 +134,67 @@ kernel::description() {
   sed -n 's/^DESCRIPTION="\(.*\)"$/\1/p' "$1" | head -n 1
 }
 
+# The installed core version (state.version), or nothing when unknown.
+kernel::version() {
+  dot::setting state.version "" 2>/dev/null || true
+}
+
+kernel::print_version() {
+  local version
+  dot::use framework.helpers.json
+  version=$(kernel::version)
+  if $DOT_JSON; then
+    printf '{"version":%s}\n' "$([ -n "$version" ] && framework.helpers.json::string "$version" || printf null)"
+  else
+    printf 'dotdot %s\n' "${version:-(version unknown)}"
+  fi
+}
+
+# The docs a core command's help ends with: its DOCS anchor (a full URL for a
+# plugin's command), on the docs of the installed version.
+kernel::docs() {
+  local file="$1" anchor version
+  anchor=$(sed -n 's/^DOCS="\(.*\)"$/\1/p' "$file" | head -n 1)
+  case "$anchor" in
+    https://*) printf '%s\n' "$anchor"; return ;;
+  esac
+  case "$file" in "$PLUGINS_DIR"/*) return ;; esac
+  version=$(kernel::version)
+  # shellcheck disable=SC2059
+  printf "$DOT_DOCS_URL#%s\n" "${version:+v$version}${version:-main}" "${anchor:-$DOT_DOCS_DEFAULT}"
+}
+
+# A command's help (usage) as JSON: its name, description, usage lines,
+# arguments, options, examples, and docs, read from the sections of the help.
+kernel::help_json() {
+  local name="$1" file="$2" kind entry text usage="" arguments="" options="" examples=""
+  dot::use framework.helpers.json
+  while IFS=$'\t' read -r kind entry text; do
+    case "$kind" in
+      usage) usage="$usage${usage:+,}$(framework.helpers.json::string "$entry")" ;;
+      example) examples="$examples${examples:+,}$(framework.helpers.json::string "$entry")" ;;
+      argument | option)
+        entry=$(printf '{"name":%s,"description":%s}' "$(framework.helpers.json::string "$entry")" "$(framework.helpers.json::string "$text")")
+        if [ "$kind" = argument ]; then arguments="$arguments${arguments:+,}$entry"; else options="$options${options:+,}$entry"; fi
+        ;;
+    esac
+  done < <(usage | awk -v styled=0 -f "$OUTPUT_RENDERER" | awk -f "$SYSTEM_DIR/help.awk")
+  printf '{"name":%s,"description":%s,"usage":[%s],"arguments":[%s],"options":[%s],"examples":[%s],"docs":%s}\n' \
+    "$(framework.helpers.json::string "$name")" "$(framework.helpers.json::string "$(kernel::description "$file")")" \
+    "$usage" "$arguments" "$options" "$examples" "$(framework.helpers.json::string "$(kernel::docs "$file")")"
+}
+
 # Every command with its description, grouped by namespace.
 kernel::list() {
-  local name file namespace previous=""
+  local name file namespace previous="" commands=""
+  if $DOT_JSON; then
+    dot::use framework.helpers.json
+    while IFS='|' read -r name file; do
+      commands="$commands${commands:+,}{\"name\":$(framework.helpers.json::string "$name"),\"description\":$(framework.helpers.json::string "$(kernel::description "$file")")}"
+    done < <(kernel::commands)
+    printf '{"version":%s,"commands":[%s]}\n' "$(name=$(kernel::version); [ -n "$name" ] && framework.helpers.json::string "$name" || printf null)" "$commands"
+    return
+  fi
   {
     cat <<EOF
 dotdot: the context, rules, and tools your coding agents work by.
@@ -150,11 +210,22 @@ EOF
       [ "$name" = "$namespace" ] || [ "$namespace" = "$previous" ] || printf '\n'
       previous="$namespace"
       printf '  %s %s\n' "$(framework.console.output::bold "$(printf '%-*s' "$KERNEL_COLUMN_WIDTH" "$name")")" "$(kernel::description "$file")"
-    done < <(kernel::commands | awk -F'|' '{ print ($1 ~ /:/ ? 1 : 0) "|" $0 }' | sort | cut -d'|' -f2-)
+    done < <(kernel::commands | awk -F'|' '{ print ($1 ~ /:/ ? 1 : 0) "|" $0 }' | sort -t'|' -k1,1 -k2,2 | cut -d'|' -f2-)
     cat <<EOF
 
 Options:
-  --agent   Plain output for AI agents (automatic under AI_AGENT or CLAUDECODE).
+  --agent         For AI agents: plain output, never a prompt (automatic under
+                  AI_AGENT or CLAUDECODE).
+  --no-input      Never prompt; what needs an answer fails instead (automatic
+                  under CI).
+  --json          JSON on stdout, errors as JSON on stderr, where a command
+                  supports it; bash dot help <command> --json describes one.
+  -v, --version   Show dotdot's version.
+  -h, --help      Show this help.
+
+Exit statuses:
+  0 success · 1 failure · 2 wrong usage · 4 not found · 5 needs something
+  first (a person at a terminal, a clean tree, ...) · 130 interrupted
 EOF
   } | framework.console.output::help
 }
@@ -181,20 +252,23 @@ kernel::closest() {
 }
 
 kernel::run() {
-  local name="${1-}" file
+  local name="${1-}" file alias
+  for alias in "${KERNEL_ALIASES[@]}"; do
+    [ "$name" != "${alias%%=*}" ] || name="${alias#*=}"
+  done
   if ! { [[ "$name" =~ $DOT_COMMAND_PATTERN ]] && kernel::find "$name"; }; then
     local closest
     closest=$(kernel::closest "$name")
-    [ -z "$closest" ] || framework.console.output::fail "There's no command $name. Did you mean $closest?" "To list all available commands, run: bash dot"
-    framework.console.output::fail "There's no command $name." "To list all available commands, run: bash dot"
+    [ -z "$closest" ] || framework.console.output::fail_as "$EXIT_USAGE" "There's no command $name. Did you mean $closest?" "To list all available commands, run: bash dot"
+    framework.console.output::fail_as "$EXIT_USAGE" "There's no command $name." "To list all available commands, run: bash dot"
   fi
   file="$KERNEL_FILE"
   shift
   case "$name:${1-}" in
-    migrate:* | update:* | *:-h | *:--help) ;;
+    migrate:* | upgrade:* | *:-h | *:--help) ;;
     *)
       [ -z "$(kernel::pending_migrations)" ] \
-        || framework.console.output::fail "dotdot's files need a quick upgrade first." "Please run: bash dot migrate"
+        || framework.console.output::fail_as "$EXIT_PRECONDITION" "dotdot's files need a quick upgrade first." "Please run: bash dot migrate"
       ;;
   esac
   DOT_COMMAND="$name"
@@ -208,10 +282,18 @@ kernel::run() {
   # Who is running is fixed before the command's code loads.
   readonly DOT_COMMAND DOT_PLUGIN
   . "$file"
-  # --<flag>=<value> is the same as --<flag> <value>.
-  local arguments=() argument
+  # --<flag>=<value> is the same as --<flag> <value>; --json is taken here
+  # when the command supports it (JSON=true), and left as an unknown flag when
+  # it doesn't. Everything after -- passes as is.
+  local arguments=() argument ended=false
   for argument in "$@"; do
+    if $ended; then
+      arguments+=("$argument")
+      continue
+    fi
     case "$argument" in
+      --) ended=true; arguments+=("$argument") ;;
+      --json) [ "${JSON-}" = true ] || arguments+=("$argument") ;;
       --[a-z]*=*) arguments+=("${argument%%=*}" "${argument#*=}") ;;
       *) arguments+=("$argument") ;;
     esac
@@ -219,18 +301,43 @@ kernel::run() {
   set -- ${arguments[@]+"${arguments[@]}"}
   case "${1-}" in
     -h | --help)
-      usage | framework.console.output::help
+      if $DOT_JSON; then
+        kernel::help_json "$name" "$file"
+      else
+        { usage; kernel::docs_section "$file"; } | framework.console.output::help
+      fi
       return 0
       ;;
   esac
   handle "$@"
 }
 
+kernel::docs_section() {
+  local docs
+  docs=$(kernel::docs "$1")
+  [ -z "$docs" ] || printf '\nDocs:\n  %s\n' "$docs"
+}
+
+# Whether --json is among <arguments>, before any --.
+kernel::wants_json() {
+  local argument
+  for argument in "$@"; do
+    case "$argument" in
+      --) return 1 ;;
+      --json) return 0 ;;
+    esac
+  done
+  return 1
+}
+
 kernel::handle() {
+  ! kernel::wants_json "$@" || DOT_JSON=true
   case "${1-}" in
-    '' | list | -h | --help) kernel::list ;;
+    '' | list | -h | --help | --json) kernel::list ;;
+    version | -v | --version) kernel::print_version ;;
     help)
       shift
+      [ "${1-}" != --json ] || shift
       [ $# -gt 0 ] || { kernel::list; return 0; }
       kernel::run "$1" --help
       ;;

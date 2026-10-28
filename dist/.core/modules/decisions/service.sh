@@ -76,7 +76,7 @@ core.modules.decisions.service::create() {
   {
     printf -- '---\nstatus: %s\ndescription: %s\ncreated: %s\nmodified: %s\n---\n\n' "$status" "$statement" "$now" "$now"
     printf '# %s\n\n' "$statement"
-    cat -- "$sections_dir/.elaboration"
+    cat -- "$sections_dir/.explanation"
     printf '\n\n'
     framework.helpers.template::compose "$DECISION_TEMPLATE" "$sections_dir"
   } > "$sections_dir/.document"

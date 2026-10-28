@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 DESCRIPTION="Update a plugin, after a review."
+DOCS="using-plugins"
 
 dot::use framework.console.args framework.console.output core.system.plugins.console core.system.plugins.manifest
 
@@ -19,22 +20,24 @@ Arguments:
 
 Options:
   --all            Update every installed plugin, each reviewed in turn.
+  --preview        Show what it would change, and stop; anyone may run it,
+                   agents included. Also --dry-run.
   -y, --yes        Update without asking. It still needs a terminal.
   -h, --help       Show this help.
 
 Examples:
   bash dot plugins:update acme/widgets
   bash dot plugins:update --all
+  bash dot plugins:update acme/widgets --preview
 
 Notes:
-  - Take the new links: bash dot link:activate <owner>/<name> --replace-active,
-    then bash dot link.
+  - Take the new links: bash dot plugins:link <owner>/<name> --overwrite.
 USAGE
 }
 
 update_plugin() {
   local plugin="$1" confirmed="$2" entry origin ref commit
-  entry=$(core.system.plugins.manifest::lock_entry "$plugin") || framework.console.output::fail "$plugin isn't installed." "See what is: bash dot plugins:list"
+  entry=$(core.system.plugins.manifest::lock_entry "$plugin") || framework.console.output::fail_as "$EXIT_NOT_FOUND" "$plugin isn't installed." "See what is: bash dot plugins:list"
   read -r origin ref commit <<< "$entry"
   case "$origin" in
     "$PLUGIN_PATH_SOURCE"*)
@@ -51,6 +54,10 @@ update_plugin() {
   core.system.plugins.console::warn "$plugin"
   core.system.plugins.console::header "$plugin" "${commit:0:7} → ${PLUGIN_COMMIT:0:7}"
   core.system.plugins.console::preview "$plugin" "$PLUGIN_SOURCE"
+  if $PLUGINS_PREVIEW; then
+    framework.console.output::next "To update it: bash dot plugins:update $plugin"
+    return 0
+  fi
   core.system.plugins.console::confirm "Do you want to update $plugin?" "$confirmed" "bash dot plugins:update $plugin" || return 0
   core.system.plugins.console::install "$plugin" "$PLUGIN_SOURCE"
   framework.console.output::success "Updated $plugin."
@@ -60,10 +67,12 @@ update_plugin() {
 
 handle() {
   local plugin confirmed=false all=false selected=()
+  PLUGINS_PREVIEW=false
   while [ $# -gt 0 ]; do
     case "$1" in
       -y | --yes) confirmed=true ;;
       --all) all=true ;;
+      --preview | --dry-run) PLUGINS_PREVIEW=true ;;
       -*) framework.console.args::unexpected "$1" ;;
       *) selected+=("$(core.system.plugins.console::plugin "$1")") ;;
     esac
@@ -91,5 +100,5 @@ handle() {
   done
   $PLUGINS_UPDATED || return 0
   core.system.plugins.console::suggest "${PLUGINS_REFRESH[@]}"
-  framework.console.output::next "Take the new links: bash dot link:activate <owner>/<name> --replace-active, then bash dot link"
+  framework.console.output::next "Take the new links: bash dot plugins:link <owner>/<name> --overwrite"
 }

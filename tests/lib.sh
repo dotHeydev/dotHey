@@ -197,9 +197,9 @@ save_links() {
     "$DOTDOT/dot.json" "$DOTDOT/dot.json" "$DOTDOT/dot.json" "$DOTDOT/dot.json"
 }
 
-# Activates a plugin's links, as a user does.
+# Links a plugin's waiting links, as a user does.
 take_suggestions() {
-  dot link:activate "$1"
+  dot plugins:link "$1" -y
   assert_success "activate the links of $1"
 }
 
@@ -216,5 +216,13 @@ map_value() {
   local path=".links$1"
   [ "$1" != . ] || path=".links"
   core "dot::use framework.helpers.json; framework.helpers.json::values \"\$(cat '$DOTDOT/dot.json')\" '$path'"
+  printf '%s' "$OUTPUT"
+}
+
+# What <path> selects in the JSON <document>, one result per line, as
+# framework.helpers.json::values prints it.
+json_value() {
+  printf '%s' "$1" > "$SANDBOX/.json"
+  core "dot::use framework.helpers.json; framework.helpers.json::values \"\$(cat '$SANDBOX/.json')\" '$2'"
   printf '%s' "$OUTPUT"
 }

@@ -151,3 +151,19 @@ test_release_commits_and_tags_as_its_author_whatever_the_environment_says() {
   assert_equal "$(git -C "$SANDBOX/build" log -1 --format='%an <%ae> %cn <%ce>')" "Rel Author <rel@x.test> Rel Author <rel@x.test>"
   assert_equal "$(git -C "$SANDBOX/build" for-each-ref --format='%(taggername) %(taggeremail)' refs/tags/v1.0.0)" "Rel Author <rel@x.test>"
 }
+
+test_release_flags_name_what_they_do() {
+  dot release:create 1.0.0 -f
+  assert_equal "$STATUS" 2
+  dot release:create 1.0.0 --push-all
+  assert_equal "$STATUS" 2
+  dot release:token github --remove
+  assert_equal "$STATUS" 2
+  dot release:create 1.0.0 --force
+  assert_equal "$STATUS" 5
+  assert_contains "$ERRORS" "Force-pushing is only confirmed at a terminal"
+  dot release:token:delete
+  assert_equal "$STATUS" 2
+  dot release:token:delete --help
+  assert_success
+}

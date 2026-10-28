@@ -15,7 +15,7 @@ An xray is the project's place to discuss a topic at length: the chat is for sho
 
 ## Open one
 
-1. Check it isn't open already: `bash dot scan:frontmatter Xrays` (status, description).
+1. Check it isn't open already: `bash dot frontmatter:show Xrays` (status, description).
 2. Create it: `bash dot xrays:create "<Title>" --description "<what it settles, and why>"`. It prints the path.
 3. Fill it from the template (`xray-template.md`, next to this skill):
    - One topic (`## I.`) per subject, one question (`### 1.`) per decision to make.

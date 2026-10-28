@@ -28,7 +28,7 @@ dotdot covers the three things an agent needs to work well:
 - **Tools:** what helps it work faster and reliably: skills, the `dot` command, harness settings.
 - **Work:** the artifacts that guide the work: feature specifications, plans, decisions, tasks, notes, and xrays.
 
-Each context file declares a `description` in its frontmatter saying when to read it, so agents survey them cheaply (`bash dot scan:frontmatter .dot/`) and open in full only what a task needs.
+Each context file declares a `description` in its frontmatter saying when to read it, so agents survey them cheaply (`bash dot frontmatter:show .dot/`) and open in full only what a task needs.
 
 ### Rules precedence
 
@@ -44,7 +44,7 @@ The recommended precedence, highest first:
 
 dotdot is a starting point, not a dependency. The installer copies `.dot/` into your project and links its sources where your harness reads them (`AGENTS.md`, `.claude/`, and so on). From then on the project owns the result: edit, extend, or remove anything, and commit `.dot/` with your code.
 
-Only `.dot/.core/` belongs to dotdot: `bash dot update` replaces it, and leaves your context, records, and plugins alone.
+Only `.dot/.core/` belongs to dotdot: `bash dot upgrade` replaces it, and leaves your context, records, and plugins alone.
 
 ---
 
@@ -93,9 +93,9 @@ Agents reply concisely by default. Add a flag to your message to change that one
 
 ### Agent mode
 
-When an AI agent runs `bash dot`, output turns plain: no colors, highlighting, or spinner, and anything that needs a person asks the agent to hand it over. It switches on by itself when `AI_AGENT` or `CLAUDECODE=1` is set, or with `--agent` on any command.
+When an AI agent runs `bash dot`, output turns plain: no colors, highlighting, or spinner, nothing ever prompts (even in a terminal), and anything that needs a person asks the agent to hand it over. It switches on by itself when `AI_AGENT` or `CLAUDECODE=1` is set, or with `--agent` on any command. `--no-input` (automatic under `CI`) does the same for scripts.
 
-Commands that change what you'd want to review (linking, plugins, updates, migrations, deletions) always need a confirmation at a real terminal. `-y` skips the question but still needs one, so no agent can approve a change for you.
+Commands that change what you'd want to review (linking, plugins, upgrades, migrations, deletions) always need a confirmation by a person at a terminal. `-y` skips the question but still needs one, so no agent can approve a change for you; `--preview` shows any of those changes to anyone, agents included.
 
 ---
 
@@ -129,13 +129,13 @@ A decision is a rule the project has settled, written as one first-person senten
 ```sh
 bash dot decisions:create "JWT in httpOnly cookie" \
   --statement "We keep the session JWT in an httpOnly cookie." \
-  --elaboration "Every authenticated response sets it as one." \
+  --explanation "Every authenticated response sets it as one." \
   --status accepted --influenced-by 002 --impacts 7
 
 bash dot decisions:impact 002,005                  # the features citing these decisions
 bash dot decisions:impact --term session,jwt       # the docs mentioning these terms
-bash dot decisions:impact 004 --cited-by           # the decisions pointing at 004
-bash dot decisions:update 002 superseded --by 007
+bash dot decisions:citers 004                      # the decisions pointing at 004
+bash dot decisions:update 002 --status superseded --by 007
 bash dot decisions:check                           # every link between decisions resolves
 ```
 
@@ -196,19 +196,23 @@ bash dot tasks:update t004 --done-when "- [x] lock after 5" --status done
 
 | Area | Commands |
 |---|---|
-| dotdot itself | `link`, `update`, `migrate` |
-| Links | `link:activate`, `link:deactivate` |
+| dotdot itself | `link`, `upgrade`, `migrate`, `version` |
+| Links | `plugins:link`, `plugins:unlink` |
 | Plugins | `plugins:add`, `plugins:update`, `plugins:remove`, `plugins:list`, `plugins:new` |
-| Records | `features:create`, `decisions:create`, `decisions:update`, `decisions:impact`, `decisions:check`, `notes:create`, `xrays:create`, `scan:frontmatter` |
-| Tasks | `tasks:initialize`, `tasks:create`, `tasks:update`, `tasks:show`, `tasks:list`, `tasks:delete`, `tasks:todo`, `tasks:doing`, `tasks:paused`, `tasks:done`, `tasks:discarded` |
-| Releases | `release:create`, `release:push`, `release:token` |
+| Records | `features:create`, `decisions:create`, `decisions:update`, `decisions:impact`, `decisions:citers`, `decisions:check`, `notes:create`, `xrays:create`, `frontmatter:show` |
+| Tasks | `tasks:initialize`, `tasks:create`, `tasks:update`, `tasks:get`, `tasks:list`, `tasks:delete`, `tasks:todo`, `tasks:doing`, `tasks:paused`, `tasks:done`, `tasks:discarded` |
+| Releases | `release:create`, `release:push`, `release:token`, `release:token:delete` |
 
 Every command follows the same conventions:
 
 - What it acts on is a parameter (`<id>`, `<owner>/<name>`, `<version>`); how it acts is a flag.
 - Flags take their value after a space or an `=`: `--status done` or `--status=done`.
-- Common flags have short forms: `-y, --yes`, `-f, --force`, `-v, --verbose`, `-s, --status`, `-n, --limit`, `-p, --page`, `-h, --help`.
-- A mistyped command suggests the closest one; a wrong argument shows the usage line and where the help is.
+- Common flags have short forms: `-y, --yes`, `-v, --verbose`, `-s, --status`, `-l, --limit`, `-p, --page`, `-h, --help`; `bash dot -v` is the version.
+- What changes things can be looked at first with `--preview` (also `--dry-run`); `--overwrite` (also `--force`) replaces what's already there.
+- At a terminal, a missing required value is asked for, then the full command is shown to reuse; without one, it fails naming the flag.
+- Data commands take `--json`: the result on stdout, an error as `{"error": {"code", "exitCode", "message", "run", "next"}}` on stderr. `bash dot --json` lists the commands, and `bash dot help <command> --json` describes one.
+- Exit statuses: `0` success (an empty result too), `1` failure (or problems found, for `decisions:check`), `2` wrong usage, `4` not found, `5` needs something first (a person at a terminal, a clean tree…), `130` interrupted.
+- A mistyped command suggests the closest one; a wrong argument shows the usage line and where the help is. Each help ends with a link to these docs.
 
 ---
 
@@ -219,7 +223,7 @@ Every command follows the same conventions:
 ```sh
 bash dot link                       # preview, then apply
 bash dot link -v                    # also list what stays as it is
-bash dot link --replace-existing    # replace taken destinations; files are backed up first
+bash dot link --overwrite    # replace taken destinations; files are backed up first
 ```
 
 ### The links
@@ -247,7 +251,7 @@ bash dot link --replace-existing    # replace taken destinations; files are back
 | `"append"` | Append the origin's file to each destination, between markers naming its owner |
 | `"remove"` | Unlink a destination still pointing at the origin, and take back what it appended; it wins over the rest |
 | `"<owner>/<name>"` | A plugin's active links, in the same shape |
-| `"inactive"` | A plugin's suggested links, never applied until `bash dot link:activate` takes them |
+| `"inactive"` | A plugin's suggested links, never applied until `bash dot plugins:link` takes them |
 
 **Origins:**
 
@@ -279,7 +283,7 @@ dotdot ships with everything it needs. A plugin adds more, from any GitHub repo 
 ```sh
 bash dot plugins:add acme/laravel                 # github.com/acme/laravel
 bash dot plugins:add acme/svelte@v1.0.0           # at a branch, tag, or commit
-bash dot link:activate acme/laravel               # take its suggested links
+bash dot plugins:link acme/laravel               # take its suggested links
 bash dot link                                     # and apply them
 bash dot plugins:update acme/laravel              # or --all
 bash dot plugins:remove acme/laravel
@@ -288,8 +292,8 @@ bash dot plugins:remove acme/laravel
 > [!WARNING]
 > A plugin is code and instructions from its author: once added, it can run anything on your machine and steer your agents. Every add and update previews each file (scripts flagged) and goes ahead only when you confirm at a terminal.
 
-- **Adding links nothing.** A plugin's suggested links go under `"inactive"` in `.dot/dot.json`; you take them with `link:activate`, then `link`.
-- **Updating** rewrites only its inactive links. `link:activate <owner>/<name> --replace-active` takes the new ones.
+- **Adding links nothing.** A plugin's suggested links go under `"inactive"` in `.dot/dot.json`; `bash dot plugins:link <owner>/<name>` links them (only them), and `plugins:unlink` takes them back.
+- **Updating** rewrites only its inactive links. `plugins:link <owner>/<name> --overwrite` takes the new ones.
 - **Removing** takes back everything it linked and appended. What's left (its settings, secrets, and records) is listed for you to review.
 - **Its commands** run as `bash dot <owner>:<command>`, or bare for an owner listed in `plugins.unprefixedCommandOwners`. dotdot's own commands are never overridden.
 - **Protected destinations** (`plugins.denyLinkDestination`; by default `AGENTS.md`, `RULES.md`, `SECURITY.md`, `USER.md`) are never touched by a plugin's links.
@@ -367,12 +371,13 @@ When every route fails, one error names each attempt, why it failed, and what to
 
 ```sh
 bash dot release:token github                       # save the remote's push token, once
-bash dot release:create 1.2.0                       # export, sign, tag, then ask to push
-bash dot release:create 1.2.0 --push github --keep-tokens 15
-bash dot release:push github                        # retry or finish a push
+bash dot release:create 1.2.0                       # export, sign, tag; push nothing
+bash dot release:create 1.2.0 --push --keep-tokens 15   # ...and push to every remote
+bash dot release:push github                        # push, retry or finish a push
+bash dot release:token:delete github                # forget a saved token
 ```
 
-It stops on uncommitted changes in what it ships, a signing key that doesn't match, anything that looks like a secret, or a remote without a token. It runs no build or tests: do those in your own workflow first.
+`--force` force-pushes, replacing a remote's history, only once you type that remote's name at a terminal. It stops on uncommitted changes in what it ships, a signing key that doesn't match, anything that looks like a secret, or a remote without a token. It runs no build or tests: do those in your own workflow first.
 
 | Setting | Meaning |
 |---|---|
@@ -391,11 +396,11 @@ It stops on uncommitted changes in what it ships, a signing key that doesn't mat
 ## Updating dotdot
 
 ```sh
-bash dot update                 # shows both versions, asks, then offers to relink
+bash dot upgrade                # shows both versions, asks, then offers to relink
 bash dot plugins:update --all   # plugins update on their own
 ```
 
-- `update` replaces `.dot/.core/` only; your context, records, and plugins are never touched.
+- `upgrade` replaces `.dot/.core/` only; your context, records, and plugins are never touched.
 - A file is deleted only when the installed version had it and the latest doesn't; one you edited is kept and listed.
 - When a new version changes the format of a file dotdot keeps, `bash dot migrate` converts it. Until then, every other command asks for it first.
 
@@ -414,7 +419,7 @@ your-project/
     ├── dot.json            # the project's settings, links included
     ├── Features/  Decisions/  Notes/  Xrays/  Tasks/
     ├── .plugins/           # installed plugins, with plugins-lock.json
-    └── .core/              # dotdot itself, replaced by bash dot update
+    └── .core/              # dotdot itself, replaced by bash dot upgrade
 ```
 
 The inside of `.dot/.core/` is described in [Architecture](plugins.md#architecture).

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 DESCRIPTION="Remove a plugin and everything it linked."
+DOCS="using-plugins"
 
 dot::use framework.console.args framework.console.output framework.console.prompt core.system.plugins.console core.system.plugins.manifest core.system.plugins.service
 
@@ -37,7 +38,7 @@ handle() {
   done
   [ -n "$plugin" ] || framework.console.args::invalid "Which plugin? Please give it as <owner>/<name>."
   plugin=$(core.system.plugins.console::plugin "$plugin")
-  core.system.plugins.manifest::lock_entry "$plugin" >/dev/null || framework.console.output::fail "$plugin isn't installed." "See what is: bash dot plugins:list"
+  core.system.plugins.manifest::lock_entry "$plugin" >/dev/null || framework.console.output::fail_as "$EXIT_NOT_FOUND" "$plugin isn't installed." "See what is: bash dot plugins:list"
   core.system.plugins.console::confirm "Do you want to remove $plugin and everything it linked?" "$confirmed" "bash dot plugins:remove $plugin" || exit 1
   directory=$(dot::relative "$(core.system.plugins.manifest::directory "$plugin")")
   left=$(core.system.plugins.service::uninstall "$plugin")

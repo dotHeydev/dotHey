@@ -12,3 +12,16 @@ test_scan_frontmatter_stays_inside_dotdot() {
   assert_failure
   assert_contains "$ERRORS" "is outside .dot/."
 }
+
+test_frontmatter_show_prints_json() {
+  dot xrays:create "Shown" --description "A \"quoted\" one."
+  dot notes:create bare
+  dot frontmatter:show Xrays --json
+  assert_success
+  assert_equal "$(json_value "$OUTPUT" '.[0].frontmatter.name')" shown
+  assert_equal "$(json_value "$OUTPUT" '.[0].frontmatter.description')" 'A "quoted" one.'
+  dot frontmatter:show Notes --json
+  assert_equal "$(json_value "$OUTPUT" '.[0].frontmatter')" ""
+  dot frontmatter:show Nowhere
+  assert_equal "$STATUS" 4
+}

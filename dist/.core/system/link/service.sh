@@ -54,6 +54,11 @@ LINK_WORK=""
 LINK_DROPPED=" "
 LINK_EDIT_IN_PLACE=false
 LINK_EDITS=()
+# Set to plan one plugin's links only (plugins:link, plugins:unlink): its
+# waiting links as if active (LINK_ONLY_MODE=link), or its active links taken
+# back (unlink); nothing else is planned or pruned.
+LINK_ONLY_GROUP=""
+LINK_ONLY_MODE=""
 
 core.system.link.service::read_map() {
   paths::links_rows
@@ -276,6 +281,15 @@ core.system.link.service::prepare_map() {
   kept=""
   while IFS="$LINK_TAB" read -r group kind origin destination; do
     [ -n "$kind" ] || continue
+    if [ -n "$LINK_ONLY_GROUP" ]; then
+      case "$LINK_ONLY_MODE:$group" in
+        link:"$LINK_ONLY_GROUP") group="+$LINK_ONLY_GROUP" ;;
+        unlink:"+$LINK_ONLY_GROUP") kind=remove ;;
+        *) continue ;;
+      esac
+      kept="$kept$group$LINK_TAB$kind$LINK_TAB$origin$LINK_TAB$destination"$'\n'
+      continue
+    fi
     plugin="${group#+}"
     [ "$plugin" != "." ] || plugin=$(core.system.link.service::origin_plugin "$origin")
     if [ -n "$plugin" ] && [[ "$installed" != *" $plugin "* ]] && ! $map_only; then
@@ -870,7 +884,7 @@ core.system.link.service::plan() {
     esac
   done < <(core.system.link.service::mappings)
   LINK_GROUP=""
-  core.system.link.service::plan_pruning
+  [ -n "$LINK_ONLY_GROUP" ] || core.system.link.service::plan_pruning
   core.system.link.service::plan_appends
 }
 
@@ -1056,6 +1070,21 @@ core.system.link.service::apply_appends() {
 # dot.json, the rest of the file left as written: <to> active places it right
 # before "inactive", <to> inactive at the end of "inactive". With <replace>,
 # it takes the place of a group already there.
+# Where <plugin>'s links are in the links map: active, inactive, both, or none.
+core.system.link.service::group_state() {
+  local document key active inactive
+  document=$(cat -- "$SETTINGS_FILE" 2>/dev/null) || { printf 'none\n'; return; }
+  key=$(framework.helpers.json::string "$1")
+  active=$(framework.helpers.json::encoded "$document" ".links[$key]")
+  inactive=$(framework.helpers.json::encoded "$document" ".links.inactive[$key]")
+  case "${active:0:1}${inactive:0:1}" in
+    "{{") printf 'both\n' ;;
+    "{"*) printf 'active\n' ;;
+    *"{") printf 'inactive\n' ;;
+    *) printf 'none\n' ;;
+  esac
+}
+
 core.system.link.service::move_group() {
   local plugin="$1" to="$2" replace="$3" document key from_path to_path group placement=()
   core.system.link.service::has_map || { core.system.link.service::fail "$(dot::relative "$SETTINGS_FILE") has no links yet." "Please run bash dot link first."; return; }
@@ -1080,7 +1109,7 @@ core.system.link.service::move_group() {
       ;;
   esac
   if [ "$(framework.helpers.json::encoded "$document" "$to_path")" != null ] && ! $replace; then
-    core.system.link.service::fail "$plugin's links are already $to. Please edit them in $(dot::relative "$SETTINGS_FILE"), or add --replace to take the new ones."
+    core.system.link.service::fail "$plugin's links are already $to. Please edit them in $(dot::relative "$SETTINGS_FILE"), or add --overwrite to take the new ones."
     return
   fi
   document=$(framework.helpers.json::set "$document" "$to_path" "$(framework.helpers.json::set null . "$group")" --keep-format ${placement[@]+"${placement[@]}"}) \

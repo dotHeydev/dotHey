@@ -33,8 +33,7 @@ Then tell your agent *"I'm using dotdot"*. It interviews you about the project a
 
    ```sh
    bash dot plugins:add dotdot-sh/claude-code
-   bash dot link:activate dotdot-sh/claude-code
-   bash dot link
+   bash dot plugins:link dotdot-sh/claude-code
    ```
 
 3. **Prepare the context.** Tell your agent you're using dotdot. The `dot-ready` skill asks about the project and fills `.dot/PRODUCT.md`, `RULES.md`, `TECHSTACK.md`, and the rest from your answers.
@@ -52,7 +51,7 @@ bash dot features:create "Password reset" --description "Reset a password by ema
 bash dot decisions:impact 002 --term session,jwt   # what a decision would touch
 bash dot tasks:list --status todo,doing
 bash dot xrays:create "Caching" --description "Where and how we cache."
-bash dot update                                    # the latest dotdot, after a review
+bash dot upgrade                                   # the latest dotdot, after a review
 ```
 
 Every command answers `--help` with its usage, options, and examples.

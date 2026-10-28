@@ -7,7 +7,11 @@ dot::use framework.console.args core.modules.release.service framework.console.o
 core.modules.release.console::parse_push_option() {
   RELEASE_TAKEN=1
   case "$1" in
-    -f | --force) RELEASE_FORCE=true ;;
+    --force)
+      framework.console.prompt::can_ask \
+        || framework.console.output::fail_as "$EXIT_PRECONDITION" "Force-pushing is only confirmed at a terminal, so nothing changed." "$OUTPUT_MANUAL_RUN bash dot $DOT_COMMAND ... --force"
+      RELEASE_FORCE=true
+      ;;
     --keep-tokens)
       framework.console.args::require_value "$@"
       RELEASE_CACHE_MINUTES="$2"
@@ -16,6 +20,16 @@ core.modules.release.console::parse_push_option() {
       ;;
     *) return 1 ;;
   esac
+}
+
+# Whether <value> names remotes (comma-separated), not a version or a flag.
+core.modules.release.console::is_remotes() {
+  local name found=false
+  while IFS= read -r name; do
+    [[ "$name" =~ $RELEASE_REMOTE_NAME_PATTERN ]] || return 1
+    found=true
+  done < <(framework.console.args::split "${1-}")
+  $found
 }
 
 # Remotes to push to without asking, comma-separated, into RELEASE_PUSH_TO.
@@ -29,8 +43,17 @@ core.modules.release.console::add_remotes() {
 
 core.modules.release.console::wants_push() {
   local name="$1" tag="$2"
-  core.modules.release.service::is_targeted "$name" && return 0
-  framework.console.prompt::confirm "Do you want to push $tag to $name?"
+  core.modules.release.service::is_targeted "$name" || framework.console.prompt::confirm "Do you want to push $tag to $name?" || return 1
+  ! $RELEASE_FORCE || core.modules.release.console::confirm_force "$name"
+}
+
+# A force-push to <name> goes on only once its name is typed back.
+core.modules.release.console::confirm_force() {
+  local name="$1" answer
+  answer=$(framework.console.prompt::ask "This replaces $name's history. Type its name to go on") || answer=""
+  [ "$answer" = "$name" ] && return 0
+  framework.console.output::line "That isn't $name, so it isn't force-pushed."
+  return 1
 }
 
 core.modules.release.console::push() {

@@ -18,11 +18,11 @@ Inform the user of your invocation of this skill by outputting exactly: 📌📌
 
 ## Process
 1. **Confirm intent.** Unless the user asked for a task (or named this skill), ask whether they want this tracked as a task. If not, stop.
-2. **Duplicate check.** Run `bash dot tasks:list --status todo,doing,paused`. If an open task already covers it, show it with `bash dot tasks:show <id>` and ask whether to update that one instead (`bash dot tasks:update <id> --<section> "..."`) or create a new one.
-3. **Gather context.** Use the context already in your window. For related records, survey with `bash dot scan:frontmatter .dot/Features/` (and `Decisions/`, `Notes/`) rather than reading files.
+2. **Duplicate check.** Run `bash dot tasks:list --status todo,doing,paused`. If an open task already covers it, show it with `bash dot tasks:get <id>` and ask whether to update that one instead (`bash dot tasks:update <id> --<section> "..."`) or create a new one.
+3. **Gather context.** Use the context already in your window. For related records, survey with `bash dot frontmatter:show .dot/Features/` (and `Decisions/`, `Notes/`) rather than reading files.
 4. **Draft** the title and every template section from the request and that context. Ask only what you can't reasonably infer, in **one** Interview Tool round (e.g. Claude Code's `AskUserQuestion`), proposing your best guess in each question. Usually nothing needs asking.
 5. **Create** it with `bash dot tasks:create "<title>" --<section> "..."` (run `bash dot tasks:create --help` for the template-derived flags). Never write a task file or call the service yourself.
-6. **Confirm.** Run `bash dot tasks:show <id>` rather than pasting it, then report per the Reporting template in `AGENTS.md`: ✅ the task id, and ask whether it is right.
+6. **Confirm.** Run `bash dot tasks:get <id>` rather than pasting it, then report per the Reporting template in `AGENTS.md`: ✅ the task id, and ask whether it is right.
 
 ## Template
 The task's shape lives in `task-template.md`, in this skill's directory; `bash dot tasks:create` builds the body from it.

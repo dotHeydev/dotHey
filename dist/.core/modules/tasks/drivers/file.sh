@@ -13,7 +13,7 @@ core.modules.tasks.drivers.file::file() {
   for file in "$TASKS_DIR/$TASK_PREFIX$number$RECORD_SEPARATOR"*"$RECORD_EXTENSION"; do
     [ -f "$file" ] && matches+=("$file")
   done
-  [ ${#matches[@]} -gt 0 ] || dot::abort "There's no task $TASK_PREFIX$number." "See them all: bash dot tasks:list"
+  [ ${#matches[@]} -gt 0 ] || dot::abort_as "$EXIT_NOT_FOUND" "There's no task $TASK_PREFIX$number." "See them all: bash dot tasks:list"
   [ ${#matches[@]} -eq 1 ] || dot::abort "Found more than one file for task $TASK_PREFIX$number in $(dot::relative "$TASKS_DIR")/; please keep one."
   printf '%s\n' "${matches[0]}"
 }
@@ -68,32 +68,32 @@ core.modules.tasks.drivers.file::list() {
 
 core.modules.tasks.drivers.file::show() {
   local file
-  file=$(core.modules.tasks.drivers.file::file "$1") || return 1
+  file=$(core.modules.tasks.drivers.file::file "$1") || return
   core.modules.tasks.drivers.file::row "$file"
   framework.helpers.frontmatter::body "$file"
 }
 
 core.modules.tasks.drivers.file::update() {
   local file title
-  file=$(core.modules.tasks.drivers.file::file "$1") || return 1
+  file=$(core.modules.tasks.drivers.file::file "$1") || return
   title="${2:-$(framework.helpers.frontmatter::field "$file" title)}"
   core.modules.tasks.drivers.file::rewrite "$file" "$title" "$(framework.helpers.frontmatter::field "$file" status)" "$3"
 }
 
 core.modules.tasks.drivers.file::status() {
   local file
-  file=$(core.modules.tasks.drivers.file::file "$1") || return 1
+  file=$(core.modules.tasks.drivers.file::file "$1") || return
   core.modules.tasks.drivers.file::rewrite "$file" "$(framework.helpers.frontmatter::field "$file" title)" "$2" ""
 }
 
 core.modules.tasks.drivers.file::delete() {
   local file
-  file=$(core.modules.tasks.drivers.file::file "$1") || return 1
+  file=$(core.modules.tasks.drivers.file::file "$1") || return
   rm -f -- "$file"
 }
 
 core.modules.tasks.drivers.file::link() {
   local file
-  file=$(core.modules.tasks.drivers.file::file "$1") || return 1
+  file=$(core.modules.tasks.drivers.file::file "$1") || return
   dot::relative "$file"
 }

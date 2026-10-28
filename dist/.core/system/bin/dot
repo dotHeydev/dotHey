@@ -18,14 +18,16 @@ while [ -L "$dot_self" ] && [ "$dot_hops" -lt 40 ]; do
   esac
 done
 
-# --agent, anywhere, says an AI agent runs this (as AI_AGENT does).
+# --agent, anywhere, says an AI agent runs this (as AI_AGENT does); --no-input,
+# or CI set, that no person is there to answer (DOT_NO_INPUT=1).
+case "${CI-}" in '' | 0 | false) ;; *) export DOT_NO_INPUT=1 ;; esac
 dot_arguments=()
 for dot_argument in "$@"; do
-  if [ "$dot_argument" = --agent ]; then
-    export AI_AGENT="${AI_AGENT:-dotdot}"
-  else
-    dot_arguments+=("$dot_argument")
-  fi
+  case "$dot_argument" in
+    --agent) export AI_AGENT="${AI_AGENT:-dotdot}" ;;
+    --no-input) export DOT_NO_INPUT=1 ;;
+    *) dot_arguments+=("$dot_argument") ;;
+  esac
 done
 set -- ${dot_arguments[@]+"${dot_arguments[@]}"}
 

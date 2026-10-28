@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 DESCRIPTION="Change a task's title, content or status."
+DOCS="tasks"
 
 dot::use framework.console.args framework.helpers.fs framework.console.output core.modules.tasks.console core.modules.tasks.service
 
@@ -11,13 +12,13 @@ Changes a task's title, content and status, in one step. At a terminal, with
 nothing to change given, your editor opens on its current body.
 
 Usage:
-  bash dot tasks:update <id> [<title>] [options]
+  bash dot tasks:update <id> [options]
 
 Arguments:
   <id>                     The task's id (t004, #12).
-  <title>                  Its new title.
 
 Options:
+  -t, --title <title>      Its new title.
   -s, --status <status>    $(core.modules.tasks.service::statuses | paste -sd ' ' -).
   --body <markdown>        Replace the whole body.
   --body-file <path>|-     Replace the whole body, from a project file or stdin.
@@ -29,7 +30,7 @@ $(core.modules.tasks.console::section_flags_help)
 Examples:
   bash dot tasks:update t004 --status doing
   bash dot tasks:update t004 --done-when "- [x] lock after 5" --status done
-  bash dot tasks:update '#12' "Throttle failed logins"
+  bash dot tasks:update '#12' --title "Throttle failed logins"
 
 Notes:
   - A section flag replaces that section only; the rest stays as it is.
@@ -55,6 +56,12 @@ handle() {
         status="$2"
         shift 2
         ;;
+      -t | --title)
+        framework.console.args::require_value "$@"
+        core.modules.tasks.service::check_title "$2"
+        title="$2"
+        shift 2
+        ;;
       --body) framework.console.args::require_value "$@"; printf '%s\n' "$2" > "$body"; has_body=true; shift 2 ;;
       --body-file) framework.console.args::require_value "$@"; core.modules.tasks.service::read_body_file "$2" "$body"; has_body=true; shift 2 ;;
       -e | --edit) editor=yes; shift ;;
@@ -64,13 +71,7 @@ handle() {
         core.modules.tasks.service::set_section "$sections" "${1#--}" "$2" || framework.console.args::invalid "$1 isn't a task section."
         shift 2
         ;;
-      -*) framework.console.args::unexpected "$1" ;;
-      *)
-        [ -z "$title" ] || framework.console.args::unexpected "$1"
-        core.modules.tasks.service::check_title "$1"
-        title="$1"
-        shift
-        ;;
+      *) framework.console.args::unexpected "$1" ;;
     esac
   done
   has_changes=$has_body
@@ -79,7 +80,7 @@ handle() {
   [ "$editor" = yes ] || $has_changes || framework.console.args::invalid "Nothing to change: please give a title, a section, or a status."
   if $has_body || [ -n "$(core.modules.tasks.service::given_sections "$sections")" ] || [ "$editor" = yes ]; then
     if ! $has_body; then
-      core.modules.tasks.console::call show "$id" > "$work/show" || exit 1
+      core.modules.tasks.console::call show "$id" > "$work/show" || exit
       tail -n +2 "$work/show" > "$body"
     fi
     core.modules.tasks.service::apply_sections "$body" "$sections"
@@ -87,9 +88,9 @@ handle() {
     body_argument="$body"
   fi
   if [ -n "$title" ] || [ -n "$body_argument" ]; then
-    core.modules.tasks.console::call update "$id" "$title" "$body_argument" || exit 1
+    core.modules.tasks.console::call update "$id" "$title" "$body_argument" || exit
   fi
-  [ -z "$status" ] || core.modules.tasks.console::call status "$id" "$status" || exit 1
+  [ -z "$status" ] || core.modules.tasks.console::call status "$id" "$status" || exit
   framework.console.output::success "Updated task $id${status:+ (now $status)}."
   core.modules.tasks.console::print_location "$id"
 }
