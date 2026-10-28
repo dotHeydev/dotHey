@@ -1,0 +1,9 @@
+{
+  "name": ".agents",
+  "docs": "https://agentskills.io",
+  "detect": [".agents/"],
+  "instructions": null,
+  "skills": ".agents/skills/",
+  "agents": null,
+  "context": {}
+}

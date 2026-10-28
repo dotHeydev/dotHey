@@ -267,7 +267,7 @@ framework.console.output::info() {
 }
 
 framework.console.output::tip() {
-  framework.console.output::emit 1 "$OUTPUT_TIP_LABEL $*"
+  framework.console.output::emit 1 "$(framework.console.output::bold "$OUTPUT_TIP_LABEL") $*"
 }
 
 framework.console.output::detail() {

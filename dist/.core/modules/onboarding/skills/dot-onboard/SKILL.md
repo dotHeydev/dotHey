@@ -11,16 +11,14 @@ metadata:
 
 Output exactly: 👋👋👋 STARTING MY ONBOARDING
 
-## 0. Is dotdot ready?
+## 0. Is dotdot set up and ready?
 
-Check whether `state.isReady` is `true` in `.dot/dot.json`, with a single `grep -Eq '"isReady"[[:space:]]*:[[:space:]]*true' .dot/dot.json`.
+Run `bash dot adopt --scan --json` once and read its `setup`: the user's choices (`harnesses`, `strategy`, `location`) and what setup left for you (`pending`). Never ask again for what is already chosen there.
 
-- **It is:** the context is prepared. Go on.
-- **It is not:** dotdot is installed but not prepared yet: its context files are still templates (`ignore: true`), with nothing yet to guide your work. Before anything else, ask the user in one plain message:
-
-  "👋 I see this project uses **dotdot** (in `.dot/`), but it isn't set up yet. Want to get it ready now? You tell me about the project and I'll turn it into its context — it only takes a minute."
-
-  If they agree, or their message already asks for it ("I'm using dotdot", "set it up"), invoke the `dot-ready` skill, and finish this onboarding once it's done. If they decline, finish onboarding and keep in mind that files marked `ignore: true` hold placeholders, not facts; offer `dot-ready` again when the work needs context they would hold.
+- **`pending` lists items:** the user installed and chose; dotdot did its part; finishing is yours. In one plain message, say what they chose and what is left (e.g. "You set dotdot up for Claude Code and Cursor, owning your files. I'll finish it: write the context, propose how to split CLAUDE.md, ask about IDEAS.md, and check every harness reads what moved. Go ahead?"). Once they agree, or their message already asks for it, invoke `dot-ready`, which works through `pending`, and finish this onboarding once it's done.
+- **`harnesses` is empty:** dotdot isn't linked to any harness yet (the user chose to set up with you, or later). Ask the choices setup needs in one Interview Tool round: the harnesses (those in `detected` first), and, only when the scan lists skills or agents, combine or own (combine first). Then hand them the exact command to run in their terminal (`dot-tool-setup`), e.g. `bash dot setup --harness claude,cursor --strategy combine`; once they ran it, continue with the case above.
+- **Neither, and `state.isReady` is `true`:** dotdot is set up and ready. Go on.
+- **Neither, and it is not:** offer `dot-ready` in one plain message, as above; if they decline, keep in mind that files marked `ignore: true` hold placeholders, not facts.
 
 ## 1. What this project is
 

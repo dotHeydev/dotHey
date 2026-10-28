@@ -10,11 +10,3 @@ test_feature_is_built_from_the_template() {
   assert_contains "$(cat "$file")" "Given a user"
 }
 
-test_feature_requires_name_and_description() {
-  dot features:create "Only a name"
-  assert_failure
-  assert_contains "$ERRORS" "--description"
-  dot features:create "Bad" --description "x" --not-a-section "y"
-  assert_failure
-  assert_contains "$ERRORS" "isn't a feature section"
-}

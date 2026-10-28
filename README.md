@@ -27,16 +27,11 @@ Then tell your agent *"I'm using dotdot"*. It interviews you about the project a
    curl -fsSL https://raw.githubusercontent.com/dotdot-sh/dotdot/main/install.sh | bash
    ```
 
-   This creates `.dot/` and the `dot` command at the root, and links dotdot where your harness reads it.
+   This creates `.dot/` and the `dot` command at the root, then offers to set dotdot up for your harnesses. Rather read it first? Download `install.sh`, read it, then run `bash install.sh`.
 
-2. **Connect your harness.** For Claude Code:
+2. **Set it up.** `bash dot setup` finds the harnesses the project uses (Claude Code, Codex, Cursor, GitHub Copilot, OpenCode, `.agents/`) and what they already hold, asks which to link, previews, and links. No plugin needed.
 
-   ```sh
-   bash dot plugins:add dotdot-sh/claude-code
-   bash dot plugins:link dotdot-sh/claude-code
-   ```
-
-3. **Prepare the context.** Tell your agent you're using dotdot. The `dot-ready` skill asks about the project and fills `.dot/PRODUCT.md`, `RULES.md`, `TECHSTACK.md`, and the rest from your answers.
+3. **Define.** Tell your agent "set up dotdot". The `dot-ready` skill reads what the project already says, asks about the rest, and fills `.dot/PRODUCT.md`, `RULES.md`, `TECHSTACK.md`, and the rest.
 
 4. **Build.** Describe a feature and let the agent take it from specification to tested code.
 

@@ -1,0 +1,15 @@
+{
+  "name": "Codex",
+  "docs": "https://learn.chatgpt.com/docs/build-skills",
+  "detect": [
+    ".codex/"
+  ],
+  "instructions": null,
+  "skills": ".agents/skills/",
+  "agents": {
+    "dir": ".codex/agents/",
+    "file": "{name}.toml",
+    "port": "render"
+  },
+  "context": {}
+}

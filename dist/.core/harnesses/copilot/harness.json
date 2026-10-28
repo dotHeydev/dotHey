@@ -1,0 +1,23 @@
+{
+  "name": "GitHub Copilot",
+  "docs": "https://docs.github.com/en/copilot/concepts/agents/about-agent-skills",
+  "detect": [
+    ".github/copilot-instructions.md",
+    ".github/skills/",
+    ".github/instructions/"
+  ],
+  "instructions": null,
+  "skills": ".github/skills/",
+  "agents": {
+    "dir": ".github/agents/",
+    "file": "{name}.agent.md"
+  },
+  "context": {
+    "instructions": [
+      ".github/copilot-instructions.md"
+    ],
+    "rule": [
+      ".github/instructions/"
+    ]
+  }
+}

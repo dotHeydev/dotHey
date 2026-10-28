@@ -1,0 +1,31 @@
+{
+  "name": "Claude Code",
+  "docs": "https://code.claude.com/docs/en/memory",
+  "detect": [
+    "CLAUDE.md",
+    ".claude/"
+  ],
+  "instructions": {
+    "link": ".claude/CLAUDE.md",
+    "existing": [
+      "CLAUDE.md",
+      ".claude/CLAUDE.md"
+    ],
+    "imports": {
+      "CLAUDE.md": "imports/CLAUDE.md",
+      ".claude/CLAUDE.md": "imports/claude-CLAUDE.md"
+    }
+  },
+  "skills": ".claude/skills/",
+  "agents": {
+    "dir": ".claude/agents/"
+  },
+  "context": {
+    "rule": [
+      ".claude/rules/"
+    ],
+    "command": [
+      ".claude/commands/"
+    ]
+  }
+}

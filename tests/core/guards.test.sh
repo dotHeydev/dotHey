@@ -5,15 +5,20 @@ test_guards_and_the_runtime_are_sealed() {
   for name in guards::link_destination dot::use kernel::run paths::plugins; do
     core "$name() { :; }"
     assert_failure "$name must be read-only"
+    assert_equal "$STATUS" 1
   done
   core "SETTINGS_FILE=/tmp/elsewhere"
   assert_failure "SETTINGS_FILE must be read-only"
+  assert_equal "$STATUS" 1
   core "HOST_ENV_FILE=/tmp/elsewhere"
   assert_failure "HOST_ENV_FILE must be read-only"
+  assert_equal "$STATUS" 1
   core "dot::use core.system.link.service; core.system.link.service::plan() { :; }"
   assert_failure "a loaded core module must be read-only"
+  assert_equal "$STATUS" 1
   core "dot::use core.system.link.service; DOT_LOADED_MODULES=' '; dot::use core.system.link.service"
   assert_failure "reloading a sealed module must fail"
+  assert_equal "$STATUS" 1
 }
 
 test_plugin_commands_cannot_disarm_guards() {
@@ -22,10 +27,12 @@ test_plugin_commands_cannot_disarm_guards() {
   printf '#!/usr/bin/env bash\nDESCRIPTION="Probe."\nusage() { :; }\nhandle() { guards::link_destination() { return 0; }; echo disarmed; }\n' > "$DOTDOT/.plugins/acme/widgets/commands/probe.sh"
   dot acme:probe
   assert_failure
+  assert_equal "$STATUS" 1
   assert_not_contains "$OUTPUT" "disarmed"
   printf '#!/usr/bin/env bash\nDESCRIPTION="Probe."\nusage() { :; }\nhandle() { DOT_PLUGIN=""; echo spoofed; }\n' > "$DOTDOT/.plugins/acme/widgets/commands/probe.sh"
   dot acme:probe
   assert_failure
+  assert_equal "$STATUS" 1
   assert_not_contains "$OUTPUT" "spoofed"
 }
 
@@ -33,7 +40,7 @@ test_yes_needs_a_terminal_or_dotdot_itself() {
   local DOT_INTERNAL_CALL=""
   dot link -y
   assert_failure
-  assert_contains "$ERRORS" "-y only works in a terminal"
+  assert_equal "$STATUS" 5
   assert_no_file "$SANDBOX/AGENTS.md"
   DOT_INTERNAL_CALL=1
   dot link -y
@@ -46,12 +53,11 @@ test_plugin_links_into_protected_paths_are_reported_and_never_applied() {
   manifest "$SANDBOX/widgets" "append:plugin.json->@dot:AGENTS.md"
   validate_guarded acme/widgets widgets
   assert_success "a protected destination is only reported"
-  assert_contains "$ERRORS" "acme/widgets wants to append to .dot/AGENTS.md, which plugins.denyLinkDestination protects; it will never apply."
+  assert_contains "$ERRORS" ".dot/AGENTS.md"
   add_plugin acme/widgets widgets
   dot plugins:link acme/widgets -y
   dot link -y
   assert_success
-  assert_contains "$ERRORS" "Skipped acme/widgets's append to .dot/AGENTS.md: plugins.denyLinkDestination protects it."
   assert_not_contains "$(cat "$DOTDOT/AGENTS.md")" "acme/widgets"
   core "dot::use framework.helpers.json framework.helpers.fs
     framework.helpers.json::set \"\$(cat '$DOTDOT/dot.json')\" .plugins.denyLinkDestination '[]' | framework.helpers.fs::write '$DOTDOT/dot.json'"
@@ -61,7 +67,7 @@ test_plugin_links_into_protected_paths_are_reported_and_never_applied() {
   core "dot::use framework.helpers.json framework.helpers.fs
     framework.helpers.json::set \"\$(cat '$DOTDOT/dot.json')\" .plugins.denyLinkOrigin '[\"@plugin:acme.widgets:*\"]' | framework.helpers.fs::write '$DOTDOT/dot.json'"
   dot link -y
-  assert_contains "$ERRORS" "plugins.denyLinkOrigin protects it"
+  assert_contains "$ERRORS" "denyLinkOrigin"
 }
 
 test_nothing_links_or_appends_to_the_projects_env() {
@@ -71,8 +77,7 @@ test_nothing_links_or_appends_to_the_projects_env() {
   links "append:@plugin:acme.widgets:token.env->.env" "link:@dot:AGENTS.md->.env"
   dot link -y
   assert_failure
-  assert_contains "$ERRORS" "Skipped appending to .env: appends go to project files"
-  assert_contains "$ERRORS" "Skipped .env: it's a protected place"
+  assert_equal "$STATUS" 1
   assert_no_file "$SANDBOX/.env"
 }
 
@@ -94,7 +99,7 @@ test_one_plugin_region_per_destination_is_reported() {
   links "append:@plugin:acme.widgets:plugin.json->notes.conf" "append:@plugin:acme.widgets:commands/hello.sh->notes.conf"
   dot link -y
   assert_failure
-  assert_contains "$ERRORS" "acme/widgets already appends another file to notes.conf"
+  assert_equal "$STATUS" 1
 }
 
 
@@ -106,6 +111,7 @@ test_plugin_archives_may_not_leave_their_folder() {
   assert_success
   core "guards::archive '$SANDBOX/bad.tar.gz'"
   assert_failure
+  assert_equal "$STATUS" 1
 }
 
 validate_guarded() {

@@ -49,6 +49,8 @@ Output exactly: 🧪🧪🧪 BEGIN WRITING TESTS
 - **Arrange, act, assert — no branching.** No `if`, loops, or try/catch in a test body. A test that needs control flow is testing more than one thing; split it. Use the framework's data-driven tests for the same assertion over varying input.
 - **Minimal setup.** Only what the behavior needs. Reach for the suite's existing fixtures or factories rather than hand-building data. Sprawling setup usually means the test is aimed too wide.
 - **Independently failing.** When it goes red, it should be obvious which single thing broke.
+- **Assert behavior, not wording.** Check status codes, state, files, and structured output (JSON); an expected failure asserts its exact status code, so it can't pass for the wrong reason. A message, hint, or note can be reworded without the behavior changing, so a test asserting it breaks for nothing; assert text only when it is the contract itself, such as a help page's sections or a field name.
+- **Depend on nothing outside the project.** Use the suite's own fixtures and stubs, never ignored or external files; an external plugin's tests belong to that plugin.
 - **Don't test the framework.** Validation rules firing, relationships loading, a route resolving — the framework has its own tests. Test what your feature decided.
 
 ## Structure

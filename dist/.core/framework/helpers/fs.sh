@@ -8,12 +8,29 @@ framework.helpers.fs::resolve() {
   printf '%s\n' "$fs_resolved"
 }
 
-# resolve, into the variable named $1 rather than printed: no subshell.
+# resolve, into the variable named $1 rather than printed: no subshell. A
+# path whose last part isn't a link and whose directory exists resolves with
+# the shell's own cd -P; anything else is walked part by part.
 framework.helpers.fs::resolve_to() {
-  local fs_target="$1" pending="$2" resolved="" part link hops=0
+  local fs_target="$1" pending="$2" resolved="" part link hops=0 fs_directory fs_name fs_here="$PWD" fs_previous="${OLDPWD-}"
   case "$pending" in
     /*) ;;
     *) pending="$PWD/$pending" ;;
+  esac
+  fs_name="${pending##*/}"
+  fs_directory="${pending%/*}"
+  case "$fs_name" in
+    "" | . | ..) ;;
+    *)
+      if [ ! -L "$pending" ] && CDPATH='' cd -P -- "${fs_directory:-/}" 2>/dev/null; then
+        resolved="$PWD"
+        cd -- "$fs_here" 2>/dev/null || true
+        OLDPWD="$fs_previous"
+        [ "$resolved" != / ] || resolved=""
+        printf -v "$fs_target" '%s' "$resolved/$fs_name"
+        return 0
+      fi
+      ;;
   esac
   while [ -n "$pending" ]; do
     part="${pending%%/*}"

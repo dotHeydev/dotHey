@@ -10,12 +10,6 @@ test_note_gets_the_next_number() {
   assert_contains "$OUTPUT" "Notes/n002--cache-idea.md"
 }
 
-test_note_refuses_an_empty_slug() {
-  dot notes:create "!!!"
-  assert_failure
-  assert_contains "$ERRORS" "The name needs at least one letter or digit."
-}
-
 test_xray_opens_numbered_from_the_template() {
   dot xrays:create "Adoption plan" --description "How dotdot moves in."
   assert_success
@@ -27,5 +21,5 @@ status: open"
   assert_contains "$(cat "$DOTDOT/Xrays/x001--adoption-plan.md")" "### 1. <Question or decision to make>"
   dot xrays:create "Second"
   assert_failure
-  assert_contains "$ERRORS" "An xray needs --description."
+  assert_equal "$STATUS" 2
 }

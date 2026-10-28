@@ -5,6 +5,7 @@ dot::use framework.console.output
 KERNEL_COLUMN_WIDTH=20
 KERNEL_FILE=""
 KERNEL_UNPREFIXED_SETTING="plugins.unprefixedCommandOwners"
+KERNEL_FEATURE_FLAGS_DOCS="feature-flags"
 KERNEL_UNPREFIXED=""
 KERNEL_UNPREFIXED_READ=false
 # Old names that still run a command, never listed: "<old>=<new>".
@@ -24,12 +25,13 @@ kernel::commands_in() {
   done < <(find "$directory" -mindepth 1 -maxdepth "$DOT_COMMAND_MAX_DEPTH" -type f -name '*.sh' | sort)
 }
 
-# dotdot's own commands, found with a single find over every module.
+# dotdot's own commands, found with a single find over every module on (with
+# --all, every module).
 kernel::core_commands() {
   local module directories=() file name
   while IFS= read -r module; do
     [ ! -d "$module/$MODULE_COMMANDS_DIR" ] || directories+=("$module/$MODULE_COMMANDS_DIR")
-  done < <(paths::modules)
+  done < <(paths::modules "$@")
   while IFS= read -r file; do
     name="${file#"$CORE_DIR"/*/*/"$MODULE_COMMANDS_DIR"/}"
     name="${name%.sh}"
@@ -81,10 +83,11 @@ kernel::commands() {
   '
 }
 
-# The first parts of dotdot's own command names, and the names bash dot
-# itself answers to: no plugin owner may take one.
+# The first parts of dotdot's own command names, those a feature flag turns
+# off included, and the names bash dot itself answers to: no plugin owner may
+# take one.
 kernel::reserved_names() {
-  kernel::core_commands | cut -d'|' -f1 | cut -d: -f1 | sort -u
+  kernel::core_commands --all | cut -d'|' -f1 | cut -d: -f1 | sort -u
   printf '%s\n' "${DOT_RESERVED_COMMANDS[@]}"
 }
 
@@ -99,10 +102,10 @@ kernel::find() {
     KERNEL_FILE="$SYSTEM_DIR/$part/$MODULE_COMMANDS_DIR/$path"
     [ ! -f "$KERNEL_FILE" ] || return 0
   done
-  for part in "${CORE_MODULES[@]}"; do
+  while IFS= read -r part; do
     KERNEL_FILE="$MODULES_DIR/$part/$MODULE_COMMANDS_DIR/$path"
     [ ! -f "$KERNEL_FILE" ] || return 0
-  done
+  done < <(paths::core_modules)
   if [ "$KERNEL_UNPREFIXED" != " " ]; then
     KERNEL_FILE=$(kernel::commands | awk -F'|' -v wanted="$name" '$1 == wanted { print $2; exit }')
     [ -z "$KERNEL_FILE" ] || return 0
@@ -150,18 +153,31 @@ kernel::print_version() {
   fi
 }
 
+# The docs at <anchor>, on the main branch: the docs aren't versioned.
+kernel::docs_link() {
+  # shellcheck disable=SC2059
+  printf "$DOT_DOCS_URL#%s\n" main "${1:-$DOT_DOCS_DEFAULT}"
+}
+
 # The docs a core command's help ends with: its DOCS anchor (a full URL for a
 # plugin's command), on the docs of the installed version.
 kernel::docs() {
-  local file="$1" anchor version
+  local file="$1" anchor
   anchor=$(sed -n 's/^DOCS="\(.*\)"$/\1/p' "$file" | head -n 1)
   case "$anchor" in
     https://*) printf '%s\n' "$anchor"; return ;;
   esac
   case "$file" in "$PLUGINS_DIR"/*) return ;; esac
-  version=$(kernel::version)
-  # shellcheck disable=SC2059
-  printf "$DOT_DOCS_URL#%s\n" "${version:+v$version}${version:-main}" "${anchor:-$DOT_DOCS_DEFAULT}"
+  kernel::docs_link "$anchor"
+}
+
+# The module, turned off by its feature flag, whose command <name> is.
+kernel::disabled_module_of() {
+  local path="${1//://}.sh" module
+  while IFS= read -r module; do
+    [ ! -f "$MODULES_DIR/$module/$MODULE_COMMANDS_DIR/$path" ] || { printf '%s\n' "$module"; return 0; }
+  done < <(paths::disabled_modules)
+  return 1
 }
 
 # A command's help (usage) as JSON: its name, description, usage lines,
@@ -253,11 +269,15 @@ kernel::closest() {
 
 kernel::run() {
   local name="${1-}" file alias
+  paths::read_flags
   for alias in "${KERNEL_ALIASES[@]}"; do
     [ "$name" != "${alias%%=*}" ] || name="${alias#*=}"
   done
   if ! { [[ "$name" =~ $DOT_COMMAND_PATTERN ]] && kernel::find "$name"; }; then
-    local closest
+    local closest module
+    ! module=$(kernel::disabled_module_of "$name") \
+      || framework.console.output::fail_as "$EXIT_PRECONDITION" "The $name feature is turned off by a feature flag." \
+        "Turn it on in $(dot::relative "$SETTINGS_FILE"): \"featureFlags\": {\"$module\": true}" "To know more about feature flags visit: $(kernel::docs_link "$KERNEL_FEATURE_FLAGS_DOCS")"
     closest=$(kernel::closest "$name")
     [ -z "$closest" ] || framework.console.output::fail_as "$EXIT_USAGE" "There's no command $name. Did you mean $closest?" "To list all available commands, run: bash dot"
     framework.console.output::fail_as "$EXIT_USAGE" "There's no command $name." "To list all available commands, run: bash dot"

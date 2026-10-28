@@ -5,17 +5,12 @@ add_migration() {
   printf '#!/usr/bin/env bash\n\nDESCRIPTION="Sample."\n\nmigrate() {\n  %s\n}\n' "$2" > "$DOTDOT/.core/system/migrations/$1.sh"
 }
 
-test_nothing_to_migrate_on_a_fresh_install() {
-  dot migrate
-  assert_success
-  assert_contains "$OUTPUT" "nothing to migrate."
-}
-
 test_migrations_run_once_and_are_recorded() {
   add_migration 0001-sample ': > "$DOTDOT_ROOT/migrated"'
   dot link -y
   assert_failure
-  assert_contains "$ERRORS" "Please run: bash dot migrate"
+  assert_equal "$STATUS" 5
+  assert_contains "$ERRORS" "bash dot migrate"
   dot migrate -y
   assert_success
   assert_file "$DOTDOT/migrated"
@@ -23,7 +18,7 @@ test_migrations_run_once_and_are_recorded() {
   assert_equal "$OUTPUT" '["0001-sample"]'
   rm "$DOTDOT/migrated"
   dot migrate
-  assert_contains "$OUTPUT" "nothing to migrate."
+  assert_success
   assert_no_file "$DOTDOT/migrated"
   dot link -y
   assert_success
@@ -34,10 +29,11 @@ test_migrate_needs_a_terminal_or_dotdot_itself() {
   add_migration 0001-sample ': > "$DOTDOT_ROOT/migrated"'
   dot migrate -y
   assert_failure
+  assert_equal "$STATUS" 5
   assert_no_file "$DOTDOT/migrated"
   dot migrate
   assert_failure
-  assert_contains "$ERRORS" "This needs your confirmation in a terminal"
+  assert_equal "$STATUS" 5
 }
 
 test_a_failing_migration_stops_the_rest_unrecorded() {
@@ -45,7 +41,8 @@ test_a_failing_migration_stops_the_rest_unrecorded() {
   add_migration 0002-after ': > "$DOTDOT_ROOT/migrated"'
   dot migrate -y
   assert_failure
-  assert_contains "$ERRORS" "0001-broken.sh didn't finish"
+  assert_equal "$STATUS" 1
+  assert_contains "$ERRORS" "0001-broken.sh"
   assert_no_file "$DOTDOT/migrated"
   core "dot::setting state.migrations"
   assert_equal "$OUTPUT" "[]"

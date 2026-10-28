@@ -21,11 +21,15 @@ LINT_EXCLUSIONS="SC1090,SC1091,SC2034,SC2154"
 if [ "${1-}" != --run ]; then
   GREEN=""
   RED=""
+  YELLOW=""
+  BOLD=""
   DIM=""
   RESET=""
   if [ -t 1 ] && [ -z "${NO_COLOR-}" ]; then
     GREEN=$'\033[32m'
     RED=$'\033[31m'
+    YELLOW=$'\033[33m'
+    BOLD=$'\033[1m'
     DIM=$'\033[2m'
     RESET=$'\033[0m'
   fi
@@ -52,9 +56,9 @@ restrict_environment() {
 # per file, cached outside the repo), so an unchanged tree lints in no time.
 lint() {
   local cache="${XDG_CACHE_HOME:-$HOME/.cache}/dotdot-tests/lint" sums="$WORK_DIR/sums" changed="$WORK_DIR/changed"
-  command -v shellcheck >/dev/null || { echo "⚠️  shellcheck not installed; lint skipped." > "$WORK_DIR/lint"; return 0; }
+  command -v shellcheck >/dev/null || { printf '%s! shellcheck not installed; lint skipped.%s\n' "$BOLD$YELLOW" "$RESET" > "$WORK_DIR/lint"; return 0; }
   mkdir -p "$(dirname -- "$cache")" && touch "$cache"
-  find "$SOURCE_DIR" "$REPOSITORY_DIR/.ignore" "$REPOSITORY_DIR/install.sh" "$TESTS_DIR" -type f \( -name '*.sh' -o -path '*/bin/dot' \) -print0 \
+  find "$SOURCE_DIR" "$REPOSITORY_DIR/install.sh" "$TESTS_DIR" -type f \( -name '*.sh' -o -path '*/bin/dot' \) -print0 \
     | xargs -0 cksum > "$sums"
   grep -vxF -f "$cache" "$sums" | cut -d' ' -f3- > "$changed"
   [ -s "$changed" ] || return 0
@@ -79,8 +83,8 @@ run_one() {
   fi
   case "$VERBOSITY" in
     1) [ -e "$result.passed" ] && printf '%s.%s' "$GREEN" "$RESET" || printf '%s.%s' "$RED" "$RESET" ;;
-    2) [ -e "$result.passed" ] && printf '  %s✓%s %s %s(%s)%s\n' "$GREEN" "$RESET" "$name" "$DIM" "${file##*/}" "$RESET" \
-      || printf '  %sx%s %s %s(%s)%s\n' "$RED" "$RESET" "$name" "$DIM" "${file##*/}" "$RESET" ;;
+    2) [ -e "$result.passed" ] && printf '  %s✓%s %s %s(%s)%s\n' "$BOLD$GREEN" "$RESET" "$name" "$DIM" "${file##*/}" "$RESET" \
+      || printf '  %s✗%s %s %s(%s)%s\n' "$BOLD$RED" "$RESET" "$name" "$DIM" "${file##*/}" "$RESET" ;;
   esac
 }
 
@@ -107,6 +111,12 @@ selected_tests() {
   done < <(test_files)
 }
 
+# The time since the run started (bash's SECONDS), as 2m27s or 9s.
+elapsed() {
+  local seconds="$SECONDS"
+  [ "$seconds" -lt 60 ] && printf '%ss' "$seconds" || printf '%sm%02ds' "$((seconds / 60))" "$((seconds % 60))"
+}
+
 report() {
   local result passed=0 failed=0 assertions=0 name
   [ "$VERBOSITY" -ne 1 ] || printf '\n'
@@ -118,11 +128,11 @@ report() {
     failed=$((failed + 1))
     name="${result%.failed}"
     name="${name##*/}"
-    printf '\n❌ %s (%s)\n' "${name#*.test.sh.}" "${name%%.test.sh.*}.test.sh"
+    printf '\n%s✗%s %s (%s)\n' "$BOLD$RED" "$RESET" "${name#*.test.sh.}" "${name%%.test.sh.*}.test.sh"
     sed 's/^/   /' "${result%.failed}.failure"
   done
   assertions=$(cat "$WORK_DIR"/results/*.assertions 2>/dev/null | wc -c | tr -d ' ')
-  printf '\n%s passed, %s failed, %s assertions\n' "$GREEN$passed$RESET" "$( [ "$failed" -eq 0 ] && printf '0' || printf '%s' "$RED$failed$RESET")" "$assertions"
+  printf '\n%s passed, %s failed, %s assertions in %s\n' "$GREEN$passed$RESET" "$( [ "$failed" -eq 0 ] && printf '0' || printf '%s' "$RED$failed$RESET")" "$assertions" "$(elapsed)"
   [ "$failed" -eq 0 ]
 }
 
@@ -154,7 +164,7 @@ done
 WORK_DIR=$(mktemp -d)
 trap 'rm -rf -- "$WORK_DIR"' EXIT
 mkdir -p "$WORK_DIR/results"
-export WORK_DIR VERBOSITY GREEN RED DIM RESET
+export WORK_DIR VERBOSITY GREEN RED YELLOW BOLD DIM RESET
 restrict_environment
 
 lint_status=0
@@ -178,7 +188,7 @@ if [ -n "$lint_pid" ]; then
   wait "$lint_pid" || lint_status=1
   if [ "$lint_status" -ne 0 ]; then
     cat "$WORK_DIR/lint"
-    echo "❌ shellcheck found problems."
+    printf '%s✗%s shellcheck found problems.\n' "$BOLD$RED" "$RESET"
   fi
 fi
 [ "$tests_status" -eq 0 ] && [ "$lint_status" -eq 0 ]

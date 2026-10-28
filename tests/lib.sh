@@ -14,15 +14,21 @@ sandbox::create() {
   sandbox::settings
 }
 
-# Writes .dot/dot.json as the installer leaves it (every migration applied),, plus the members given, e.g. '"tasks": {"service": "x"}'.
+# Writes .dot/dot.json as the installer leaves it (every migration applied),
+# every feature flag on unless the members given set featureFlags, plus the
+# members given, e.g. '"tasks": {"service": "x"}'.
 sandbox::settings() {
-  local file list=""
+  local file list="" flags
   for file in "$DOTDOT"/.core/system/migrations/*.sh; do
     [ -f "$file" ] || continue
     file="${file##*/}"
     list="$list${list:+, }\"${file%.sh}\""
   done
-  printf '{"state": {"version": "", "isReady": false, "migrations": [%s]}%s}\n' "$list" "${1:+, $1}" > "$DOTDOT/dot.json"
+  case "${1-}" in
+    *'"featureFlags"'*) flags="" ;;
+    *) flags=$(sed -n '/"featureFlags"/,/}/{s/: *false/: true/;p;}' "$DOTDOT/.core/dot.defaults.json" | tr -d '\n') ;;
+  esac
+  printf '{"state": {"version": "", "isReady": false, "migrations": [%s]}%s%s}\n' "$list" "${flags:+, ${flags%,}}" "${1:+, $1}" > "$DOTDOT/dot.json"
 }
 
 # A secret-shaped value built at run time, <count> times "F4k3", so no
@@ -113,22 +119,6 @@ assert_link_to() {
   [ -L "$1" ] || fail "expected a link at $1"
   [ "$(cd "$(dirname -- "$1")" && cd -P -- "$(dirname -- "$(readlink "$1")")" && pwd)/$(basename -- "$(readlink "$1")")" = "$2" ] \
     || fail "expected $1 to point at $2, got $(readlink "$1")"
-}
-
-CLAUDE_CODE_PLUGIN_DIR="$REPOSITORY_DIR/.ignore/claude-code"
-
-# The claude-code plugin's files in place, without adding it: enough to run
-# its scripts.
-copy_claude_code() {
-  mkdir -p "$DOTDOT/.plugins/dotdot-sh"
-  cp -R "$CLAUDE_CODE_PLUGIN_DIR/dotdot" "$DOTDOT/.plugins/dotdot-sh/claude-code"
-}
-
-add_claude_code() {
-  cp -R "$CLAUDE_CODE_PLUGIN_DIR" "$SANDBOX/claude-code"
-  add_plugin dotdot-sh/claude-code claude-code
-  take_suggestions dotdot-sh/claude-code
-  dot link -y
 }
 
 add_plugin() {

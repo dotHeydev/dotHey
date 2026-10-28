@@ -1,0 +1,15 @@
+{
+  "name": "OpenCode",
+  "docs": "https://opencode.ai/docs/skills/",
+  "detect": [
+    "opencode.json",
+    "opencode.jsonc",
+    ".opencode/"
+  ],
+  "instructions": null,
+  "skills": ".opencode/skills/",
+  "agents": {
+    "dir": ".opencode/agents/"
+  },
+  "context": {}
+}

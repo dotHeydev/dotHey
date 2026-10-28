@@ -261,8 +261,9 @@ Each helper returns markup, not escape codes. The markup becomes escape codes on
 │   ├── guards.sh    # the policy every action is checked against
 │   └── link/  plugins/  update/  migrations/
 ├── modules/         # what dotdot can do
-│   └── onboarding/  ready/  frontmatter/  housekeeping/  notes/  xrays/
-│       features/  decisions/  tasks/  release/
+│   └── onboarding/  ready/  setup/  frontmatter/  housekeeping/  notes/
+│       xrays/  features/  decisions/  tasks/  release/
+├── harnesses/       # one folder per harness, and capabilities/ shared by them
 ├── framework/       # the only shared code
 │   ├── helpers/     # project-agnostic building blocks
 │   ├── console/     # command-line input and output
@@ -270,7 +271,7 @@ Each helper returns markup, not escape codes. The markup becomes escape codes on
 └── dot.defaults.json
 ```
 
-- **System parts** load as `core.system.<part>.*`, **modules** as `core.modules.<module>.*`, the **framework** as `framework.*`.
+- **System parts** load as `core.system.<part>.*`, **modules** as `core.modules.<module>.*`, **harnesses** as `core.harnesses.<id>.*` (from anywhere in the core, never from a plugin), the **framework** as `framework.*`.
 - Every system part and module uses only the framework and its own code; it reaches another one through `dot::call`.
 - An integration exposes only its `service.sh`; its `internal/` parts load from inside it alone.
 - Migrations (`system/migrations/NNNN-<slug>.sh`, each with `DESCRIPTION` and `migrate()`) convert the files dotdot keeps when a new version changes their format; `state.migrations` lists those applied.

@@ -1,6 +1,16 @@
 {
+  "featureFlags": {
+    "release": false
+  },
   "general": {
     "timezone": ""
+  },
+  "setup": {
+    "harnesses": [],
+    "strategy": "combine",
+    "links": {},
+    "pending": [],
+    "done": []
   },
   "tasks": {
     "service": "file",

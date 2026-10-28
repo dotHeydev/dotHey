@@ -34,7 +34,7 @@ core.system.plugins.console::preview() {
   while IFS=$'\t' read -r kind first second; do
     [ "$kind" = file ] || continue
     case "$first" in
-      *.sh) framework.console.output::change "$second" "$first $(framework.console.output::yellow "$OUTPUT_WARNING_ICON script, runs on your machine")" ;;
+      *.sh) framework.console.output::change "$second" "$first $(framework.console.output::yellow "$(framework.console.output::bold "$OUTPUT_WARNING_ICON") script, runs on your machine")" ;;
       *) framework.console.output::change "$second" "$first" ;;
     esac
   done <<< "$rows"

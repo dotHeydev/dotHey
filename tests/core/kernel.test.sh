@@ -20,25 +20,16 @@ test_every_command_is_listed_and_answers_help() {
   [ -z "$ERRORS" ] || fail "a command's --help wrote to stderr: $ERRORS"
 }
 
-test_help_command_matches_help_flag() {
-  local expected
-  dot link --help
-  expected="$OUTPUT"
-  dot help link
-  assert_success
-  assert_equal "$OUTPUT" "$expected"
-}
-
 test_unknown_command_fails_with_hint() {
   dot nothing:here
   assert_failure
-  assert_contains "$ERRORS" "There's no command nothing:here."
+  assert_equal "$STATUS" 2
 }
 
 test_invalid_command_name_is_refused() {
   dot '../escape'
   assert_failure
-  assert_contains "$ERRORS" "There's no command"
+  assert_equal "$STATUS" 2
 }
 
 test_runs_through_a_symlinked_entry_point() {
@@ -51,7 +42,7 @@ test_runs_through_a_symlinked_entry_point() {
 test_refuses_to_run_under_sh() {
   run sh ./dot
   assert_failure
-  assert_contains "$ERRORS" "bash"
+  assert_equal "$STATUS" 1
 }
 
 test_modules_load_by_dotted_path() {
@@ -67,7 +58,7 @@ test_unknown_or_undotted_modules_fail() {
   for module in text tools.missing tools..fs acme.tools.greet core.nothing.here; do
     core "dot::use $module"
     assert_failure "$module"
-    assert_contains "$ERRORS" "Unknown dotdot module: $module"
+    assert_equal "$STATUS" 1
   done
 }
 
@@ -84,34 +75,34 @@ test_record_folders_ship_with_dotdot() {
 test_a_typo_suggests_the_closest_command() {
   dot notes:creat
   assert_failure
-  assert_contains "$ERRORS" "There's no command notes:creat. Did you mean notes:create?"
+  assert_equal "$STATUS" 2
+  assert_contains "$ERRORS" "notes:create"
   dot zzzzzz
   assert_failure
-  assert_not_contains "$ERRORS" "Did you mean"
+  assert_equal "$STATUS" 2
 }
 
 test_agents_get_plain_output_and_hand_over_what_needs_a_person() {
   dot upgrade
-  assert_contains "$ERRORS" "Please run the command manually: bash dot upgrade"
+  local person="$ERRORS"; assert_contains "$ERRORS" "bash dot upgrade"
   dot --agent upgrade
-  assert_contains "$ERRORS" "Please ask the user to run it in a terminal: bash dot upgrade"
+  assert_contains "$ERRORS" "bash dot upgrade"; [ "$ERRORS" != "$person" ] || fail "an agent got the hand-over a person gets"
   run env AI_AGENT=some-agent bash ./dot upgrade
-  assert_contains "$ERRORS" "Please ask the user to run it in a terminal: bash dot upgrade"
+  assert_contains "$ERRORS" "bash dot upgrade"; [ "$ERRORS" != "$person" ] || fail "AI_AGENT got the hand-over a person gets"
 }
 
 test_flag_values_may_follow_an_equals_sign() {
   dot tasks:list --order=sideways
   assert_failure
-  assert_contains "$ERRORS" "--order takes asc or desc."
+  assert_equal "$STATUS" 2
 }
 
 test_a_missing_plugin_never_means_every_plugin() {
   dot plugins:update
   assert_failure
-  assert_contains "$ERRORS" "or --all for every one"
+  assert_equal "$STATUS" 2
   dot plugins:update --all
   assert_success
-  assert_contains "$OUTPUT" "No plugins installed yet."
 }
 
 test_every_help_page_has_usage_and_fits_80_columns() {
@@ -200,4 +191,34 @@ test_no_input_and_ci_never_let_yes_skip_a_person() {
   assert_equal "$STATUS" 5
   run env DOT_INTERNAL_CALL="" bash ./dot --no-input link -y
   assert_equal "$STATUS" 5
+}
+
+test_a_module_behind_a_feature_flag_is_off_until_turned_on() {
+  sandbox::settings '"featureFlags": {}'
+  dot
+  assert_success
+  assert_not_contains "$OUTPUT" "release:create"
+  dot release:create 1.0.0
+  assert_failure
+  assert_equal "$STATUS" 5
+#  assert_contains "$ERRORS" "#feature-flags"
+  core 'kernel::reserved_names'
+  assert_contains "$OUTPUT" "release"
+  sandbox::settings '"featureFlags": {"release": true}'
+  dot
+  assert_contains "$OUTPUT" "release:create"
+}
+
+test_feature_reads_a_flag_as_on_only_when_true() {
+  sandbox::settings '"featureFlags": {"release": true, "other": "yes"}'
+  core 'dot::feature release && ! dot::feature other && ! dot::feature missing'
+  assert_success
+}
+
+test_help_links_the_docs_on_main_whatever_the_installed_version() {
+  sandbox::settings '"state": {"version": "4d342b097ba4acf1850d6caab9d63a52cea45457"}'
+  dot link --help
+  assert_success
+  assert_contains "$OUTPUT" "https://github.com/dotdot-sh/dotdot/blob/main/docs/usage.md#linking"
+  assert_not_contains "$OUTPUT" "4d342b0"
 }

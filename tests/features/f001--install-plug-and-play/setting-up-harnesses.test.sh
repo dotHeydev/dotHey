@@ -1,0 +1,176 @@
+#!/usr/bin/env bash
+. "$(dirname -- "${BASH_SOURCE[0]}")/helpers.sh"
+
+# Golden
+
+test_setup_links_every_chosen_harness() {
+  dot setup --harness claude,agents --yes
+  assert_success
+  assert_link_to "$SANDBOX/AGENTS.md" "$DOTDOT/AGENTS.md"
+  assert_link_to "$SANDBOX/.claude/CLAUDE.md" "$DOTDOT/AGENTS.md"
+  assert_link_to "$SANDBOX/.claude/skills/dot-onboard" "$DOTDOT/.core/modules/onboarding/skills/dot-onboard"
+  assert_link_to "$SANDBOX/.agents/skills/dot-onboard" "$DOTDOT/.core/modules/onboarding/skills/dot-onboard"
+  assert_equal "$(setting_value '.setup.harnesses[]' | tr '\n' ,)" "claude,agents"
+}
+
+test_setup_previews_what_it_found_with_the_detected_harnesses() {
+  own_instructions CLAUDE.md
+  own_skill .claude/skills/mine
+  cp "$DOTDOT/dot.json" "$SANDBOX/before.json"
+  dot setup --preview
+  assert_success
+  assert_contains "$OUTPUT" "CLAUDE.md"
+  assert_contains "$OUTPUT" ".claude/skills/mine"
+  assert_contains "$OUTPUT" ".claude/skills/dot-onboard"
+  assert_equal "$(cat "$DOTDOT/dot.json")" "$(cat "$SANDBOX/before.json")"
+  assert_no_file "$SANDBOX/.claude/skills/dot-onboard"
+}
+
+test_combine_keeps_existing_files_and_imports_dotdot() {
+  own_instructions CLAUDE.md
+  own_skill .claude/skills/mine
+  dot setup --harness claude --strategy combine --yes
+  assert_success
+  [ -f "$SANDBOX/CLAUDE.md" ] && [ ! -L "$SANDBOX/CLAUDE.md" ] || fail "CLAUDE.md is no longer the project's own file"
+  assert_contains "$(cat "$SANDBOX/CLAUDE.md")" "Keep this line."
+  assert_contains "$(cat "$SANDBOX/CLAUDE.md")" "@.dot/AGENTS.md"
+  [ -d "$SANDBOX/.claude/skills/mine" ] && [ ! -L "$SANDBOX/.claude/skills/mine" ] || fail "the project's skill was moved"
+  assert_link_to "$SANDBOX/.claude/skills/dot-onboard" "$DOTDOT/.core/modules/onboarding/skills/dot-onboard"
+}
+
+test_own_moves_skills_into_dotdot_and_links_them_back() {
+  own_instructions CLAUDE.md
+  own_skill .claude/skills/mine
+  dot setup --harness claude --strategy own --yes
+  assert_success
+  assert_file "$DOTDOT/Skills/mine/SKILL.md"
+  assert_link_to "$SANDBOX/.claude/skills/mine" "$DOTDOT/Skills/mine"
+  assert_contains "$(cat "$SANDBOX/CLAUDE.md")" "@.dot/AGENTS.md"
+  assert_equal "$(setting_value '.setup.strategy')" "own"
+}
+
+test_own_links_owned_skills_into_every_chosen_harness() {
+  own_skill .claude/skills/mine
+  dot setup --harness claude,agents --strategy own --yes
+  assert_success
+  assert_link_to "$SANDBOX/.agents/skills/mine" "$DOTDOT/Skills/mine"
+}
+
+test_own_previews_where_each_item_moves() {
+  own_skill .claude/skills/mine
+  dot setup --harness claude --strategy own --preview
+  assert_success
+  assert_contains "$OUTPUT" ".dot/Skills/mine"
+  assert_no_file "$DOTDOT/Skills/mine"
+}
+
+# Edge
+
+test_own_leaves_an_item_named_like_dotdots_in_place() {
+  own_skill .claude/skills/dot-onboard
+  own_skill .claude/skills/mine
+  dot setup --harness claude --strategy own --yes
+  assert_success
+  [ -d "$SANDBOX/.claude/skills/dot-onboard" ] && [ ! -L "$SANDBOX/.claude/skills/dot-onboard" ] || fail "the clashing skill was moved"
+  assert_no_file "$DOTDOT/Skills/dot-onboard"
+  assert_contains "$OUTPUT$ERRORS" ".claude/skills/dot-onboard"
+  assert_file "$DOTDOT/Skills/mine/SKILL.md"
+}
+
+test_preview_changes_nothing() {
+  own_skill .claude/skills/mine
+  cp "$DOTDOT/dot.json" "$SANDBOX/before.json"
+  dot setup --harness claude --strategy own --preview
+  assert_success
+  assert_equal "$(cat "$DOTDOT/dot.json")" "$(cat "$SANDBOX/before.json")"
+  assert_no_file "$SANDBOX/.claude/skills/dot-onboard"
+  assert_no_file "$DOTDOT/Skills/mine"
+}
+
+test_setup_without_a_person_and_no_choice_stops_naming_the_flags() {
+  dot setup
+  assert_failure
+  assert_equal "$STATUS" 5
+}
+
+test_setup_without_a_person_only_previews() {
+  DOT_INTERNAL_CALL="" dot setup --harness claude
+  assert_success
+  assert_no_file "$SANDBOX/.claude/skills/dot-onboard"
+}
+
+test_rerunning_setup_unlinks_harnesses_no_longer_chosen() {
+  own_instructions CLAUDE.md
+  dot setup --harness claude,agents --yes
+  dot setup --harness agents --yes
+  assert_success
+  assert_no_file "$SANDBOX/.claude/skills/dot-onboard"
+  assert_not_contains "$(cat "$SANDBOX/CLAUDE.md")" "@.dot/AGENTS.md"
+  assert_contains "$(cat "$SANDBOX/CLAUDE.md")" "Keep this line."
+  assert_link_to "$SANDBOX/.agents/skills/dot-onboard" "$DOTDOT/.core/modules/onboarding/skills/dot-onboard"
+  assert_equal "$(setting_value '.setup.harnesses[]')" "agents"
+}
+
+test_rechoosing_a_harness_links_it_again() {
+  dot setup --harness claude --yes
+  dot setup --harness agents --yes
+  dot setup --harness claude --yes
+  assert_success
+  assert_link_to "$SANDBOX/.claude/skills/dot-onboard" "$DOTDOT/.core/modules/onboarding/skills/dot-onboard"
+}
+
+test_rerunning_setup_duplicates_nothing() {
+  own_instructions CLAUDE.md
+  dot setup --harness claude --yes
+  dot setup --harness claude --yes
+  assert_success
+  assert_equal "$(grep -c '@.dot/AGENTS.md' "$SANDBOX/CLAUDE.md")" 1
+  assert_equal "$(setting_value '.links["@dotdotSkills"][]' | grep -c '^.claude/skills/$')" 1
+}
+
+test_setup_unlinks_dotdots_default_links_for_harnesses_not_chosen() {
+  dot link -y
+  assert_link_to "$SANDBOX/.claude/skills/dot-onboard" "$DOTDOT/.core/modules/onboarding/skills/dot-onboard"
+  dot setup --harness agents --yes
+  assert_success
+  assert_no_file "$SANDBOX/.claude/skills/dot-onboard"
+}
+
+# Adversarial
+
+test_own_never_moves_a_link_leading_out_of_the_project() {
+  local outside
+  outside=$(mktemp -d)
+  printf -- '---\nname: away\n---\n' > "$outside/SKILL.md"
+  mkdir -p "$SANDBOX/.claude/skills"
+  ln -s "$outside" "$SANDBOX/.claude/skills/away"
+  dot setup --harness claude --strategy own --yes
+  [ -L "$SANDBOX/.claude/skills/away" ] && [ "$(readlink "$SANDBOX/.claude/skills/away")" = "$outside" ] || fail "the outside link was touched"
+  assert_file "$outside/SKILL.md"
+  rm -rf -- "$outside"
+  assert_success
+  assert_no_file "$DOTDOT/Skills/away"
+}
+
+test_an_unknown_harness_is_refused_with_the_valid_ones() {
+  cp "$DOTDOT/dot.json" "$SANDBOX/before.json"
+  dot setup --harness nope --yes
+  assert_failure
+  assert_equal "$STATUS" 2
+  assert_contains "$ERRORS" "claude"
+  assert_equal "$(cat "$DOTDOT/dot.json")" "$(cat "$SANDBOX/before.json")"
+}
+
+test_a_harness_name_with_a_path_is_refused() {
+  dot setup --harness ../../etc --yes
+  assert_failure
+  assert_equal "$STATUS" 2
+  assert_contains "$ERRORS" "claude"
+}
+
+test_an_unknown_strategy_is_refused() {
+  dot setup --harness claude --strategy merge --yes
+  assert_failure
+  assert_equal "$STATUS" 2
+  assert_no_file "$SANDBOX/.claude/skills/dot-onboard"
+}

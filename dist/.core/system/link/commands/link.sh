@@ -104,6 +104,11 @@ handle() {
       --preview | --dry-run) preview=true ;;
       --settings-only) only_map=true ;;
       --remove-uninstalled) sweep=true ;;
+      --relink-from)
+        framework.console.args::require_value "$@"
+        core.system.link.service::relink_from "$2" || framework.console.args::invalid "--relink-from needs dotdot's former place in the project (got $2)."
+        shift
+        ;;
       -v | --verbose) LINK_VERBOSE=true ;;
       -y | --yes) confirmed=true ;;
       --refresh-plugin)
@@ -126,6 +131,7 @@ handle() {
     core.system.link.service::plan_sweep
   else
     $confirmed || offer_merge
+    $preview || core.system.link.service::build_harnesses
     core.system.link.service::plan "$override" "$refresh"
   fi
   core.system.link.service::count_changes

@@ -23,6 +23,7 @@ test_fs_resolve_detects_link_loops() {
   ln -s loop-b "$SANDBOX/loop-a"
   core "dot::use framework.helpers.fs; framework.helpers.fs::resolve '$SANDBOX/loop-a'"
   assert_failure
+  assert_equal "$STATUS" 1
 }
 
 test_fs_relative_walks_up_and_down() {
@@ -38,8 +39,10 @@ test_fs_within_refuses_escapes() {
   ln -s / "$SANDBOX/root-link"
   core "dot::use framework.helpers.fs; framework.helpers.fs::within ../outside '$SANDBOX'"
   assert_failure
+  assert_equal "$STATUS" 1
   core "dot::use framework.helpers.fs; framework.helpers.fs::within root-link/etc '$SANDBOX'"
   assert_failure
+  assert_equal "$STATUS" 1
   core "dot::use framework.helpers.fs; framework.helpers.fs::within inside/file '$SANDBOX'"
   assert_success
   assert_equal "$OUTPUT" "$(physical "$SANDBOX")/inside/file"
@@ -105,10 +108,10 @@ acme/repo"
   sandbox::settings '"tasks": {"service": ""}'
   core "dot::setting tasks.service"
   assert_failure
-  assert_contains "$ERRORS" 'The setting tasks.service isn'"'"'t set yet.'
+  assert_equal "$STATUS" 1
   core "dot::setting TASKS_SERVICE"
   assert_failure
-  assert_contains "$ERRORS" '"TASKS_SERVICE" isn'"'"'t a valid setting path.'
+  assert_equal "$STATUS" 1
 }
 
 # Adds members to the sandbox's dotdot defaults, e.g. '"flag": false' under general.
@@ -149,7 +152,7 @@ test_env_references_resolve_inside_objects_and_lists() {
   sandbox::settings '"release": {"exclude": ["@env:DOT_GH_TOKEN"]}'
   core "dot::setting release.exclude"
   assert_failure
-  assert_contains "$ERRORS" 'DOT_GH_TOKEN is reserved by dotdot; please pick another .env key for release.exclude[0].'
+  assert_equal "$STATUS" 1
 }
 
 test_env_references_never_name_a_secret_or_a_json_only_setting() {
@@ -159,32 +162,32 @@ test_env_references_never_name_a_secret_or_a_json_only_setting() {
     sandbox::settings "\"general\": {\"timezone\": \"@env:$key\"}"
     core "dot::setting general.timezone"
     assert_failure "$key must be refused"
-    assert_contains "$ERRORS" "$key is reserved by dotdot; please pick another .env key for general.timezone."
+    assert_equal "$STATUS" 1
     assert_not_contains "$OUTPUT$ERRORS" "secret"
   done
   sandbox::settings '"state": {"version": "@env:MY_STATE", "migrations": []}, "tasks": {}'
   core "dot::setting state.version ''"
   assert_failure
-  assert_contains "$ERRORS" "state.version can't come from .env."
+  assert_equal "$STATUS" 1
   sandbox::settings '"state": {"migrations": ["@env:MY_STATE"]}'
   core "dot::setting state.migrations '[]'"
   assert_failure
-  assert_contains "$ERRORS" "state.migrations can't come from .env."
+  assert_equal "$STATUS" 1
   with_defaults general.timezone '"@env:MY_STATE"'
   sandbox::settings
   core "dot::setting general.timezone"
   assert_failure
-  assert_contains "$ERRORS" "only .dot/dot.json may."
+  assert_equal "$STATUS" 1
   core "dot::save_setting general.timezone '\"@env:MY_STATE\"'"
   assert_failure
-  assert_contains "$ERRORS" "by hand only"
+  assert_equal "$STATUS" 1
 }
 
 test_a_broken_settings_file_stops_rather_than_falls_back() {
   printf '{"tasks": {"service": "github",}\n' > "$DOTDOT/dot.json"
   core "dot::setting tasks.service"
   assert_failure
-  assert_contains "$ERRORS" ".dot/dot.json isn't valid JSON"
+  assert_equal "$STATUS" 1
 }
 
 test_env_files_read_as_dotenv_libraries_do() {
@@ -209,6 +212,7 @@ test_every_printed_line_masks_what_looks_like_a_secret() {
     framework.console.output::error 'push failed: API_KEY=$fake'
     dot::raise 'request sent \"client_secret\": \"$fake\"'; exit 1"
   assert_failure
+  assert_equal "$STATUS" 1
   assert_not_contains "$OUTPUT$ERRORS" "$fake"
   assert_contains "$OUTPUT" "clone with ghp_F4******"
   assert_contains "$ERRORS" "push failed: API_KEY=F4k3******"
@@ -247,6 +251,7 @@ links	append"
 }'
   core "dot::use framework.helpers.json; framework.helpers.json::merge_duplicates '{\"links\": {\"k\": \"a\", \"k\": \"b\"}}' links"
   assert_failure "two different texts can't be merged"
+  assert_equal "$STATUS" 1
 }
 
 test_path_patterns_read_the_same_everywhere() {
@@ -294,14 +299,14 @@ test_secrets_come_only_from_the_env_file() {
   assert_equal "$OUTPUT" "from-env-file"
   core "dot::secret GH_TOKEN"
   assert_failure
-  assert_contains "$ERRORS" "\"GH_TOKEN\" isn't a valid secret name."
+  assert_equal "$STATUS" 2
 }
 
 test_secrets_are_saved_privately_and_only_while_git_ignores_them() {
   git -C "$SANDBOX" init -q
   core "export GIT_CONFIG_GLOBAL=/dev/null XDG_CONFIG_HOME='$SANDBOX/none'; dot::save_secret DOT_RELEASE_TOKEN_SAMPLE value"
   assert_failure
-  assert_contains "$ERRORS" ".env isn't git-ignored"
+  assert_equal "$STATUS" 1
   assert_no_file "$SANDBOX/.env"
   printf '.env\n' > "$SANDBOX/.gitignore"
   core "export GIT_CONFIG_GLOBAL=/dev/null XDG_CONFIG_HOME='$SANDBOX/none'; dot::save_secret DOT_RELEASE_TOKEN_SAMPLE 'a value' && dot::secret DOT_RELEASE_TOKEN_SAMPLE"
@@ -324,6 +329,7 @@ test_frontmatter_update_fails_on_missing_key() {
   printf -- '---\nstatus: draft\n---\n' > "$file"
   core "dot::use framework.helpers.frontmatter; framework.helpers.frontmatter::update '$file' modified now"
   assert_failure
+  assert_equal "$STATUS" 1
   assert_equal "$(cat "$file")" "$(printf -- '---\nstatus: draft\n---')"
 }
 
@@ -345,7 +351,6 @@ test_the_timezone_setting_applies_once_dates_load() {
   printf 'MY_TIMEZONE=Nowhere/Land\n' > "$SANDBOX/.env"
   core 'unset TZ; dot::use framework.helpers.date; printf "%s" "${TZ-unset}"'
   assert_equal "$OUTPUT" "unset"
-  assert_contains "$ERRORS" "Unknown timezone \"Nowhere/Land\" in .dot/dot.json settings (general.timezone)"
 }
 
 json_document='{"model":{"name":"Opus \"4\" é 😀"},"n":12.5,"t":true,"f":false,"z":null,"items":[1,{"x":"y"},[2,3]],"empty":{},"deep":{"a":{"b":[{"c":"found"}]}},"esc":"a\\b\/c\td\u0001\u007f","dup":{"b":1,"a":2,"b":3},"nums":[1e2,-3e2,0.0000001,10e-1,0e5,-0.0,.5,1.,+1,1.000e-3,Infinity,nan],"bad":"x\udc00y","sp" : [ ] , "a b":{"c":[1,2,3]}}'
@@ -445,6 +450,7 @@ test_json_set_and_delete_print_what_jq_prints() {
   assert_equal "$OUTPUT" '{"a":{"b":[{"c":[]}],"e":{}},"s":"x"}'
   core "dot::use framework.helpers.json; framework.helpers.json::read '$doc' '.s.x' set 1"
   assert_failure
+  assert_equal "$STATUS" 5
   command -v jq >/dev/null || return 0
   for path in .a.b .x.y '.a.b[5]' .s; do
     core "dot::use framework.helpers.json; framework.helpers.json::read '$doc' '$path' set '[1]'"

@@ -1,0 +1,19 @@
+{
+  "name": "Cursor",
+  "docs": "https://cursor.com/docs/subagents",
+  "detect": [
+    ".cursor/",
+    ".cursorrules"
+  ],
+  "instructions": null,
+  "skills": ".cursor/skills/",
+  "agents": {
+    "dir": ".cursor/agents/"
+  },
+  "context": {
+    "rule": [
+      ".cursor/rules/",
+      ".cursorrules"
+    ]
+  }
+}

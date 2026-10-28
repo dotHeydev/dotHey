@@ -11,25 +11,31 @@ test_link_links_and_seeds() {
   assert_file "$DOTDOT/USER.md"
 }
 
+# Every link in the project outside dotdot, with its target.
+link_state() {
+  find "$SANDBOX" -path "$DOTDOT" -prune -o -type l -print | sort | while IFS= read -r link; do
+    printf '%s -> %s\n' "$link" "$(readlink "$link")"
+  done
+}
+
 test_link_is_idempotent() {
+  local before
   dot link -y
+  before=$(link_state)
   dot link -y
   assert_success
-  assert_contains "$OUTPUT" "Everything is already linked."
+  assert_equal "$(link_state)" "$before"
 }
 
 test_link_only_previews_without_a_terminal_or_with_preview() {
   dot link
   assert_success
-  assert_contains "$OUTPUT" "No one at a terminal to confirm, so this is only a preview."
-  assert_contains "$OUTPUT" "Preview only — nothing changed."
   assert_no_file "$SANDBOX/AGENTS.md"
   DOT_INTERNAL_CALL="" dot link --preview -y
   assert_failure
   assert_equal "$STATUS" 5
   dot link --dry-run
   assert_success
-  assert_contains "$OUTPUT" "Preview only — nothing changed."
   assert_no_file "$SANDBOX/AGENTS.md"
 }
 
@@ -53,21 +59,6 @@ test_link_never_overwrites_files_without_override() {
   [ -n "$(find "$SANDBOX" -maxdepth 1 -name 'AGENTS.md.bak-*')" ] || fail "no backup was made"
 }
 
-test_claude_code_plugin_installs_and_links_cleanly() {
-  add_claude_code
-  assert_success
-  [ -z "$ERRORS" ] || fail "link reported problems: $ERRORS"
-}
-
-test_claude_code_statusline_runs_through_its_link() {
-  copy_claude_code
-  mkdir -p "$SANDBOX/.claude"
-  ln -s ../.dot/.plugins/dotdot-sh/claude-code/claude/llff-statusline.sh "$SANDBOX/.claude/llff-statusline.sh"
-  run bash -c "printf '%s' '{\"model\":{\"display_name\":\"Opus\"}}' | bash .claude/llff-statusline.sh"
-  assert_success
-  assert_contains "$OUTPUT" "Opus"
-}
-
 test_link_seeds_a_map_the_user_controls() {
   dot link -y
   assert_success
@@ -87,22 +78,22 @@ test_link_refuses_a_map_outside_its_structure() {
   sandbox::settings '"links": {"@dot:RULES.md": "rules.md", "link": {"@dot:AGENTS.md": ["AGENTS.md"]}}'
   dot link -y
   assert_failure
-  assert_contains "$ERRORS" "doesn't fit their shape"
+  assert_equal "$STATUS" 1
   assert_no_file "$SANDBOX/rules.md"
   sandbox::settings '"links": {"@dot:RULES.md": ["rules.md"],}'
   cp "$DOTDOT/dot.json" "$SANDBOX/links.before"
   dot link -y
   assert_failure
-  assert_contains "$ERRORS" "can't be read (invalid JSON"
+  assert_equal "$STATUS" 1
   assert_equal "$(cat "$DOTDOT/dot.json")" "$(cat "$SANDBOX/links.before")"
   sandbox::settings '"links": ["@dot:RULES.md"]'
   dot link -y
   assert_failure
-  assert_contains "$ERRORS" "\"links\" isn't an object"
+  assert_equal "$STATUS" 1
   sandbox::settings '"links": {"@dot:RULES.md": ["@env:MY_PATH"]}'
   dot link -y
   assert_failure
-  assert_contains "$ERRORS" "The links can't come from .env"
+  assert_equal "$STATUS" 1
 }
 
 test_link_never_writes_suggestions_back_once_taken() {
@@ -132,7 +123,7 @@ test_plugin_links_the_user_already_has_never_block_it() {
     core.system.plugins.service::fetch acme/widgets '' widgets
     core.system.plugins.manifest::validate \"\$PLUGIN_SOURCE\" acme/widgets"
   assert_success "a destination the user links elsewhere is only reported"
-  assert_contains "$ERRORS" "acme/widgets wants to link widgets.conf, which you already link elsewhere"
+  assert_contains "$ERRORS" "widgets.conf"
 }
 
 test_plugins_get_suggestions_in_the_map_that_the_user_can_take() {
@@ -225,8 +216,10 @@ description: Widget rules.
 
 widgets rule
 <!-- /acme/widgets -->"
+  local before; before=$(cat "$DOTDOT/WIDGETS.md" "$DOTDOT/STANDARDS.md")
   dot link -y
-  assert_contains "$OUTPUT" "Everything is already linked."
+  assert_success
+  assert_equal "$(cat "$DOTDOT/WIDGETS.md" "$DOTDOT/STANDARDS.md")" "$before"
   dot link -y --refresh-plugin acme/widgets
   assert_success
   assert_contains "$(cat "$DOTDOT/STANDARDS.md")" "widgets rule"
@@ -243,7 +236,6 @@ test_plugin_commands_only_write_the_map() {
   assert_no_file "$SANDBOX/AGENTS.md"
   dot link --settings-only
   assert_success
-  assert_contains "$OUTPUT" "The links are up to date."
 }
 
 test_link_keeps_origins_inside_dotdot() {
@@ -251,6 +243,7 @@ test_link_keeps_origins_inside_dotdot() {
   links "link:@dot:../.env->leak" "link:@dot:../../.env->leak2" "link:@plugin:acme.widgets:../../../.env->leak3" "link:../x->leak4" "append:@dot:../.env->leak5"
   dot link -y
   assert_failure
+  assert_equal "$STATUS" 1
   for leak in leak leak2 leak3 leak4 leak5; do
     assert_no_file "$SANDBOX/$leak"
   done
@@ -307,7 +300,6 @@ test_plugin_links_are_activated_and_lose_to_the_general_ones() {
   assert_no_file "$SANDBOX/widgets.conf"
   dot plugins:link acme/widgets --preview
   assert_success
-  assert_contains "$OUTPUT" "Preview only — nothing changed."
   assert_no_file "$SANDBOX/widgets.conf"
   dot plugins:link acme/widgets -y
   assert_success
@@ -322,7 +314,6 @@ inactive" "the group lands right before inactive"
   dot plugins:link acme/widgets -y
   assert_failure
   assert_equal "$STATUS" 5
-  assert_contains "$ERRORS" "acme/widgets's links are already linked, with none waiting."
   dot plugins:unlink acme/widgets -y
   assert_success
   assert_no_file "$SANDBOX/widgets.conf"
@@ -331,13 +322,12 @@ inactive" "the group lands right before inactive"
   assert_equal "$(map_value '["acme/widgets"]')" ""
   dot plugins:unlink acme/widgets -y
   assert_failure
-  assert_contains "$ERRORS" "acme/widgets's links aren't linked."
+  assert_equal "$STATUS" 5
   dot plugins:link acme/widgets -y
   dot link -y
   assert_success
   assert_link_to "$SANDBOX/widgets.conf" "$DOTDOT/.plugins/acme/widgets/plugin.json"
   assert_link_to "$SANDBOX/rules.md" "$DOTDOT/RULES.md"
-  assert_contains "$ERRORS" "Skipped acme/widgets's link to rules.md: your own links already link it to .dot/RULES.md."
   assert_contains "$(cat "$SANDBOX/notes.md")" "<!-- dotdot"
   assert_contains "$(cat "$SANDBOX/notes.md")" "<!-- acme/widgets -->"
 }
@@ -345,8 +335,8 @@ inactive" "the group lands right before inactive"
 test_keys_defined_twice_in_the_links_are_reported() {
   sandbox::settings '"links": {"@dot:AGENTS.md": ["AGENTS.md"], "@dot:AGENTS.md": ["agents.md"], "acme/widgets": {"@dot:RULES.md": ["a.md"], "@dot:RULES.md": ["b.md"]}}'
   dot link -y
-  assert_contains "$ERRORS" '"@dot:AGENTS.md" appears twice in the links of .dot/dot.json, so only the last one counts. Please merge them into one list: "@dot:AGENTS.md": ["<first>", "<second>"]'
-  assert_contains "$ERRORS" '"@dot:RULES.md" appears twice in the links of .dot/dot.json under "acme/widgets", so only the last one counts.'
+  assert_contains "$ERRORS" "\"@dot:AGENTS.md\""
+  assert_contains "$ERRORS" "\"@dot:RULES.md\""
   assert_link_to "$SANDBOX/agents.md" "$DOTDOT/AGENTS.md"
 }
 
@@ -365,8 +355,9 @@ test_link_map_refuses_unknown_origins() {
   links "link:@everything->x" "link:RULES.md->y"
   dot link -y
   assert_failure
-  assert_contains "$ERRORS" "Origin '@everything'"
-  assert_contains "$ERRORS" "Origin 'RULES.md'"
+  assert_equal "$STATUS" 1
+  assert_contains "$ERRORS" "@everything"
+  assert_contains "$ERRORS" "RULES.md"
 }
 
 test_skill_and_agent_sets_follow_the_skills_standard() {
@@ -408,7 +399,7 @@ test_an_origin_links_and_appends_to_several_destinations() {
   manifest "$SANDBOX/widgets" "link:plugin.json->ok.json->.git/config"
   validate_chain acme/widgets widgets
   assert_failure
-  assert_contains "$ERRORS" "link destination \".git/config\" must be a project path outside"
+  assert_equal "$STATUS" 1
 }
 
 validate_chain() {
@@ -441,4 +432,22 @@ MAP
   assert_success
   assert_equal "$(sed '/"inactive"/,$d' "$DOTDOT/dot.json")" "$links_before"
   assert_equal "$(map_value '.inactive')" '{}'
+}
+
+test_link_leaves_out_everything_of_a_module_a_feature_flag_turns_off() {
+  mkdir -p "$DOTDOT/.core/modules/release/skills/dot-release-example"
+  printf -- '---\nname: dot-release-example\ndescription: An example.\n---\n' > "$DOTDOT/.core/modules/release/skills/dot-release-example/SKILL.md"
+  : > "$DOTDOT/.core/modules/release/notes.md"
+  sandbox::settings '"featureFlags": {"release": true}, "links": {"@dotdotSkills": ["skills/"], "append": {}, "remove": {}, "inactive": {}}'
+  dot link -y
+  assert_success
+  assert_link_to "$SANDBOX/skills/dot-release-example" "$DOTDOT/.core/modules/release/skills/dot-release-example"
+  sandbox::settings '"featureFlags": {}, "links": {"@dotdotSkills": ["skills/"], "@module:release:skills/dot-release-example": ["one/dot-release-example"], "append": {"@module:release:notes.md": ["notes.md"]}, "remove": {}, "inactive": {}}'
+  dot link -y
+  assert_link_to "$SANDBOX/skills/dot-onboard" "$DOTDOT/.core/modules/onboarding/skills/dot-onboard"
+  assert_no_file "$SANDBOX/skills/dot-release-example"
+  assert_no_file "$SANDBOX/one/dot-release-example"
+  assert_failure
+  assert_equal "$STATUS" 1
+  assert_no_file "$SANDBOX/notes.md"
 }

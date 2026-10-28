@@ -4,7 +4,7 @@ BIN_DIR="$SYSTEM_DIR/bin"
 DOT_BIN="$BIN_DIR/dot"
 SYSTEM_PARTS=(plugins link update migrations)
 MIGRATIONS_DIR="$SYSTEM_DIR/migrations"
-CORE_MODULES=(onboarding ready frontmatter housekeeping notes xrays features decisions tasks release)
+CORE_MODULES=(onboarding ready setup frontmatter housekeeping notes xrays features decisions tasks release)
 MODULE_COMMANDS_DIR="commands"
 KEEP_FILE=".gitkeep"
 
@@ -50,16 +50,53 @@ paths::in_dotdot() {
   printf '%s\n' "$DOTDOT_ROOT/$path"
 }
 
-# Every part of the system and every module: the directories commands and
-# skills are found in, system first.
+# The modules a feature flag turns off: each one dotdot's defaults list under
+# featureFlags, unless the project turns its flag on. Read once per run
+# (paths::read_flags), as every listing and lookup asks.
+PATHS_DISABLED=""
+PATHS_FLAGS_READ=false
+
+paths::read_flags() {
+  local module
+  ! $PATHS_FLAGS_READ || return 0
+  dot::use framework.helpers.json
+  PATHS_DISABLED=""
+  for module in $(framework.helpers.json::keys "$(cat -- "$SETTINGS_DEFAULTS")" .featureFlags); do
+    dot::feature "$module" || PATHS_DISABLED="$PATHS_DISABLED$module"$'\n'
+  done
+  PATHS_FLAGS_READ=true
+}
+
+paths::disabled_modules() {
+  paths::read_flags
+  printf '%s' "$PATHS_DISABLED"
+}
+
+# Whether <module> is on: anything but a module a feature flag turns off.
+paths::module_on() {
+  paths::read_flags
+  [[ $'\n'"$PATHS_DISABLED" != *$'\n'"$1"$'\n'* ]]
+}
+
+# dotdot's modules, but those a feature flag turns off; with --all, every one.
+paths::core_modules() {
+  local part disabled=" "
+  [ "${1-}" = --all ] || disabled=" $(paths::disabled_modules | tr '\n' ' ')"
+  for part in "${CORE_MODULES[@]}"; do
+    [[ "$disabled" == *" $part "* ]] || printf '%s\n' "$part"
+  done
+}
+
+# Every part of the system and every module on (with --all, every module):
+# the directories commands and skills are found in, system first.
 paths::modules() {
   local part
   for part in "${SYSTEM_PARTS[@]}"; do
     printf '%s\n' "$SYSTEM_DIR/$part"
   done
-  for part in "${CORE_MODULES[@]}"; do
+  while IFS= read -r part; do
     printf '%s\n' "$MODULES_DIR/$part"
-  done
+  done < <(paths::core_modules "$@")
 }
 
 # Every installed plugin's directory, in the order they were added (the lock's

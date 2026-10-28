@@ -169,7 +169,7 @@ core.system.plugins.manifest::validate_links() {
       [ "$root" != "$PLUGINS_DIR/$plugin" ] || continue
       [ ! -e "$root/$entry" ] && [ ! -L "$root/$entry" ] \
         || framework.console.output::warn "$plugin's $entry has the same name as one in $(dot::relative "$root"); where both link to one place, the first declared wins."
-    done < <({ paths::modules; paths::plugins; })
+    done < <({ paths::modules --all; paths::plugins; })
   done < <(core.system.plugins.manifest::linked_entries "$source")
 }
 

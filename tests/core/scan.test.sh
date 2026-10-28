@@ -4,13 +4,14 @@ test_scan_frontmatter_stays_inside_dotdot() {
   dot notes:create scanned
   dot scan:frontmatter Notes
   assert_success
-  assert_contains "$OUTPUT" "(no frontmatter)"
+  assert_contains "$OUTPUT" "n001--scanned.md"
   dot scan:frontmatter ../..
   assert_failure
+  assert_equal "$STATUS" 1
   ln -s / "$DOTDOT/escape"
   dot scan:frontmatter escape
   assert_failure
-  assert_contains "$ERRORS" "is outside .dot/."
+  assert_equal "$STATUS" 1
 }
 
 test_frontmatter_show_prints_json() {

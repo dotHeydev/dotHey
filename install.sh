@@ -2,12 +2,17 @@
 # install.sh — install dotdot into the current folder.
 #
 # Downloads dotdot from the repo's main branch, places its dist/ here as
-# .dot/, links dotdot's entry point as ./dot, and runs dot link -y. Nothing
-# that already exists is overwritten: an existing .dot/ or dot stops the
-# install untouched. Plugins are never installed here: add the ones you trust
+# .dot/ (or --dir <path>), links dotdot's entry point as ./dot, and runs dot
+# link -y for its default links. It only installs: bash dot setup links the
+# harnesses, which it offers to run (or runs, given setup flags). Nothing that
+# already exists is overwritten: an existing dotdot is offered an update or a
+# setup instead. Plugins are never installed here: add the ones you trust
 # afterwards with bash dot plugins:add <owner>/<name>.
 # Output stays quiet: progress lines, then the result; a failing step shows
 # its output.
+#
+#   curl -fsSL https://raw.githubusercontent.com/dotdot-sh/dotdot/main/install.sh | bash
+#   curl … | bash -s -- --dir .agents/.dot --harness claude,cursor --strategy combine --yes
 
 set -euo pipefail
 
@@ -18,25 +23,31 @@ SOURCE_DIR="dist"
 MIGRATIONS_DIR=".core/system/migrations"
 SETTINGS_FILE="dot.json"
 JSON_HELPER=".core/framework/helpers/json.sh"
-DOTDOT_DIR=".dot"
+DEFAULT_DIR=".dot"
 ENTRY_LINK="dot"
-ENTRY_POINT="$DOTDOT_DIR/.core/system/bin/dot"
+BIN_PATH=".core/system/bin/dot"
 BOOT_FILE=".core/system/boot.sh"
 TEMP_PREFIX=".dot-install."
 REQUIRED_COMMANDS=(curl tar gzip mktemp ln mv)
 # dotdot's spinner: one frame every SPINNER_INTERVAL seconds.
 SPINNER_FRAMES=(' ·●' ' •⏺' ' ⏺•' ' ●·' ' ⏺•' ' •⏺' ' ·●')
 SPINNER_INTERVAL=0.07
+USAGE="Usage: bash install.sh [--dir <path>] [--harness <a,b>] [--strategy combine|own] [--yes]"
 
 main() {
-  local GREEN="" RED="" YELLOW="" BOLD="" RESET=""
-  if [ -t 1 ]; then
-    GREEN=$'\033[32m' RED=$'\033[31m' YELLOW=$'\033[33m' BOLD=$'\033[1m' RESET=$'\033[0m'
+  local GREEN="" RED="" YELLOW="" BLUE="" BOLD="" RESET=""
+  if [ -t 1 ] && [ -z "${NO_COLOR-}" ]; then
+    GREEN=$'\033[32m' RED=$'\033[31m' YELLOW=$'\033[33m' BLUE=$'\033[34m' BOLD=$'\033[1m' RESET=$'\033[0m'
   fi
   local name="${BOLD}dotdot${RESET}"
+  DOTDOT_DIR="$DEFAULT_DIR"
+  SETUP_FLAGS=()
+  parse_arguments "$@"
+  ENTRY_POINT="$DOTDOT_DIR/$BIN_PATH"
   base="$PWD"
   check_requirements
-  check_destination
+  check_place
+  check_existing
 
   temp=$(mktemp -d "$base/$TEMP_PREFIX"XXXXXX) || fail "Couldn't create a temporary directory in $base; nothing was installed."
   trap 'rm -rf -- "$temp"' EXIT
@@ -47,7 +58,9 @@ main() {
   source=$(find_source "$temp/tree") || fail "Couldn't find dotdot in the download ($SOURCE_DIR/$BOOT_FILE is missing); nothing was installed."
 
   printf 'Getting %s ready for your project…\n' "$name"
-  check_destination
+  check_existing
+  rename_paths "$source/$SOURCE_DIR"
+  mkdir -p -- "$(dirname -- "$base/$DOTDOT_DIR")"
   mv -- "$source/$SOURCE_DIR" "$base/$DOTDOT_DIR" || fail "Couldn't place dotdot at $base/$DOTDOT_DIR."
   record_version "$temp/dotdot.tar.gz"
   record_migrations
@@ -55,16 +68,80 @@ main() {
   quietly "Link" env DOT_INTERNAL_CALL=1 bash "$base/$ENTRY_LINK" link -y
   quietly "Checking bash $ENTRY_LINK" bash "$base/$ENTRY_LINK"
 
-  printf '\n%s✓ %s is ready!%s\n\n' "$GREEN" "$name$GREEN" "$RESET"
-  printf "   → Tell your coding agent that you're using %s and it'll take it from there.\n" "$name"
-  printf "     Or fill in your project's context manually in %s%s/%s.\n" "$BOLD" "$DOTDOT_DIR" "$RESET"
-  printf '   → Using Claude Code? %sbash %s plugins:add dotdot-sh/claude-code%s\n' "$BOLD" "$ENTRY_LINK" "$RESET"
-  printf '   → See all commands: %sbash %s%s\n' "$BOLD" "$ENTRY_LINK" "$RESET"
-  printf '\n%s🚀 Build something amazing!%s\n\n' "$BOLD" "$RESET"
+  printf '\n%s%s✓%s %s is installed in %s/.\n' "$BOLD" "$GREEN" "$RESET" "$name" "$DOTDOT_DIR"
+  if [ ${#SETUP_FLAGS[@]} -gt 0 ]; then
+    printf '\n'
+    DOT_INTERNAL_CALL=1 bash "$base/$ENTRY_LINK" setup "${SETUP_FLAGS[@]}" || fail "The setup didn't finish; run it again with: bash $ENTRY_LINK setup"
+  elif can_prompt; then
+    offer_setup
+  else
+    next_steps
+  fi
+}
+
+# Reads the flags: --dir for the installer, the setup flags handed to bash
+# dot setup.
+parse_arguments() {
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --dir)
+        [ $# -ge 2 ] || fail "--dir needs a value. $USAGE"
+        DOTDOT_DIR="${2%/}"
+        shift
+        ;;
+      --harness | --strategy)
+        [ $# -ge 2 ] || fail "$1 needs a value. $USAGE"
+        SETUP_FLAGS+=("$1" "$2")
+        shift
+        ;;
+      -y | --yes) SETUP_FLAGS+=(--yes) ;;
+      -h | --help) printf '%s\n' "$USAGE"; exit 0 ;;
+      *) fail "Unknown argument: $1. $USAGE" ;;
+    esac
+    shift
+  done
+}
+
+# Whether a person can answer: a terminal to read from, and no agent, CI, or
+# --no-input asking for none.
+can_prompt() {
+  [ -z "${AI_AGENT-}" ] && [ "${CLAUDECODE-}" != 1 ] && [ "${DOT_NO_INPUT-}" != 1 ] && [ -z "${CI-}" ] \
+    && { : < /dev/tty; } 2>/dev/null
+}
+
+# A numbered choice read from the terminal, even when stdin is the script;
+# prints the number picked.
+choose() {
+  local question="$1" reply index=1 option
+  shift
+  {
+    printf '\n%s%s%s\n' "$BOLD" "$question" "$RESET"
+    for option in "$@"; do
+      printf '  %s) %s\n' "$index" "$option"
+      index=$((index + 1))
+    done
+    printf 'Choose 1–%s [1]: ' "$#"
+  } >&2
+  read -r reply < /dev/tty || reply=""
+  printf '%s\n' "${reply:-1}"
+}
+
+offer_setup() {
+  case "$(choose "Set dotdot up for this project now?" "Here, step by step (bash $ENTRY_LINK setup)" "With your agent: tell it \"set up dotdot\"" "Later")" in
+    1) bash "$base/$ENTRY_LINK" setup < /dev/tty || fail "The setup didn't finish; run it again with: bash $ENTRY_LINK setup" ;;
+    2) printf "   %s%s→%s Tell your coding agent \"set up dotdot\"; it takes it from there.\n" "$BOLD" "$BLUE" "$RESET" ;;
+    *) next_steps ;;
+  esac
+}
+
+next_steps() {
+  printf '   %s%s→%s Set it up for your harnesses: %sbash %s setup%s\n' "$BOLD" "$BLUE" "$RESET" "$BOLD" "$ENTRY_LINK" "$RESET"
+  printf "   %s%s→%s Or tell your coding agent \"set up dotdot\"; it takes it from there.\n" "$BOLD" "$BLUE" "$RESET"
+  printf '   %s%s→%s See all commands: %sbash %s%s\n' "$BOLD" "$BLUE" "$RESET" "$BOLD" "$ENTRY_LINK" "$RESET"
 }
 
 fail() {
-  printf '%s❌ %s%s\n\n' "$RED" "$*" "$RESET" >&2
+  printf '%s%s✗%s %s\n\n' "$BOLD" "$RED" "$RESET" "$*" >&2
   exit 1
 }
 
@@ -73,7 +150,7 @@ quietly() {
   local label="$1"
   shift
   if ! "$@" >"$log" 2>&1; then
-    printf "%s❌ %s didn't finish:%s\n" "$RED" "$label" "$RESET" >&2
+    printf "%s%s✗%s %s didn't finish:\n" "$BOLD" "$RED" "$RESET" "$label" >&2
     sed 's/^/   /' "$log" >&2
     fail "Please fix the errors above, then run: bash $ENTRY_LINK link"
   fi
@@ -88,22 +165,53 @@ check_requirements() {
   [ ${#missing[@]} -eq 0 ] || fail "dotdot needs ${missing[*]}, which isn't installed here."
 }
 
-check_destination() {
-  local name
+# Refuses a --dir outside the project, in .git/, or onto .env or the entry.
+check_place() {
   if [ "$base" = "/" ] || [ "$base" = "${HOME-}" ]; then
     fail "Please run this from your project's directory, not $base."
   fi
   [ -w "$base" ] || fail "Can't write to $base; please check its permissions."
+  case "/$DOTDOT_DIR/" in
+    //* | */../* | */./* | */.git/* | "/$ENTRY_LINK/" | /.env/) fail "dotdot can't live in $DOTDOT_DIR: it must be a place in the project, outside .git/." ;;
+  esac
+}
+
+# An existing dotdot (the dot entry, or the place taken) is never installed
+# over: at a terminal, it is offered an update or a setup instead.
+check_existing() {
+  local name
   for name in "$DOTDOT_DIR" "$ENTRY_LINK"; do
-    if [ -e "$base/$name" ] || [ -L "$base/$name" ]; then
-      fail "$base/$name already exists, so nothing was installed."
+    [ -e "$base/$name" ] || [ -L "$base/$name" ] || continue
+    if [ -f "$base/$ENTRY_LINK" ] && can_prompt; then
+      case "$(choose "dotdot is already installed here." "Update it (bash $ENTRY_LINK upgrade)" "Run its setup again (bash $ENTRY_LINK setup)" "Cancel")" in
+        1) exec bash "$base/$ENTRY_LINK" upgrade < /dev/tty ;;
+        2) exec bash "$base/$ENTRY_LINK" setup < /dev/tty ;;
+      esac
+      exit 0
     fi
+    fail "$base/$name already exists, so nothing was installed. To update dotdot, run: bash $ENTRY_LINK upgrade; to set it up again: bash $ENTRY_LINK setup"
   done
 }
 
+# Writes dotdot's own paths for a --dir other than .dot/, as bash dot upgrade
+# does for the files it brings.
+rename_paths() {
+  local source="$1" file replacement
+  [ "$DOTDOT_DIR" != "$DEFAULT_DIR" ] || return 0
+  replacement=$(printf '%s' "$DOTDOT_DIR/" | sed 's/[|&\\]/\\&/g')
+  grep -rl --null --binary-files=without-match -F "$DEFAULT_DIR/" "$source" | while IFS= read -r -d '' file; do
+    sed "s|\\$DEFAULT_DIR/|$replacement|g" "$file" > "$file.renamed" && cat -- "$file.renamed" > "$file" && rm -f -- "$file.renamed"
+  done
+}
+
+# DOT_INSTALL_ARCHIVE, a local archive, replaces the download (for tests).
 download_and_unpack() {
   mkdir -p -- "$temp/tree"
-  curl --proto '=https' --tlsv1.2 -fsSL -o "$temp/dotdot.tar.gz" "$ARCHIVE_URL"
+  if [ -n "${DOT_INSTALL_ARCHIVE-}" ]; then
+    [ -f "$DOT_INSTALL_ARCHIVE" ] && cp -- "$DOT_INSTALL_ARCHIVE" "$temp/dotdot.tar.gz"
+  else
+    curl --proto '=https' --tlsv1.2 -fsSL -o "$temp/dotdot.tar.gz" "$ARCHIVE_URL"
+  fi
   tar -xzf "$temp/dotdot.tar.gz" -C "$temp/tree"
 }
 
@@ -124,7 +232,7 @@ spin() {
   fi
   printf '%s\n' "$label"
   if ! wait "$pid"; then
-    printf "%s❌ The download didn't work:%s\n" "$RED" "$RESET" >&2
+    printf "%s%s✗%s The download didn't work:\n" "$BOLD" "$RED" "$RESET" >&2
     sed 's/^/   /' "$log" >&2
     fail "Nothing was installed."
   fi
@@ -150,7 +258,7 @@ set_state() {
   # shellcheck source=/dev/null
   document=$(. "$base/$DOTDOT_DIR/$JSON_HELPER" && framework.helpers.json::set "$(cat -- "$settings")" ".state.$1" "$2" --keep-format) \
     && printf '%s\n' "$document" > "$settings" \
-    || printf "%s⚠️  Couldn't record state.%s in %s.%s\n" "$YELLOW" "$1" "$SETTINGS_FILE" "$RESET"
+    || printf "%s%s! Couldn't record state.%s in %s.%s\n" "$BOLD" "$YELLOW" "$1" "$SETTINGS_FILE" "$RESET"
 }
 
 # A fresh install has nothing to migrate: every migration it ships is applied.
@@ -173,7 +281,7 @@ record_version() {
   if [ -n "$commit" ]; then
     set_state version "\"$commit\""
   else
-    printf "%s⚠️  Couldn't read the installed version; the first bash dot upgrade won't clean up stale files.%s\n" "$YELLOW" "$RESET"
+    printf "%s%s! Couldn't read the installed version; the first bash dot upgrade won't clean up stale files.%s\n" "$BOLD" "$YELLOW" "$RESET"
   fi
 }
 

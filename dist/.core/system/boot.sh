@@ -32,8 +32,15 @@ CORE_DIR=$(dirname -- "$SYSTEM_DIR")
 FRAMEWORK_DIR="$CORE_DIR/framework"
 MODULES_DIR="$CORE_DIR/modules"
 DOTDOT_ROOT=$(dirname -- "$CORE_DIR")
+# The project is the nearest directory above dotdot whose dot entry runs this
+# dotdot (it may sit deeper, as .agents/.dot), else dotdot's parent; dotdot's
+# name is its path from there.
 BASE=$(CDPATH='' cd -P -- "$DOTDOT_ROOT/.." && pwd)
-DOTDOT_NAME=$(basename -- "$DOTDOT_ROOT")
+while [ "$BASE" != / ] && ! [ "$BASE/dot" -ef "$SYSTEM_DIR/bin/dot" ]; do
+  BASE=$(dirname -- "$BASE")
+done
+[ "$BASE/dot" -ef "$SYSTEM_DIR/bin/dot" ] || BASE=$(CDPATH='' cd -P -- "$DOTDOT_ROOT/.." && pwd)
+DOTDOT_NAME="${DOTDOT_ROOT#"$BASE"/}"
 
 . "$SYSTEM_DIR/paths.sh"
 . "$SYSTEM_DIR/guards.sh"
@@ -73,7 +80,8 @@ dot::plugin_of() {
 # The directory a module's own code lives in, the only place that may load
 # it, into DOT_MODULE_HOME: core.system.<part> and core.modules.<module>,
 # plugins.<owner>.<name>, or, for a framework module with an internal/ part,
-# the directory holding internal/; empty when anyone may load it.
+# the directory holding internal/; empty when anyone may load it. The
+# harnesses (core.harnesses.*) are the core's to use, from anywhere in it.
 dot::module_home() {
   local name="$1" path
   DOT_MODULE_HOME=""
@@ -83,6 +91,7 @@ dot::module_home() {
       path="${path%%".$DOT_PRIVATE_SEGMENT."*}"
       DOT_MODULE_HOME="$FRAMEWORK_DIR/${path//./\/}"
       ;;
+    core.harnesses.*) DOT_MODULE_HOME="$CORE_DIR" ;;
     core.* | plugins.*)
       path="${name#*.}"
       name="${path#*.}"
@@ -106,17 +115,24 @@ dot::is_allowed() {
   [ -z "$home" ] || [ "${importer#"$home"/}" != "$importer" ]
 }
 
+# A stop from before the output tool can load: its error icon bold and red
+# on a terminal, as the output tool's.
+dot::fail_early() {
+  local icon="✗"
+  [ ! -t 2 ] || [ -n "${NO_COLOR-}" ] || [ "${TERM-}" = dumb ] || icon=$'\033[1;31m✗\033[0m'
+  printf '%s %s\n' "$icon" "$1" >&2
+  exit 1
+}
+
 dot::use() {
   local importer name file
   dot::physical_to importer "${BASH_SOURCE[1]-}"
   for name in "$@"; do
     if ! dot::module_file "$name" || [ ! -f "$DOT_MODULE_FILE" ]; then
-      printf '❌ Unknown dotdot module: %s (framework.*, core.system.*, core.modules.*).\n' "$name" >&2
-      exit 1
+      dot::fail_early "Unknown dotdot module: $name (framework.*, core.system.*, core.modules.*)."
     fi
     if ! dot::is_allowed "$name" "$importer"; then
-      printf '❌ %s may not use %s: a system part or module only uses the framework and its own code; reach another one with dot::call.\n' "$(dot::relative "${importer:-this script}")" "$name" >&2
-      exit 1
+      dot::fail_early "$(dot::relative "${importer:-this script}") may not use $name: a system part or module only uses the framework and its own code; reach another one with dot::call."
     fi
     case "$DOT_LOADED_MODULES" in
       *" $name "*) continue ;;
@@ -349,6 +365,12 @@ dot::calling_plugin() {
 # dot::get_setting), for any code, a plugin's included.
 dot::setting() {
   dot::get_setting "$1" "" "${@:2}"
+}
+
+# dot::feature <name>: whether the feature flag featureFlags.<name> is on, for
+# conditionals; off unless set to true, and off when it can't be read.
+dot::feature() {
+  [ "$(dot::setting "featureFlags.$1" false 2>/dev/null)" = true ]
 }
 
 # dot::plugin_setting <key> [default]: one of the calling plugin's own

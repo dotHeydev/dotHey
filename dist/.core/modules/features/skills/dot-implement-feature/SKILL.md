@@ -31,7 +31,7 @@ Output exactly: 💻💻💻 BEGIN IMPLEMENTING
 
 6. **Ask First on discovery.** A new dependency, Critical Path, data model change, or billing logic that the feature doc's `Constraining Rules` doesn't already cover goes to the user before you write it.
 
-7. **Green, then check for collateral damage.** Run the feature's full test set, then the wider suite for the area you touched. Passing your test while breaking someone else's isn't done. Use the test flags and scope the project's context prescribes.
+7. **Green, then check for collateral damage.** Run the feature's full test set, then the tests of every other area the changed code touches, filtered by file or case. Passing your test while breaking someone else's isn't done. Never wait on the whole suite after each change: run it once, when everything is green, as part of the Definition of Done. Use the test flags and scope the project's context prescribes.
 
 8. **Run the tooling; don't do its job by hand.** Formatting, linting, and code generation are scripted — hand-editing style wastes turns and diverges from the project's config. Use the formatter, generators, and schema workflow `STANDARDS.md` and `TECHSTACK.md` name, and activate other skills when their domain applies.
 

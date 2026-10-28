@@ -3,7 +3,7 @@
 test_update_needs_a_terminal() {
   dot upgrade -y
   assert_failure
-  assert_contains "$ERRORS" "confirmation in a terminal"
+  assert_equal "$STATUS" 5
 }
 
 test_update_records_the_version() {

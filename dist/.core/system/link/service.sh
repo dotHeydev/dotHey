@@ -7,11 +7,12 @@ LINK_TREE_SUFFIX="/*"
 LINK_DOT_SHORTCUT="@dot:"
 LINK_MODULE_SHORTCUT="@module:"
 LINK_PLUGIN_SHORTCUT="@plugin:"
+LINK_HARNESS_SHORTCUT="@harness:"
 LINK_TAB=$'\t'
 LINK_DOTDOT_LABEL="dotdot"
 LINK_AGENTS_DIR=".agents"
 LINK_NEW_FILE=" (new file)"
-LINK_MANAGED_DIRS=("$CORE_DIR" "$PLUGINS_DIR")
+LINK_MANAGED_DIRS=("$CORE_DIR" "$PLUGINS_DIR" "$DOTDOT_ROOT/.harnesses" "$DOTDOT_ROOT/Skills" "$DOTDOT_ROOT/Agents")
 
 LINK_ORIGINS=()
 LINK_DESTINATIONS=()
@@ -369,8 +370,8 @@ core.system.link.service::destination_path() {
 }
 
 # The dotdot-relative path an origin names, keeping a "/*" ending, into
-# LINK_SHORTCUT: @dot:<path>, @module:<name>:<path>, or
-# @plugin:<owner>.<name>:<path>.
+# LINK_SHORTCUT: @dot:<path>, @module:<name>:<path>, @harness:<name>:<path>,
+# or @plugin:<owner>.<name>:<path>.
 core.system.link.service::shortcut_path() {
   local origin="$1" suffix="" rest name base owner path
   case "$origin" in
@@ -386,9 +387,15 @@ core.system.link.service::shortcut_path() {
     "$LINK_MODULE_SHORTCUT"*)
       rest="${origin#"$LINK_MODULE_SHORTCUT"}"
       name="${rest%%:*}"
-      [[ "$name" =~ ^[a-z][a-z0-9-]*$ ]] || return 1
+      [[ "$name" =~ ^[a-z][a-z0-9-]*$ ]] && paths::module_on "$name" || return 1
       base="$MODULES_DIR/$name"
       [ -d "$base" ] || base="$SYSTEM_DIR/$name"
+      ;;
+    "$LINK_HARNESS_SHORTCUT"*)
+      rest="${origin#"$LINK_HARNESS_SHORTCUT"}"
+      name="${rest%%:*}"
+      [[ "$name" =~ ^[a-z][a-z0-9-]*$ ]] || return 1
+      base="$CORE_DIR/harnesses/$name"
       ;;
     "$LINK_PLUGIN_SHORTCUT"*)
       rest="${origin#"$LINK_PLUGIN_SHORTCUT"}"
@@ -406,13 +413,17 @@ core.system.link.service::shortcut_path() {
 }
 
 # The directories a set's skills or agents are found in: every system part
-# and module for dotdot (discovered, not listed), every plugin for plugins.
+# and module for dotdot (discovered, not listed), but a module a feature flag
+# turns off; every plugin for plugins.
 core.system.link.service::set_roots() {
   local root
   case "$1" in
     dotdot)
       for root in "$SYSTEM_DIR"/*/ "$MODULES_DIR"/*/; do
-        [ ! -d "$root" ] || printf '%s\n' "${root%/}"
+        root="${root%/}"
+        [ -d "$root" ] || continue
+        [ "${root%/*}" != "$MODULES_DIR" ] || paths::module_on "${root##*/}" || continue
+        printf '%s\n' "$root"
       done
       ;;
     plugins) paths::plugins ;;
@@ -446,7 +457,7 @@ core.system.link.service::set_links() {
 # lines (a set gives one per skill or agent); an origin no shortcut names
 # fails.
 core.system.link.service::map_link() {
-  local origin="$1" destination set kind
+  local origin="$1" destination set kind module
   destination=$(core.system.link.service::destination_path "$2")
   case "$origin" in
     @dotdotSkills | @pluginsSkills | @dotdotAgents | @pluginsAgents)
@@ -464,11 +475,21 @@ core.system.link.service::map_link() {
           */) framework.helpers.fs::is_contents_pattern "$LINK_SHORTCUT" || destination="$destination$(basename -- "${LINK_SHORTCUT%/}")" ;;
         esac
         printf '%s%s%s\n' "$LINK_SHORTCUT" "$LINK_SEPARATOR" "$destination"
+      elif module=$(core.system.link.service::disabled_module_of "$origin"); then
+        printf '!Origin %s in %s is in the module %s, which the feature flag featureFlags.%s turns off; not linked.\n' "'$origin'" "$(dot::relative "$SETTINGS_FILE")" "$module" "$module"
       else
-        printf '!Origin %s in %s is not @dot:<path>, @module:<name>:<path>, @plugin:<owner>.<name>:<path>, or a skill or agent set; not linked.\n' "'$origin'" "$(dot::relative "$SETTINGS_FILE")"
+        printf '!Origin %s in %s is not @dot:<path>, @module:<name>:<path>, @harness:<name>:<path>, @plugin:<owner>.<name>:<path>, or a skill or agent set; not linked.\n' "'$origin'" "$(dot::relative "$SETTINGS_FILE")"
       fi
       ;;
   esac
+}
+
+# The module an @module: origin names, when a feature flag turns it off.
+core.system.link.service::disabled_module_of() {
+  local name="${1#"$LINK_MODULE_SHORTCUT"}"
+  [ "$name" != "$1" ] || return 1
+  name="${name%%:*}"
+  ! paths::module_on "$name" && printf '%s\n' "$name"
 }
 
 # Every remove entry, resolved: that origin is never linked to that
@@ -561,6 +582,36 @@ core.system.link.service::mappings() {
 core.system.link.service::fail() {
   LINK_ERRORS+=("$1${2:+$LINK_TAB$2}")
   LINK_FAILURES=$((LINK_FAILURES + 1))
+}
+
+# Whether <path> is inside any of the <directories> given.
+core.system.link.service::is_inside_any() {
+  local path="$1" directory
+  shift
+  for directory in "$@"; do
+    framework.helpers.fs::is_inside "$path" "$directory" && return 0
+  done
+  return 1
+}
+
+# Rebuilds what the harnesses set up (setup.harnesses) link from dotdot, so
+# renamed and rendered files follow the agents and skills they come from.
+core.system.link.service::build_harnesses() {
+  local list id
+  list=$(dot::setting setup.harnesses "[]" 2>/dev/null) || return 0
+  dot::use core.harnesses.harness
+  for id in $(framework.helpers.json::values "$list" '.[]'); do
+    core.harnesses.harness::valid "$id" || continue
+    core.harnesses.harness::call "$id" build \
+      || core.system.link.service::fail "Couldn't rebuild what $(core.harnesses.harness::data "$id" .name) reads from dotdot."
+  done
+}
+
+# dotdot's former place, after a move: its links there count as dotdot's own,
+# so they are relinked (or pruned) rather than left as someone else's.
+core.system.link.service::relink_from() {
+  guards::stays_inside "$1" && [ -n "${1%/}" ] && [[ "$1" != /* ]] || return 1
+  LINK_MANAGED_DIRS+=("$BASE/${1%/}")
 }
 
 core.system.link.service::is_managed() {
@@ -786,7 +837,7 @@ core.system.link.service::append_label() {
 # What to do for one append; a removal takes its region out, quietly when
 # there is none. <label> overrides the origin's (a removed plugin's sweep).
 core.system.link.service::plan_append() {
-  local origin="$1" destination="$2" removal="$3" label="${4-}" path style absolute action
+  local origin="$1" destination="$2" removal="$3" label="${4-}" path style absolute action module
   destination=$(core.system.link.service::destination_path "$destination")
   [ -n "$label" ] || label=$(core.system.link.service::append_label "$origin")
   if ! core.system.link.service::append_destination "$destination" path "$label"; then
@@ -802,7 +853,11 @@ core.system.link.service::plan_append() {
     return
   fi
   if ! core.system.link.service::append_origin "$origin" absolute; then
-    core.system.link.service::fail "Skipped appending $origin: it isn't a file @dot:, @module: or @plugin: names."
+    if module=$(core.system.link.service::disabled_module_of "$origin"); then
+      core.system.link.service::fail "Skipped appending $origin: the feature flag featureFlags.$module turns its module off."
+    else
+      core.system.link.service::fail "Skipped appending $origin: it isn't a file @dot:, @module:, @harness: or @plugin: names."
+    fi
     return
   fi
   if core.system.link.service::is_append_planned "$path" "$label"; then
@@ -853,14 +908,19 @@ core.system.link.service::swept_directories() {
   } | sort -zu
 }
 
+# Prunes dotdot's broken links, and its links into a module a feature flag
+# turns off.
 core.system.link.service::plan_pruning() {
-  local directory link target
+  local directory link target module off=()
+  while IFS= read -r module; do
+    framework.helpers.fs::resolve_to directory "$MODULES_DIR/$module" && off+=("$directory")
+  done < <(paths::disabled_modules)
   while IFS= read -r -d '' directory; do
     [ -d "$directory" ] && [ ! -L "$directory" ] || continue
     while IFS= read -r -d '' link; do
       [ "$link" != "$ENTRY_LINK" ] || continue
-      [ ! -e "$link" ] || continue
       framework.helpers.fs::resolve_to target "$link" && core.system.link.service::is_managed "$target" || continue
+      [ ! -e "$link" ] || core.system.link.service::is_inside_any "$target" ${off[@]+"${off[@]}"} || continue
       ! core.system.link.service::is_planned "$link" || continue
       core.system.link.service::add "" "$link" "$(dot::relative "$link")" prune
     done < <(find "$directory" -mindepth 1 -maxdepth 1 -type l -print0 | sort -z)

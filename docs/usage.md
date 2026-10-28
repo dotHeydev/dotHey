@@ -6,6 +6,7 @@ Everything you need to build with dotdot day to day. To extend it, see [Extendin
 - [Working with agents](#working-with-agents)
 - [Records](#records)
 - [The `dot` command](#the-dot-command)
+- [Setting up](#setting-up)
 - [Linking](#linking)
 - [Using plugins](#using-plugins)
 - [Settings](#settings)
@@ -216,6 +217,50 @@ Every command follows the same conventions:
 
 ---
 
+## Setting up
+
+The installer only installs. `bash dot setup` puts dotdot where your harnesses read it, out of the box, for Claude Code, Codex, Cursor, GitHub Copilot, OpenCode, and `.agents/`.
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/dotdot-sh/dotdot/main/install.sh | bash      # install; offers setup
+curl … | bash -s -- --harness claude,cursor --strategy combine --yes                        # install and set up
+bash dot setup                                       # detect, choose, preview, link
+bash dot setup --harness claude --strategy own --preview
+bash dot adopt --scan --json                         # what the project already holds
+```
+
+Setup finds what each harness already holds (instructions, skills, agents, rules; `adopt --scan` also lists other top-level docs as *unsure*, for `dot-ready` to raise with you), offers the detected harnesses first, and asks one question when it finds existing skills or agents:
+
+- **Combine** (the default): they stay where they are, and dotdot's are linked beside them.
+- **Own**: they move into `.dot/Skills/` and `.dot/Agents/` and are linked back into every chosen harness, so they're edited in `.dot/` from then on. An agent in a harness's own format is taken into dotdot's (Codex's TOML becomes Markdown). A name dotdot already uses, a link leading elsewhere, or a file that can't be read as an agent is left in place.
+
+A harness's own instructions file is never replaced: dotdot appends an import of `AGENTS.md` in that harness's syntax (`@.dot/AGENTS.md` for Claude Code), or links `AGENTS.md` where the harness reads one. Setup changes only the [links](#the-links) and lets `bash dot link` do the linking, so everything is previewed, backed up, and reversible. Run it again to change the choice: harnesses no longer chosen are unlinked. It records the choice in `setup.harnesses`, `setup.strategy`, and `setup.links`, and what only your agent can finish in `setup.pending`: the context, with own the split of your instruction files and a check that every harness reads what moved, and any unsure docs to ask you about. Your agent picks it up at its next session, confirms with you once, finishes it, and marks each item with `bash dot setup:done <item>`; the default setup leaves it only the context.
+
+| Flag | Meaning |
+|---|---|
+| `--harness <a,b>` | The harnesses to link; without it, a terminal asks |
+| `--strategy combine\|own` | What happens to the project's own skills and agents |
+| `--dir <path>` | Where dotdot lives afterwards ([Relocating](#relocating)) |
+| `--preview`, `-y` | Show only, or apply without asking (at a terminal) |
+
+Each harness is a folder in `.dot/.core/harnesses/<id>/`: `harness.json` declares what it supports and where (detection paths, instructions, skills, agents), `harness.sh` answers setup's standard calls (`detect`, `scan`, `rows`, `destinations`, `build`), and the folder's own scripts handle what the data can't express (Codex's `agents-toml.sh`). Each capability's shared logic lives once in `harnesses/capabilities/<capability>.sh`, so changing the data changes the behaviour with no code to touch, and a new capability (MCP, settings) is one more module.
+
+**Agents** are written once, in Claude's Markdown format (`name`, `description`, the prompt), in `.dot/Agents/` or a module's `agents/`, and ported where each harness reads them, linked wherever the format allows:
+
+| Harness | Agents |
+|---|---|
+| Claude Code, Cursor, OpenCode | linked as they are into `.claude/agents/`, `.cursor/agents/`, `.opencode/agents/` |
+| GitHub Copilot | linked as `.github/agents/<name>.agent.md` |
+| Codex | rendered as TOML into `.codex/agents/<name>.toml` (`name`, `description`, `developer_instructions`) |
+
+Renamed and rendered agents are built into `.dot/.harnesses/<id>/` and linked from there; `bash dot link` rebuilds them, so they follow every change. `tools` and `model` don't port: each harness writes them its own way, so keep them out of an agent meant for more than one, or check it on each.
+
+### Relocating
+
+`bash dot relocate .agents/.dot` moves all of dotdot into the project's `.agents/` folder: it points `dot` at the new place, rewrites the paths in dotdot's files, and relinks everything. Setup offers it when the project has `.agents/`, and the installer takes `--dir .agents/.dot` to install there directly.
+
+---
+
 ## Linking
 
 `bash dot link` puts dotdot where your harness reads it: it symlinks files and appends sections, following the `"links"` in `.dot/dot.json`. It previews every change and asks before applying any; run it again whenever skills, agents, or docs are added, renamed, or removed.
@@ -306,6 +351,7 @@ Every setting lives in `.dot/dot.json`, nested by area. A value comes from there
 
 ```json
 {
+  "featureFlags": { "release": true },
   "general": { "timezone": "Europe/Madrid" },
   "tasks":   { "service": "file", "githubRepo": "" },
   "plugins": { "unprefixedCommandOwners": ["acme"], "acme/widgets": { "apiUrl": "https://…" } },
@@ -317,14 +363,28 @@ Every setting lives in `.dot/dot.json`, nested by area. A value comes from there
 
 | Setting | Meaning |
 |---|---|
+| `featureFlags.*` | [Feature flags](#feature-flags) |
 | `general.timezone` | An IANA name or a fixed offset (`UTC+2`), for every date dotdot writes |
 | `tasks.service`, `tasks.githubRepo` | Where tasks live; set by `bash dot tasks:initialize` |
 | `plugins.unprefixedCommandOwners` | Plugin owners whose commands run without the `<owner>:` prefix |
 | `plugins.denyLinkOrigin`, `plugins.denyLinkDestination` | What no plugin may link or append from, or to |
 | `plugins["<owner>/<name>"]` | A plugin's own settings, written with their defaults when it's added |
 | `links` | What `bash dot link` links and appends ([Linking](#linking)) |
+| `setup.*` | [Setting up](#setting-up): the harnesses chosen, the strategy, the links setup wrote, and what is left for the agent (`pending`, `done`) |
 | `release.*` | [Releases](#releases) |
 | `state.*` | dotdot's own: the installed version, whether the context is ready, the migrations applied |
+
+## Feature flags
+
+Some of dotdot's modules are off until you turn their flag on in `.dot/dot.json`. A module that's off is off entirely: it lists no commands, running one stops with how to turn it on, and `bash dot link` neither links nor appends anything from it, removing what it linked before. Its command and skill names stay reserved, so no plugin takes them while it's off.
+
+```json
+{ "featureFlags": { "release": true } }
+```
+
+| Flag | Turns on |
+|---|---|
+| `featureFlags.release` | [Releases](#releases) |
 
 ## Values from `.env`
 
@@ -366,6 +426,8 @@ When every route fails, one error names each attempt, why it failed, and what to
 ---
 
 ## Releases
+
+Releases are behind the `featureFlags.release` [feature flag](#feature-flags).
 
 `bash dot release:create` turns the project into a clean, signed public history: each release is one commit in a separate release repo, holding every committed file but the ones you exclude.
 
