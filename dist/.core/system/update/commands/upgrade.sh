@@ -3,7 +3,7 @@
 DESCRIPTION="Update dotdot's core to its latest version."
 DOCS="updating-dotdot"
 
-dot::use framework.console.args framework.helpers.fs framework.console.output framework.console.prompt core.system.update.service
+dot::use framework.console.args framework.helpers.fs framework.console.output framework.console.prompt framework.ui.spinner core.system.update.service
 
 usage() {
   cat <<EOF
@@ -33,16 +33,16 @@ report() {
   local new="$1" counts="" count
   framework.console.output::newline
   for count in "${#UPDATE_ADDED[@]} added" "${#UPDATE_UPDATED[@]} updated" "${#UPDATE_REMOVED[@]} removed"; do
-    [ "${count%% *}" -eq 0 ] || counts="$counts $OUTPUT_SEPARATOR $count"
+    [ "${count%% *}" -eq 0 ] || counts="$counts $UI_SEPARATOR $count"
   done
   framework.console.output::success "dotdot updated to ${new:0:7}$counts."
   if [ ${#UPDATE_EDITED[@]} -gt 0 ]; then
     framework.console.output::warn "Kept the files you edited that dotdot no longer ships; please delete them once reviewed:"
-    printf "$OUTPUT_INDENT%s\n" "${UPDATE_EDITED[@]}"
+    printf "$UI_INDENT%s\n" "${UPDATE_EDITED[@]}"
   fi
   if [ ${#UPDATE_UNKNOWN[@]} -gt 0 ]; then
     framework.console.output::warn "These files aren't part of dotdot ${new:0:7}. Please delete any left from older versions and keep your own:"
-    printf "$OUTPUT_INDENT%s\n" "${UPDATE_UNKNOWN[@]}"
+    printf "$UI_INDENT%s\n" "${UPDATE_UNKNOWN[@]}"
   fi
 }
 
@@ -57,7 +57,7 @@ handle() {
   old=$(core.system.update.service::installed_commit)
   framework.helpers.fs::make_temp_dir UPDATE_WORKSPACE || framework.console.output::fail "Couldn't create a temporary directory; please check free space and \$TMPDIR."
   UPDATE_REPOSITORY="$UPDATE_WORKSPACE/repository"
-  framework.console.output::spin "Downloading dotdot…" core.system.update.service::download "$old" || framework.console.output::fail "The download didn't work, so nothing changed."
+  framework.ui.spinner::run "Downloading dotdot…" core.system.update.service::download "$old" || framework.console.output::fail "The download didn't work, so nothing changed."
   core.system.update.service::has_commit "$UPDATE_NEW_REF" || framework.console.output::fail "The download doesn't look like dotdot (it has no commit), so nothing changed."
   new=$(core.system.update.service::git rev-parse --verify "$UPDATE_NEW_REF^{commit}")
   if [ -n "$old" ] && ! core.system.update.service::has_commit "$UPDATE_OLD_REF"; then

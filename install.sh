@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 # install.sh — install dotdot into the current folder.
 #
-# Downloads dotdot from the repo's main branch, places its dist/ here as
-# .dot/ (or --dir <path>), links dotdot's entry point as ./dot, and runs dot
-# link -y for its default links. It only installs: bash dot setup links the
-# harnesses, which it offers to run (or runs, given setup flags). Nothing that
-# already exists is overwritten: an existing dotdot is offered an update or a
-# setup instead. Plugins are never installed here: add the ones you trust
-# afterwards with bash dot plugins:add <owner>/<name>.
-# Output stays quiet: progress lines, then the result; a failing step shows
-# its output.
+# Downloads dotdot from the repo's main branch into a temporary folder,
+# places its dist/ here as .dot/ (or --dir <path>), and links dotdot's entry
+# point as ./dot. Then, at a terminal (or given setup flags), it hands over to
+# bash dot setup, which asks what to link and says when dotdot is ready; with
+# no one to ask, it links only AGENTS.md, so any agent finds dotdot, and says
+# how to set it up. Nothing that already exists is overwritten: an existing
+# dotdot is offered an update or a setup instead. Plugins are never installed
+# here: add the ones you trust afterwards with bash dot plugins:add
+# <owner>/<name>. Output stays quiet; a failing step shows its output.
 #
 #   curl -fsSL https://raw.githubusercontent.com/dotdot-sh/dotdot/main/install.sh | bash
 #   curl … | bash -s -- --dir .agents/.dot --harness claude,cursor --strategy combine --yes
@@ -49,7 +49,9 @@ main() {
   check_place
   check_existing
 
-  temp=$(mktemp -d "$base/$TEMP_PREFIX"XXXXXX) || fail "Couldn't create a temporary directory in $base; nothing was installed."
+  # The system's temporary folder, or the project's when there is none.
+  temp=$(mktemp -d "${TMPDIR:-/tmp}/$TEMP_PREFIX"XXXXXX 2>/dev/null) || temp=$(mktemp -d "$base/$TEMP_PREFIX"XXXXXX) \
+    || fail "Couldn't create a temporary directory; nothing was installed."
   trap 'rm -rf -- "$temp"' EXIT
   trap 'exit 130' INT TERM HUP
   log="$temp/log"
@@ -57,7 +59,6 @@ main() {
   local source
   source=$(find_source "$temp/tree") || fail "Couldn't find dotdot in the download ($SOURCE_DIR/$BOOT_FILE is missing); nothing was installed."
 
-  printf 'Getting %s ready for your project…\n' "$name"
   check_existing
   rename_paths "$source/$SOURCE_DIR"
   mkdir -p -- "$(dirname -- "$base/$DOTDOT_DIR")"
@@ -65,16 +66,17 @@ main() {
   record_version "$temp/dotdot.tar.gz"
   record_migrations
   ln -s -- "$ENTRY_POINT" "$base/$ENTRY_LINK" || fail "Couldn't link $base/$ENTRY_LINK."
-  quietly "Link" env DOT_INTERNAL_CALL=1 bash "$base/$ENTRY_LINK" link -y
   quietly "Checking bash $ENTRY_LINK" bash "$base/$ENTRY_LINK"
+  [ ${#SETUP_FLAGS[@]} -gt 0 ] || can_prompt || quietly "Linking AGENTS.md" env DOT_INTERNAL_CALL=1 bash "$base/$ENTRY_LINK" link -y
+  rm -rf -- "$temp"
 
-  printf '\n%s%s✓%s %s is installed in %s/.\n' "$BOLD" "$GREEN" "$RESET" "$name" "$DOTDOT_DIR"
+  # Setup says how it went: what it asked, its steps, and the send-off.
   if [ ${#SETUP_FLAGS[@]} -gt 0 ]; then
-    printf '\n'
-    DOT_INTERNAL_CALL=1 bash "$base/$ENTRY_LINK" setup "${SETUP_FLAGS[@]}" || fail "The setup didn't finish; run it again with: bash $ENTRY_LINK setup"
+    DOT_INTERNAL_CALL=1 bash "$base/$ENTRY_LINK" setup "${SETUP_FLAGS[@]}"
   elif can_prompt; then
-    offer_setup
+    bash "$base/$ENTRY_LINK" setup < /dev/tty
   else
+    printf '%s%s✓%s %s is installed in %s/.\n' "$BOLD" "$GREEN" "$RESET" "$name" "$DOTDOT_DIR"
     next_steps
   fi
 }
@@ -126,18 +128,9 @@ choose() {
   printf '%s\n' "${reply:-1}"
 }
 
-offer_setup() {
-  case "$(choose "Set dotdot up for this project now?" "Here, step by step (bash $ENTRY_LINK setup)" "With your agent: tell it \"set up dotdot\"" "Later")" in
-    1) bash "$base/$ENTRY_LINK" setup < /dev/tty || fail "The setup didn't finish; run it again with: bash $ENTRY_LINK setup" ;;
-    2) printf "   %s%s→%s Tell your coding agent \"set up dotdot\"; it takes it from there.\n" "$BOLD" "$BLUE" "$RESET" ;;
-    *) next_steps ;;
-  esac
-}
-
 next_steps() {
   printf '   %s%s→%s Set it up for your harnesses: %sbash %s setup%s\n' "$BOLD" "$BLUE" "$RESET" "$BOLD" "$ENTRY_LINK" "$RESET"
   printf "   %s%s→%s Or tell your coding agent \"set up dotdot\"; it takes it from there.\n" "$BOLD" "$BLUE" "$RESET"
-  printf '   %s%s→%s See all commands: %sbash %s%s\n' "$BOLD" "$BLUE" "$RESET" "$BOLD" "$ENTRY_LINK" "$RESET"
 }
 
 fail() {

@@ -5,7 +5,7 @@
 # only ever changed through the map; bash dot link does the linking. Rows are
 # tab-separated: "<link|append|remove>\t<origin>\t<destination>".
 
-dot::use core.harnesses.harness core.harnesses.capabilities.agents framework.helpers.fs framework.helpers.json
+dot::use core.harnesses.harness core.harnesses.capabilities.agents framework.helpers.fs framework.helpers.json framework.helpers.text
 
 SETUP_STRATEGIES=" combine own "
 SETUP_DEFAULT_STRATEGY="combine"
@@ -19,15 +19,16 @@ SETUP_SKILLS_DIR="Skills"
 SETUP_AGENTS_DIR="Agents"
 SETUP_AGENTS_HOME=".agents"
 SETUP_TAB=$'\t'
+SETUP_NO_HARNESS="-"
 # Top-level docs every project has, which say what it is rather than how an
 # agent should work: never listed as unsure.
-SETUP_NO_HARNESS="-"
 SETUP_KNOWN_DOCS=" README.md CHANGELOG.md LICENSE.md "
 
 SETUP_IDS=""
 SETUP_INVALID=()
 SETUP_WANTED=""
 SETUP_MOVES=()
+SETUP_DUPLICATES=()
 SETUP_SKIPPED=()
 SETUP_ROWS=""
 
@@ -82,12 +83,58 @@ core.modules.setup.service::unsure() {
   done
 }
 
-core.modules.setup.service::state() {
-  dot::setting "$1" "$2" 2>/dev/null || printf '%s\n' "$2"
+# What the project holds, found once before anything is asked: the detected
+# harnesses into <directory>/detected, the scan of every harness into
+# <directory>/rows.
+core.modules.setup.service::assess() {
+  local directory="$1"
+  # shellcheck disable=SC2086
+  core.modules.setup.service::detected $SETUP_IDS > "$directory/detected" \
+    && core.modules.setup.service::scan $SETUP_IDS > "$directory/rows"
 }
 
-core.modules.setup.service::location() {
-  printf '%s\n' "$DOTDOT_NAME"
+# What <harness> holds in <rows>, counted by kind: "9 skills, 1 agent".
+core.modules.setup.service::summary() {
+  local id="$1" rows="$2" kind count summary=""
+  while read -r count kind; do
+    case "$kind" in
+      instructions) kind=$(framework.helpers.text::plural "$count" "instructions file") ;;
+      unsure) kind="$(framework.helpers.text::plural "$count" doc) to check" ;;
+      *) kind=$(framework.helpers.text::plural "$count" "$kind") ;;
+    esac
+    summary="$summary${summary:+, }$kind"
+  done < <(printf '%s\n' "$rows" | awk -F '\t' -v id="$id" '$1 == id { print $2 }' | sort | uniq -c)
+  printf '%s' "$summary"
+}
+
+# Whether <rows> hold skills or agents of the project's own, for own to move.
+core.modules.setup.service::holds_items() {
+  printf '%s\n' "$1" | awk -F '\t' '$2 == "skill" || $2 == "agent" { found = 1 } END { exit !found }'
+}
+
+# Whether the project uses .agents/ for more than skills, or links into it
+# from a harness's folders: then dotdot may belong there too.
+core.modules.setup.service::agents_home_in_use() {
+  local home="$BASE/$SETUP_AGENTS_HOME" entry destination target
+  [ -d "$home" ] && [ ! -L "$home" ] && [ "$DOTDOT_NAME" != "$SETUP_AGENTS_HOME/.dot" ] || return 1
+  for entry in "$home"/* "$home"/.[!.]*; do
+    [ -e "$entry" ] || [ -L "$entry" ] || continue
+    case "${entry##*/}" in
+      skills | .dot) ;;
+      *) return 0 ;;
+    esac
+  done
+  # shellcheck disable=SC2086
+  while IFS= read -r destination; do
+    for entry in "$BASE/$destination" "$BASE/$destination"/*; do
+      [ -L "$entry" ] && target=$(framework.helpers.fs::resolve "$entry") && framework.helpers.fs::is_inside "$target" "$home" && return 0
+    done
+  done < <(core.modules.setup.service::destinations $SETUP_IDS)
+  return 1
+}
+
+core.modules.setup.service::state() {
+  dot::setting "$1" "$2" 2>/dev/null || printf '%s\n' "$2"
 }
 
 # The names of dotdot's own skills and agents, which an owned item may not take.
@@ -103,11 +150,14 @@ core.modules.setup.service::taken_names() {
   done < <(paths::modules)
 }
 
-# What own would move, into SETUP_MOVES ("<from>\t<to>", project and dotdot
-# paths), and what it leaves, into SETUP_SKIPPED ("<path>\t<why>").
+# What own would move, into SETUP_MOVES ("<from>\t<to>\t<harness>", project
+# and dotdot paths); the copies of an item already moving, which go once it
+# has, into SETUP_DUPLICATES ("<path>"); and what it leaves, into
+# SETUP_SKIPPED ("<path>\t<why>").
 core.modules.setup.service::plan_moves() {
-  local taken id kind path name folder absolute
+  local taken id kind path name folder absolute first
   SETUP_MOVES=()
+  SETUP_DUPLICATES=()
   SETUP_SKIPPED=()
   taken=" $(core.modules.setup.service::taken_names | tr '\n' ' ') "
   while IFS="$SETUP_TAB" read -r id kind path _; do
@@ -135,10 +185,29 @@ core.modules.setup.service::plan_moves() {
       SETUP_SKIPPED+=("$path${SETUP_TAB}dotdot has one named ${name%.md}")
     elif [ -e "$DOTDOT_ROOT/$folder/$name" ] || [ -L "$DOTDOT_ROOT/$folder/$name" ]; then
       SETUP_SKIPPED+=("$path${SETUP_TAB}$DOTDOT_NAME/$folder/$name already exists")
+    elif first=$(core.modules.setup.service::moving_to "$folder/$name"); then
+      if diff -rq -- "$BASE/$first" "$absolute" > /dev/null 2>&1; then
+        SETUP_DUPLICATES+=("$path")
+      else
+        SETUP_SKIPPED+=("$path${SETUP_TAB}differs from $first, which moves")
+      fi
     else
       SETUP_MOVES+=("$path$SETUP_TAB$folder/$name$SETUP_TAB$id")
     fi
   done < <(core.modules.setup.service::scan "$@")
+}
+
+# The item planned to move to <to> (a dotdot path), if any.
+core.modules.setup.service::moving_to() {
+  local move rest
+  for move in ${SETUP_MOVES[@]+"${SETUP_MOVES[@]}"}; do
+    rest="${move#*"$SETUP_TAB"}"
+    if [ "${rest%%"$SETUP_TAB"*}" = "$1" ]; then
+      printf '%s\n' "${move%%"$SETUP_TAB"*}"
+      return 0
+    fi
+  done
+  return 1
 }
 
 # Whether dotdot holds owned items in <folder> (Skills, Agents), or will
@@ -223,7 +292,7 @@ core.modules.setup.service::plan_map() {
     function key(kind, origin, destination) { sub(/\/$/, "", destination); return kind SUBSEP origin SUBSEP destination }
     BEGIN {
       n = split(wanted, lines, "\n")
-      for (i = 1; i <= n; i++) if (split(lines[i], f, "\t") == 3) { want[key(f[1], f[2], f[3])] = 1; wanted_dest[f[3]] = 1 }
+      for (i = 1; i <= n; i++) if (split(lines[i], f, "\t") == 3) want[key(f[1], f[2], f[3])] = 1
       n = split(previous, lines, "\n")
       for (i = 1; i <= n; i++) if (split(lines[i], f, "\t") == 3 && !(key(f[1], f[2], f[3]) in want)) gone[key(f[1], f[2], f[3])] = lines[i]
       n = split(dropped, lines, "\n")
@@ -237,6 +306,9 @@ core.modules.setup.service::plan_map() {
         print; seen["remove" SUBSEP $2 SUBSEP destination] = 1; next
       }
       if (key($1, $2, $3) in want) { if (!(key($1, $2, $3) in printed)) { print; printed[key($1, $2, $3)] = 1 }; next }
+      # A link where an append of the same origin is wanted (or the other way
+      # round): the destination changed kind, so the old entry just goes.
+      if (key($1 == "link" ? "append" : "link", $2, $3) in want) next
       if (key($1, $2, $3) in gone || destination in drop) { removed[$2 SUBSEP $3] = 1; next }
       print
     }
@@ -307,11 +379,11 @@ core.modules.setup.service::build() {
   done
 }
 
-# Moves each planned item into dotdot.
 # Moves each planned item into dotdot; an agent in a harness's own format is
-# imported into dotdot's, and the original removed.
+# imported into dotdot's, and the original removed. Then the duplicates go:
+# link puts dotdot's copy in their place.
 core.modules.setup.service::move() {
-  local move from to id rest name
+  local move from to id rest name duplicate
   for move in ${SETUP_MOVES[@]+"${SETUP_MOVES[@]}"}; do
     from="$BASE/${move%%"$SETUP_TAB"*}"
     rest="${move#*"$SETUP_TAB"}"
@@ -325,6 +397,9 @@ core.modules.setup.service::move() {
     else
       mv -- "$from" "$to" || { dot::raise "Couldn't move $(dot::relative "$from") into $(dot::relative "$to")."; return 1; }
     fi
+  done
+  for duplicate in ${SETUP_DUPLICATES[@]+"${SETUP_DUPLICATES[@]}"}; do
+    rm -rf -- "${BASE:?}/$duplicate" || { dot::raise "Couldn't remove $duplicate, a copy of what moved."; return 1; }
   done
 }
 

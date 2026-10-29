@@ -1,14 +1,30 @@
 # Marks up a line of dotdot's output for render.awk, by what its words look
-# like: commands (bash dot <name> and the arguments after it) bold bright,
-# paths gray, "quoted values" italic, plugin ids (acme/widgets) and record and
-# task references (d002, t004, #12) bold. A word already marked up is left as
-# it is.
+# like, each in the theme's style given as a variable (see
+# framework.console.output::highlight): commands (bash dot <name> and the
+# arguments after it), paths, "quoted values", and plugin ids (acme/widgets)
+# and record and task references (d002, t004, #12). A word already marked up
+# is left as it is.
 BEGIN {
   OPEN = sprintf("%c", 1); NAME_END = sprintf("%c", 2); CLOSE = sprintf("%c", 3)
-  COMMAND = OPEN "bold" NAME_END OPEN "bright" NAME_END; COMMAND_OFF = CLOSE CLOSE
-  PATH_ON = OPEN "gray" NAME_END; PATH_OFF = CLOSE
-  VALUE = OPEN "italic" NAME_END; VALUE_OFF = CLOSE
-  REFERENCE = OPEN "bold" NAME_END; REFERENCE_OFF = CLOSE
+  COMMAND = opens(command_style); COMMAND_OFF = closes(command_style)
+  PATH_ON = opens(path_style); PATH_OFF = closes(path_style)
+  VALUE = opens(value_style); VALUE_OFF = closes(value_style)
+  REFERENCE = opens(reference_style); REFERENCE_OFF = closes(reference_style)
+}
+
+# The markup that opens, or closes, each style in the space-separated <styles>.
+function opens(styles,   names, count, i, out) {
+  count = split(styles, names, " ")
+  out = ""
+  for (i = 1; i <= count; i++) out = out OPEN names[i] NAME_END
+  return out
+}
+
+function closes(styles,   names, count, out) {
+  count = split(styles, names, " ")
+  out = ""
+  while (count-- > 0) out = out CLOSE
+  return out
 }
 
 function is_argument(word) {

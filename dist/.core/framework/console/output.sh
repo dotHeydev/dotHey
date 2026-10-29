@@ -1,22 +1,9 @@
 #!/usr/bin/env bash
 
-dot::use framework.helpers.secrets
+dot::use framework.helpers.secrets framework.helpers.fs framework.ui.theme
 
-OUTPUT_SUCCESS_ICON="✓"
-OUTPUT_ERROR_ICON="✗"
-OUTPUT_WARNING_ICON="!"
-OUTPUT_INFO_ICON="i"
-OUTPUT_NEXT_ICON="→"
-OUTPUT_SEPARATOR="•"
-OUTPUT_TIP_LABEL="💡 Tip:"
-OUTPUT_INDENT="   "
 OUTPUT_HIGHLIGHTER="${BASH_SOURCE[0]%/*}/highlight.awk"
 OUTPUT_HIGHLIGHT=true
-OUTPUT_DEFAULT_WIDTH=80
-# The spinner shared with install.sh: one frame every SPINNER_INTERVAL seconds.
-SPINNER_FRAMES=(' ·●' ' •⏺' ' ⏺•' ' ●·' ' ⏺•' ' •⏺' ' ·●')
-SPINNER_INTERVAL=0.07
-SPINNER_GRACE_FRAMES=4
 
 # Exit statuses (set by dotdot's boot; these are the defaults).
 : "${EXIT_FAILURE:=1}" "${EXIT_USAGE:=2}" "${EXIT_NOT_FOUND:=4}" "${EXIT_PRECONDITION:=5}"
@@ -72,10 +59,22 @@ framework.console.output::paints() {
 OUTPUT_RENDERER="${BASH_SOURCE[0]%/*}/render.awk"
 
 # <text> in one primitive style: bold, dim, italic, underline, red, green,
-# yellow, blue, magenta, cyan, gray, light-blue, or bright (the bright variant
-# of the colors inside it).
+# yellow, blue, magenta, cyan, gray, light-blue, bright (the bright variant
+# of the colors inside it), bg-red, bg-green, or bg-blue.
 framework.console.output::style() {
   [ -z "$2" ] || printf '\001%s\002%s\003' "$1" "$2"
+}
+
+# <text> in <styles>, a theme's space-separated list of primitive styles,
+# the first outermost.
+framework.console.output::paint() {
+  local styles="$1" text="$2" style opened="" closed="" IFS=' '
+  [ -n "$text" ] || return 0
+  for style in $styles; do
+    opened="$opened"$'\001'"$style"$'\002'
+    closed="$closed"$'\003'
+  done
+  printf '%s%s%s' "$opened" "$text" "$closed"
 }
 
 framework.console.output::bold() { framework.console.output::style bold "$*"; }
@@ -91,13 +90,13 @@ framework.console.output::light_blue() { framework.console.output::style light-b
 framework.console.output::bright() { framework.console.output::style bright "$*"; }
 
 # What a piece of text is, each one a composition of primitives.
-framework.console.output::path() { framework.console.output::gray "$*"; }
-framework.console.output::command() { framework.console.output::bold "$(framework.console.output::bright "$*")"; }
-framework.console.output::value() { framework.console.output::italic "$*"; }
-framework.console.output::setting() { framework.console.output::italic "$(framework.console.output::bright "$*")"; }
-framework.console.output::code() { framework.console.output::cyan "$*"; }
-framework.console.output::heading() { framework.console.output::bold "$(framework.console.output::blue "$*")"; }
-framework.console.output::note() { framework.console.output::light_blue "$(framework.console.output::italic "$*")"; }
+framework.console.output::path() { framework.console.output::paint "$UI_STYLE_PATH" "$*"; }
+framework.console.output::command() { framework.console.output::paint "$UI_STYLE_COMMAND" "$*"; }
+framework.console.output::value() { framework.console.output::paint "$UI_STYLE_VALUE" "$*"; }
+framework.console.output::setting() { framework.console.output::paint "$UI_STYLE_SETTING" "$*"; }
+framework.console.output::code() { framework.console.output::paint "$UI_STYLE_CODE" "$*"; }
+framework.console.output::heading() { framework.console.output::paint "$UI_STYLE_HEADING" "$*"; }
+framework.console.output::note() { framework.console.output::paint "$UI_STYLE_NOTE" "$*"; }
 
 # Marked-up <text> as it prints on <descriptor>: escape codes at a terminal,
 # plain text anywhere else, with no newline added.
@@ -130,13 +129,30 @@ framework.console.output::emit() {
   text=$(framework.helpers.secrets::mask "$*")
   if framework.console.output::paints "$descriptor"; then
     if $OUTPUT_HIGHLIGHT; then
-      printf '%s\n' "$text" | awk -f "$OUTPUT_HIGHLIGHTER" | awk -v styled=1 -f "$OUTPUT_RENDERER" >&"$descriptor"
+      printf '%s\n' "$text" | framework.console.output::highlight | awk -v styled=1 -f "$OUTPUT_RENDERER" >&"$descriptor"
     else
       printf '%s\n' "$text" | awk -v styled=1 -f "$OUTPUT_RENDERER" >&"$descriptor"
     fi
   else
     printf '%s\n' "$(framework.console.output::render "$descriptor" "$text")" >&"$descriptor"
   fi
+}
+
+# Lines on stdin, their commands, paths, values, and references marked up in
+# the theme's styles (highlight.awk).
+framework.console.output::highlight() {
+  awk -v command_style="$UI_STYLE_COMMAND" -v path_style="$UI_STYLE_PATH" -v value_style="$UI_STYLE_VALUE" \
+    -v reference_style="$UI_STYLE_REFERENCE" -f "$OUTPUT_HIGHLIGHTER"
+}
+
+# Keeps printing from copies of the files output reads, for a run that moves
+# them (dotdot moving itself); the copies go when the run ends.
+framework.console.output::detach() {
+  local copies
+  framework.helpers.fs::make_temp_dir copies || return 1
+  cp -- "$OUTPUT_RENDERER" "$OUTPUT_HIGHLIGHTER" "$copies/" || return 1
+  OUTPUT_RENDERER="$copies/${OUTPUT_RENDERER##*/}"
+  OUTPUT_HIGHLIGHTER="$copies/${OUTPUT_HIGHLIGHTER##*/}"
 }
 
 # Each line of <file> through emit, then the file removed.
@@ -241,11 +257,11 @@ framework.console.output::newline() {
 }
 
 framework.console.output::title() {
-  framework.console.output::emit 1 "$(framework.console.output::bold "$*")"
+  framework.console.output::emit 1 "$(framework.console.output::paint "$UI_STYLE_TITLE" "$*")"
 }
 
 framework.console.output::success() {
-  framework.console.output::emit 1 "$(framework.console.output::bold "$(framework.console.output::green "$OUTPUT_SUCCESS_ICON")") $*"
+  framework.console.output::emit 1 "$(framework.console.output::paint "$UI_STYLE_SUCCESS" "$UI_ICON_SUCCESS") $*"
 }
 
 # A record just made: <message>, its <path> under it; under --json,
@@ -263,35 +279,35 @@ framework.console.output::created() {
 
 # A side note: light blue, its text in italics.
 framework.console.output::info() {
-  framework.console.output::emit 1 "$(framework.console.output::light_blue "$(framework.console.output::bold "$OUTPUT_INFO_ICON") $(framework.console.output::italic "$*")")"
+  framework.console.output::emit 1 "$(framework.console.output::paint "$UI_STYLE_INFO" "$(framework.console.output::bold "$UI_ICON_INFO") $(framework.console.output::italic "$*")")"
 }
 
 framework.console.output::tip() {
-  framework.console.output::emit 1 "$(framework.console.output::bold "$OUTPUT_TIP_LABEL") $*"
+  framework.console.output::emit 1 "$(framework.console.output::bold "$UI_TIP_LABEL") $*"
 }
 
 framework.console.output::detail() {
-  framework.console.output::emit 1 "$OUTPUT_INDENT$*"
+  framework.console.output::emit 1 "$UI_INDENT$*"
 }
 
 # The next step to take, under the message it follows.
 framework.console.output::next() {
-  framework.console.output::emit 1 "$OUTPUT_INDENT$(framework.console.output::bold "$(framework.console.output::blue "$OUTPUT_NEXT_ICON")") $*"
+  framework.console.output::emit 1 "$UI_INDENT$(framework.console.output::paint "$UI_STYLE_NEXT" "$UI_ICON_NEXT") $*"
 }
 
-# A listed change: <symbol> in <color> (+ new, - removed, * changed, ~ linked,
-# > appended, ! taken, · unchanged), what it is, and a note.
+# A listed change: <symbol> in <color> (one of the theme's UI_MARK_*), what
+# it is, and a note.
 framework.console.output::entry() {
   local color="$1" symbol="$2" text="$3" note="${4-}"
-  framework.console.output::emit 1 "$OUTPUT_INDENT$(framework.console.output::bold "$(framework.console.output::style "$color" "$symbol")") $text${note:+ $(framework.console.output::note "$note")}"
+  framework.console.output::emit 1 "$UI_INDENT$(framework.console.output::bold "$(framework.console.output::style "$color" "$symbol")") $text${note:+ $(framework.console.output::note "$note")}"
 }
 
 # A file's change as git shows it: added, removed, or changed.
 framework.console.output::change() {
   case "$1" in
-    added) framework.console.output::entry green "+" "$2" "${3-}" ;;
-    removed) framework.console.output::entry red "-" "$2" "${3-}" ;;
-    *) framework.console.output::entry yellow "*" "$2" "${3-}" ;;
+    added) framework.console.output::entry green "$UI_MARK_ADDED" "$2" "${3-}" ;;
+    removed) framework.console.output::entry red "$UI_MARK_REMOVED" "$2" "${3-}" ;;
+    *) framework.console.output::entry yellow "$UI_MARK_CHANGED" "$2" "${3-}" ;;
   esac
 }
 
@@ -306,7 +322,7 @@ framework.console.output::item() {
 
 # A warning, all of it yellow.
 framework.console.output::warn() {
-  framework.console.output::emit 2 "$(framework.console.output::bold "$(framework.console.output::yellow "$OUTPUT_WARNING_ICON $*")")"
+  framework.console.output::emit 2 "$(framework.console.output::paint "$UI_STYLE_WARNING" "$UI_ICON_WARNING $*")"
 }
 
 # <message>, then each further argument as a next step under it; under --json
@@ -318,7 +334,7 @@ framework.console.output::error() {
     framework.console.output::json_error "${OUTPUT_ERROR_STATUS:-$EXIT_FAILURE}" "$@"
     return
   fi
-  framework.console.output::emit 2 "$(framework.console.output::bold "$(framework.console.output::red "$OUTPUT_ERROR_ICON")") $1"
+  framework.console.output::emit 2 "$(framework.console.output::paint "$UI_STYLE_ERROR" "$UI_ICON_ERROR") $1"
   shift
   for step in "$@"; do
     framework.console.output::next "$step" >&2
@@ -359,10 +375,19 @@ framework.console.output::fail() {
   framework.console.output::fail_as "$EXIT_FAILURE" "$@"
 }
 
+# Stopped by the person: <message> in red, then each further argument as a
+# next step under it.
+framework.console.output::cancelled() {
+  local step
+  framework.console.output::emit 2 "$(framework.console.output::paint "$UI_STYLE_CANCELLED" "$UI_ICON_CANCELLED $1")"
+  shift
+  for step in "$@"; do
+    framework.console.output::next "$step" >&2
+  done
+}
+
 framework.console.output::aborted() {
-  local hint="${1-}"
-  framework.console.output::emit 2 "Cancelled — nothing changed."
-  [ -z "$hint" ] || framework.console.output::next "$hint" >&2
+  framework.console.output::cancelled "$UI_LABEL_ABORTED" "$@"
 }
 
 framework.console.output::width() {
@@ -374,42 +399,7 @@ framework.console.output::width() {
     '' | *[!0-9]*) width="${COLUMNS-}" ;;
   esac
   case "$width" in
-    '' | 0 | *[!0-9]*) width=$OUTPUT_DEFAULT_WIDTH ;;
+    '' | 0 | *[!0-9]*) width=$UI_WIDTH ;;
   esac
   printf '%s\n' "$width"
-}
-
-framework.console.output::rule() {
-  local width="${1:-$(framework.console.output::width)}" rule
-  rule=$(printf '%*s' "$width" '')
-  printf '%s\n' "${rule// /-}"
-}
-
-framework.console.output::spin() {
-  local label="$1" errors status=0 process tick=0 drawn=false frame_count=${#SPINNER_FRAMES[@]}
-  shift
-  errors=$(mktemp) || return 1
-  if [ ! -t 2 ] || framework.console.output::is_unattended; then
-    [ -z "$label" ] || framework.console.output::emit 2 "$label"
-    "$@" 2>"$errors" || status=$?
-    framework.console.output::emit_file 2 "$errors"
-    return "$status"
-  fi
-  "$@" 2>"$errors" &
-  process=$!
-  while kill -0 "$process" 2>/dev/null; do
-    if [ "$tick" -ge "$SPINNER_GRACE_FRAMES" ] || [ -n "$label" ]; then
-      printf '\r%s%s ' "$label" "${SPINNER_FRAMES[$((tick % frame_count))]}" >&2
-      drawn=true
-    fi
-    tick=$((tick + 1))
-    sleep "$SPINNER_INTERVAL"
-  done
-  wait "$process" || status=$?
-  if $drawn; then
-    printf '\r\033[K' >&2
-  fi
-  [ -z "$label" ] || framework.console.output::emit 2 "$label"
-  framework.console.output::emit_file 2 "$errors"
-  return "$status"
 }

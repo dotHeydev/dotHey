@@ -12,6 +12,7 @@ BEGIN {
   code["bold"] = 1; code["dim"] = 2; code["italic"] = 3; code["underline"] = 4
   code["red"] = 31; code["green"] = 32; code["yellow"] = 33; code["blue"] = 34
   code["magenta"] = 35; code["cyan"] = 36; code["gray"] = 90; code["light-blue"] = 94
+  code["bg-red"] = 41; code["bg-green"] = 42; code["bg-blue"] = 44
   depth = 0
 }
 

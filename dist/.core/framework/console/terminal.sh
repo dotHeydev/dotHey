@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-dot::use framework.console.output framework.console.prompt
+dot::use framework.console.output framework.console.prompt framework.ui.rule
 
 TERMINAL_FALLBACK_EDITORS=(nano vi)
 
@@ -10,9 +10,9 @@ framework.console.terminal::page() {
     less -R -- "$file"
     return
   fi
-  framework.console.output::rule
+  framework.ui.rule::show
   printf '%s\n' "$(cat -- "$file")"
-  framework.console.output::rule
+  framework.ui.rule::show
 }
 
 framework.console.terminal::editor() {

@@ -3,7 +3,7 @@
 DESCRIPTION="Print just the frontmatter of dotdot's docs."
 JSON=true
 
-dot::use framework.console.args framework.helpers.frontmatter framework.helpers.fs framework.console.output framework.helpers.json
+dot::use framework.console.args framework.helpers.frontmatter framework.helpers.fs framework.console.output framework.helpers.json framework.ui.rule
 
 SCAN_MISSING_FRONTMATTER="(no frontmatter)"
 
@@ -73,7 +73,7 @@ scan_directory() {
       framework.console.output::warn "Skipped $label/$(basename -- "$file"): it leads outside $DOTDOT_NAME/."
       continue
     fi
-    $DOT_JSON || ! $found || framework.console.output::rule
+    $DOT_JSON || ! $found || framework.ui.rule::show
     found=true
     print_frontmatter "$file" "$label/$(basename -- "$file")"
   done

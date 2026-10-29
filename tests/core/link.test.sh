@@ -40,6 +40,7 @@ test_link_only_previews_without_a_terminal_or_with_preview() {
 }
 
 test_link_prunes_broken_dotdot_links_and_keeps_foreign_ones() {
+  links "link:@dot:AGENTS.md->AGENTS.md" "link:@dotdotSkills->.claude/skills/"
   dot link -y
   ln -s ../../.dot/.core/system/link/skills/removed-skill "$SANDBOX/.claude/skills/removed-skill"
   ln -s /nonexistent/elsewhere "$SANDBOX/.claude/skills/foreign"
@@ -450,4 +451,16 @@ test_link_leaves_out_everything_of_a_module_a_feature_flag_turns_off() {
   assert_failure
   assert_equal "$STATUS" 1
   assert_no_file "$SANDBOX/notes.md"
+}
+
+test_link_json_plans_then_applies_with_counts() {
+  links "link:@dot:AGENTS.md->AGENTS.md"
+  dot link --json
+  assert_success
+  assert_contains "$OUTPUT" '{"action":"link","origin":".dot/AGENTS.md","destination":"AGENTS.md"}'
+  assert_no_file "$SANDBOX/AGENTS.md"
+  dot link --json -y
+  assert_success
+  assert_contains "$OUTPUT" '"failed":0'
+  assert_link_to "$SANDBOX/AGENTS.md" "$DOTDOT/AGENTS.md"
 }

@@ -3,11 +3,11 @@
 command_names() {
   local directory
   for directory in "$DOTDOT"/.core/system/*/commands "$DOTDOT"/.core/modules/*/commands; do
-    (cd "$directory" && find . -name '*.sh' | sed 's|^\./||; s|\.sh$||; s|/|:|g')
+    (cd "$directory" && find . -name '*.sh' ! -exec grep -q '^HIDDEN=true$' {} \; -print | sed 's|^\./||; s|\.sh$||; s|/|:|g')
   done | sort
 }
 
-test_every_command_is_listed_and_answers_help() {
+test_every_command_not_hidden_is_listed_and_every_one_answers_help() {
   local name
   dot
   while IFS= read -r name; do

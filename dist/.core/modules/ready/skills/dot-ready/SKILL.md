@@ -68,6 +68,11 @@ Tell the user, in the Reporting template of `AGENTS.md`, that the context is rea
 - ⚠️ Only the gaps that would weaken the work — a file still empty, or a section too thin to guide decisions (e.g. no tech stack, no audience for the product) — each with what would make it sound. Don't list every empty section, and don't ask questions for their own sake; they can add more anytime by just telling you.
 
 ## Finishing
-Output exactly: ✅✅✅ DOTDOT IS READY
+Output exactly, the second line echoing the send-off `bash dot setup` ends with:
+
+```
+✅✅✅ DOTDOT IS READY
+🚀 Let's build something amazing!
+```
 
 Then stop: don't touch any other file, nor code anything. If onboarding invoked you, it picks up from here.

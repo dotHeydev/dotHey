@@ -43,7 +43,7 @@ handle() {
   fi
   framework.console.output::line "These migrations will run:"
   for file in "${pending[@]}"; do
-    framework.console.output::entry blue "$OUTPUT_SEPARATOR" "${file##*/}" "$(kernel::description "$file")"
+    framework.console.output::entry blue "$UI_SEPARATOR" "${file##*/}" "$(kernel::description "$file")"
   done
   if $confirmed; then
     guards::skip_confirmation || framework.console.output::fail_as "$EXIT_PRECONDITION" "-y only works in a terminal, so nothing ran unseen." "$OUTPUT_MANUAL_RUN bash dot migrate"

@@ -14,13 +14,15 @@ installer() {
 
 # Golden
 
-test_install_places_dotdot_and_offers_setup() {
+test_install_without_a_person_links_only_agents_md() {
   installer
   assert_success
   assert_file "$SANDBOX/project/.dot/.core/system/boot.sh"
   assert_link_to "$SANDBOX/project/dot" "$SANDBOX/project/.dot/.core/system/bin/dot"
   assert_link_to "$SANDBOX/project/AGENTS.md" "$SANDBOX/project/.dot/AGENTS.md"
+  assert_no_file "$SANDBOX/project/.claude"
   assert_equal "$(setting_value '.setup.harnesses[]' "$SANDBOX/project/.dot/dot.json")" ""
+  [ -z "$(find "$SANDBOX/project" -maxdepth 1 -name '.dot-install.*')" ] || fail "the download was left in the project"
 }
 
 test_install_with_setup_flags_runs_setup() {

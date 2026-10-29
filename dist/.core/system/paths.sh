@@ -4,7 +4,7 @@ BIN_DIR="$SYSTEM_DIR/bin"
 DOT_BIN="$BIN_DIR/dot"
 SYSTEM_PARTS=(plugins link update migrations)
 MIGRATIONS_DIR="$SYSTEM_DIR/migrations"
-CORE_MODULES=(onboarding ready setup frontmatter housekeeping notes xrays features decisions tasks release)
+CORE_MODULES=(onboarding ready setup frontmatter housekeeping notes xrays features decisions tasks release tui)
 MODULE_COMMANDS_DIR="commands"
 KEEP_FILE=".gitkeep"
 

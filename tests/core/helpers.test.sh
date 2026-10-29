@@ -493,7 +493,7 @@ test_json_keep_format_edits_only_the_member() {
 }
 
 test_output_highlights_commands_paths_and_values_only_at_a_terminal() {
-  core "dot::use framework.console.output; printf '%s\n' 'Run bash dot link:activate acme/widgets, then edit .dot/dot.json for \"x\".' | awk -f \"\$OUTPUT_HIGHLIGHTER\" | awk -v styled=1 -f \"\$OUTPUT_RENDERER\""
+  core "dot::use framework.console.output; printf '%s\n' 'Run bash dot link:activate acme/widgets, then edit .dot/dot.json for \"x\".' | framework.console.output::highlight | awk -v styled=1 -f \"\$OUTPUT_RENDERER\""
   assert_equal "$OUTPUT" $'Run \033[1mbash dot link:activate acme/widgets\033[0m, then edit \033[90m.dot/dot.json\033[0m for \033[3m"x"\033[0m.'
   core "dot::use framework.console.output; framework.console.output::line 'Run bash dot link.'"
   assert_equal "$OUTPUT" "Run bash dot link."

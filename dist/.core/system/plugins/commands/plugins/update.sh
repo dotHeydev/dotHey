@@ -52,7 +52,7 @@ update_plugin() {
     return 0
   fi
   core.system.plugins.console::warn "$plugin"
-  core.system.plugins.console::header "$plugin" "${commit:0:7} → ${PLUGIN_COMMIT:0:7}"
+  core.system.plugins.console::header "$plugin" "${commit:0:7} $UI_ARROW ${PLUGIN_COMMIT:0:7}"
   core.system.plugins.console::preview "$plugin" "$PLUGIN_SOURCE"
   if $PLUGINS_PREVIEW; then
     framework.console.output::next "To update it: bash dot plugins:update $plugin"

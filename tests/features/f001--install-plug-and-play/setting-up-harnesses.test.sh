@@ -13,15 +13,15 @@ test_setup_links_every_chosen_harness() {
   assert_equal "$(setting_value '.setup.harnesses[]' | tr '\n' ,)" "claude,agents"
 }
 
-test_setup_previews_what_it_found_with_the_detected_harnesses() {
+test_setup_previews_the_plan_for_the_detected_harnesses() {
   own_instructions CLAUDE.md
   own_skill .claude/skills/mine
   cp "$DOTDOT/dot.json" "$SANDBOX/before.json"
   dot setup --preview
   assert_success
   assert_contains "$OUTPUT" "CLAUDE.md"
-  assert_contains "$OUTPUT" ".claude/skills/mine"
-  assert_contains "$OUTPUT" ".claude/skills/dot-onboard"
+  assert_contains "$OUTPUT" ".claude/skills/"
+  assert_not_contains "$OUTPUT" ".cursor/"
   assert_equal "$(cat "$DOTDOT/dot.json")" "$(cat "$SANDBOX/before.json")"
   assert_no_file "$SANDBOX/.claude/skills/dot-onboard"
 }
@@ -128,7 +128,8 @@ test_rerunning_setup_duplicates_nothing() {
   assert_equal "$(setting_value '.links["@dotdotSkills"][]' | grep -c '^.claude/skills/$')" 1
 }
 
-test_setup_unlinks_dotdots_default_links_for_harnesses_not_chosen() {
+test_setup_unlinks_links_for_harnesses_not_chosen() {
+  links "link:@dot:AGENTS.md->AGENTS.md" "link:@dotdotSkills->.claude/skills/"
   dot link -y
   assert_link_to "$SANDBOX/.claude/skills/dot-onboard" "$DOTDOT/.core/modules/onboarding/skills/dot-onboard"
   dot setup --harness agents --yes
@@ -173,4 +174,58 @@ test_an_unknown_strategy_is_refused() {
   assert_failure
   assert_equal "$STATUS" 2
   assert_no_file "$SANDBOX/.claude/skills/dot-onboard"
+}
+
+test_the_plan_groups_changes_by_folder_rather_than_listing_files() {
+  dot setup --harness claude,cursor --preview
+  assert_success
+  assert_contains "$OUTPUT" ".claude/"
+  assert_contains "$OUTPUT" ".cursor/"
+  assert_not_contains "$OUTPUT" ".claude/skills/dot-onboard"
+}
+
+test_own_moves_a_skill_found_twice_once_and_links_its_copy() {
+  own_skill .agents/skills/twice
+  own_skill .claude/skills/twice
+  dot setup --harness agents,claude --strategy own --yes
+  assert_success
+  assert_file "$DOTDOT/Skills/twice/SKILL.md"
+  assert_no_file "$DOTDOT/Skills/twice/twice"
+  assert_link_to "$SANDBOX/.agents/skills/twice" "$DOTDOT/Skills/twice"
+  assert_link_to "$SANDBOX/.claude/skills/twice" "$DOTDOT/Skills/twice"
+}
+
+test_own_leaves_a_differing_copy_in_place() {
+  own_skill .agents/skills/twice
+  own_skill .claude/skills/twice
+  printf 'changed\n' >> "$SANDBOX/.claude/skills/twice/SKILL.md"
+  dot setup --harness agents,claude --strategy own --yes
+  assert_success
+  [ -d "$SANDBOX/.claude/skills/twice" ] && [ ! -L "$SANDBOX/.claude/skills/twice" ] || fail "the differing copy was replaced"
+  assert_contains "$ERRORS" ".claude/skills/twice"
+}
+
+test_an_existing_agents_md_is_appended_to_not_linked() {
+  own_instructions AGENTS.md
+  dot link -y
+  dot setup --harness claude --yes
+  assert_success
+  [ -f "$SANDBOX/AGENTS.md" ] && [ ! -L "$SANDBOX/AGENTS.md" ] || fail "AGENTS.md is no longer the project's own"
+  assert_contains "$(cat "$SANDBOX/AGENTS.md")" "Keep this line."
+  assert_equal "$(setting_value '.links["@dot:AGENTS.md"][]' | grep -cx 'AGENTS.md')" 0
+}
+
+test_setup_asks_where_dotdot_lives_only_when_agents_holds_more_than_skills() {
+  local check="dot::use core.modules.setup.service; core.modules.setup.service::harnesses; core.modules.setup.service::agents_home_in_use"
+  own_skill .agents/skills/mine
+  core "$check"
+  assert_failure
+  : > "$SANDBOX/.agents/mcp.json"
+  core "$check"
+  assert_success
+  rm "$SANDBOX/.agents/mcp.json"
+  mkdir -p "$SANDBOX/.claude"
+  ln -s ../.agents/skills "$SANDBOX/.claude/skills"
+  core "$check"
+  assert_success
 }

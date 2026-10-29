@@ -1,7 +1,4 @@
 {
-  "featureFlags": {
-    "release": false
-  },
   "general": {
     "timezone": ""
   },
@@ -23,7 +20,6 @@
   },
   "links": {
     "@dot:AGENTS.md": ["AGENTS.md"],
-    "@dotdotSkills": [".claude/skills/"],
     "append": {},
     "remove": {},
     "inactive": {}
@@ -38,12 +34,13 @@
       "github": "https://github.com/_USER_/_REPO_.git"
     },
     "exclude": [
-      ".claude/",
-      ".devcontainer/",
+      "secrets/",
       ".dot/",
-      "dot",
-      "AGENTS.md"
+      "dot"
     ]
+  },
+  "featureFlags": {
+    "release": false
   },
   "state": {
     "version": "",

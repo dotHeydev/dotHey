@@ -137,6 +137,11 @@ kernel::description() {
   sed -n 's/^DESCRIPTION="\(.*\)"$/\1/p' "$1" | head -n 1
 }
 
+# Whether the command in <file> declares HIDDEN=true: it runs, but isn't listed.
+kernel::is_hidden() {
+  grep -q '^HIDDEN=true$' "$1"
+}
+
 # The installed core version (state.version), or nothing when unknown.
 kernel::version() {
   dot::setting state.version "" 2>/dev/null || true
@@ -206,6 +211,7 @@ kernel::list() {
   if $DOT_JSON; then
     dot::use framework.helpers.json
     while IFS='|' read -r name file; do
+      ! kernel::is_hidden "$file" || continue
       commands="$commands${commands:+,}{\"name\":$(framework.helpers.json::string "$name"),\"description\":$(framework.helpers.json::string "$(kernel::description "$file")")}"
     done < <(kernel::commands)
     printf '{"version":%s,"commands":[%s]}\n' "$(name=$(kernel::version); [ -n "$name" ] && framework.helpers.json::string "$name" || printf null)" "$commands"
@@ -222,6 +228,7 @@ Usage:
 Commands:
 EOF
     while IFS='|' read -r name file; do
+      ! kernel::is_hidden "$file" || continue
       namespace="${name%%:*}"
       [ "$name" = "$namespace" ] || [ "$namespace" = "$previous" ] || printf '\n'
       previous="$namespace"

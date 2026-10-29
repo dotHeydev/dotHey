@@ -86,6 +86,6 @@ handle() {
     printf '{"id":%s,"title":%s,"status":%s}\n' "$(framework.helpers.json::string "$id")" "$(framework.helpers.json::string "$title")" "$(framework.helpers.json::string "$status")"
     return
   fi
-  framework.console.output::success "Created task $id • $title ($status)"
+  framework.console.output::success "Created task $id $UI_SEPARATOR $title ($status)"
   core.modules.tasks.console::print_location "$id"
 }

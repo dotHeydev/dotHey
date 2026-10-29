@@ -1,26 +1,26 @@
 #!/usr/bin/env bash
 
-dot::use framework.console.args framework.console.output framework.console.prompt framework.helpers.text core.system.link.service
+dot::use framework.console.args framework.console.output framework.console.prompt framework.helpers.json framework.helpers.text core.system.link.service
 
 LINK_VERBOSE=false
 
 # An entry that stays as it is, listed only with --verbose.
 core.system.link.console::unchanged_entry() {
-  ! $LINK_VERBOSE || framework.console.output::entry dim "·" "$@"
+  ! $LINK_VERBOSE || framework.console.output::entry dim "$UI_MARK_UNCHANGED" "$@"
 }
 
 # A link's line: its origin → its destination.
 core.system.link.console::link_entry() {
   local origin="$1" label="$2"
   case "$3" in
-    link) framework.console.output::entry blue "~" "$(dot::relative "$origin") → $label" ;;
+    link) framework.console.output::entry blue "$UI_MARK_LINKED" "$(dot::relative "$origin") $UI_ARROW $label" ;;
     ok) core.system.link.console::unchanged_entry "$label" "already linked" ;;
-    move) framework.console.output::entry blue "~" "$(dot::relative "$origin") → $label" "moved; relink" ;;
-    prune) framework.console.output::entry red "-" "$label" "broken; remove" ;;
-    unlink) framework.console.output::entry red "-" "$label" "no longer listed; unlink" ;;
-    skip) framework.console.output::entry yellow "!" "$label" "exists; skip" ;;
-    relink) framework.console.output::entry red "!" "$label" "exists; replace" ;;
-    backup) framework.console.output::entry red "!" "$label" "exists; back up and replace" ;;
+    move) framework.console.output::entry blue "$UI_MARK_LINKED" "$(dot::relative "$origin") $UI_ARROW $label" "moved; relink" ;;
+    prune) framework.console.output::entry red "$UI_MARK_REMOVED" "$label" "broken; remove" ;;
+    unlink) framework.console.output::entry red "$UI_MARK_REMOVED" "$label" "no longer listed; unlink" ;;
+    skip) framework.console.output::entry yellow "$UI_MARK_TAKEN" "$label" "exists; skip" ;;
+    relink) framework.console.output::entry red "$UI_MARK_TAKEN" "$label" "exists; replace" ;;
+    backup) framework.console.output::entry red "$UI_MARK_TAKEN" "$label" "exists; back up and replace" ;;
   esac
 }
 
@@ -28,10 +28,10 @@ core.system.link.console::link_entry() {
 core.system.link.console::append_entry() {
   local origin="$1" label="$2" owner="$3"
   case "$4" in
-    append) framework.console.output::entry blue ">" "$(dot::relative "$origin") → $label" "section of $owner" ;;
+    append) framework.console.output::entry blue "$UI_MARK_APPENDED" "$(dot::relative "$origin") $UI_ARROW $label" "section of $owner" ;;
     appended) core.system.link.console::unchanged_entry "$label" "section of $owner already appended" ;;
-    unappend) framework.console.output::entry red "-" "$label" "take back the section of $owner" ;;
-    create) framework.console.output::entry green "+" "$label" "from $(dot::relative "$origin")" ;;
+    unappend) framework.console.output::entry red "$UI_MARK_REMOVED" "$label" "take back the section of $owner" ;;
+    create) framework.console.output::entry green "$UI_MARK_ADDED" "$label" "from $(dot::relative "$origin")" ;;
     exists) core.system.link.console::unchanged_entry "$label" "exists; keep" ;;
   esac
 }
@@ -39,8 +39,8 @@ core.system.link.console::append_entry() {
 # An edit of the links in dot.json.
 core.system.link.console::map_entry() {
   case "$1" in
-    remove*) framework.console.output::entry red "-" "$(dot::relative "$SETTINGS_FILE")" "$1" ;;
-    *) framework.console.output::entry green "+" "$(dot::relative "$SETTINGS_FILE")" "$1" ;;
+    remove*) framework.console.output::entry red "$UI_MARK_REMOVED" "$(dot::relative "$SETTINGS_FILE")" "$1" ;;
+    *) framework.console.output::entry green "$UI_MARK_ADDED" "$(dot::relative "$SETTINGS_FILE")" "$1" ;;
   esac
 }
 
@@ -50,7 +50,7 @@ core.system.link.console::print_seeds() {
     core.system.link.console::map_entry "$note"
   done
   case "$(core.system.link.service::user_state)" in
-    create) framework.console.output::entry green "+" "$DOTDOT_NAME/USER.md" "from USER.example.md" ;;
+    create) framework.console.output::entry green "$UI_MARK_ADDED" "$DOTDOT_NAME/USER.md" "from USER.example.md" ;;
     existing) core.system.link.console::unchanged_entry "$DOTDOT_NAME/USER.md" "exists; keep" ;;
   esac
 }
@@ -88,6 +88,32 @@ core.system.link.console::print_errors() {
   LINK_ERRORS=()
 }
 
+# The planned changes as JSON: each link, append, and seed that changes
+# something or is skipped, and how many destinations are taken.
+core.system.link.console::print_json_plan() {
+  local index changes=""
+  ! $LINK_SEED_USER || changes=$(core.system.link.console::json_change create "$(dot::relative "$USER_EXAMPLE_FILE")" "$DOTDOT_NAME/USER.md")
+  for index in ${LINK_ACTIONS[@]+"${!LINK_ACTIONS[@]}"}; do
+    core.system.link.service::is_change "${LINK_ACTIONS[$index]}" || [ "${LINK_ACTIONS[$index]}" = skip ] || continue
+    changes="$changes${changes:+,}$(core.system.link.console::json_change "${LINK_ACTIONS[$index]}" "$(dot::relative "${LINK_ORIGINS[$index]}")" "${LINK_LABELS[$index]}")"
+  done
+  for index in ${LINK_APPEND_ACTIONS[@]+"${!LINK_APPEND_ACTIONS[@]}"}; do
+    core.system.link.service::is_change "${LINK_APPEND_ACTIONS[$index]}" || continue
+    changes="$changes${changes:+,}$(core.system.link.console::json_change "${LINK_APPEND_ACTIONS[$index]}" "$(dot::relative "${LINK_APPEND_ORIGINS[$index]}")" "${LINK_APPEND_LABELS[$index]}")"
+  done
+  printf '{"changes":[%s],"taken":%s}\n' "$changes" "$LINK_OVERRIDABLE"
+}
+
+core.system.link.console::json_change() {
+  printf '{"action":%s,"origin":%s,"destination":%s}' "$(framework.helpers.json::string "$1")" "$(framework.helpers.json::string "$2")" "$(framework.helpers.json::string "$3")"
+}
+
+# What was done, as JSON counts.
+core.system.link.console::print_json_result() {
+  printf '{"linked":%s,"removed":%s,"appended":%s,"takenBack":%s,"skipped":%s,"failed":%s}\n' \
+    "$LINK_LINKED" "$LINK_REMOVED" "$LINK_APPENDED" "$LINK_UNAPPENDED" "$LINK_SKIPPED" "$LINK_FAILURES"
+}
+
 # What was done, its non-zero counts only.
 core.system.link.console::print_result() {
   local warning counts=() count label
@@ -98,7 +124,7 @@ core.system.link.console::print_result() {
     [ "$count" -eq 0 ] || counts+=("$count $label")
   done
   label=$(IFS='|'; printf '%s' "${counts[*]-}")
-  label="${label//|/ $OUTPUT_SEPARATOR }"
+  label="${label//|/ $UI_SEPARATOR }"
   if [ "$LINK_FAILURES" -eq 0 ]; then
     framework.console.output::success "Done${label:+: $label}."
   else

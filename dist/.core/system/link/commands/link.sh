@@ -2,6 +2,7 @@
 
 DESCRIPTION="Link dotdot and its plugins where your agents read them."
 DOCS="linking"
+JSON=true
 
 dot::use framework.console.args framework.console.output framework.console.prompt framework.helpers.fs framework.helpers.json framework.helpers.text core.system.link.service core.system.link.console
 
@@ -12,7 +13,7 @@ $(dot::relative "$SETTINGS_FILE") list. It previews every change and asks before
 with no one at a terminal to ask, it only previews.
 
 Usage:
-  bash dot link [--overwrite] [--preview] [-v, --verbose] [-y, --yes]
+  bash dot link [--overwrite] [--preview] [-v, --verbose] [-y, --yes] [--json]
 
 Options:
   --overwrite          Replace destinations that already exist: a symlink is
@@ -22,6 +23,10 @@ Options:
   -v, --verbose        List the entries that stay as they are, too.
   -y, --yes            Apply without asking. Only at a terminal, or when dotdot
                        itself runs it.
+  --json               Print the changes as {"changes": [{"action", "origin",
+                       "destination"}], "taken"}, and stop; with -y, apply them
+                       and print {"linked", "removed", "appended", "takenBack",
+                       "skipped", "failed"}.
   -h, --help           Show this help.
 
 Examples:
@@ -130,7 +135,7 @@ handle() {
   if $sweep; then
     core.system.link.service::plan_sweep
   else
-    $confirmed || offer_merge
+    $confirmed || $DOT_JSON || offer_merge
     $preview || core.system.link.service::build_harnesses
     core.system.link.service::plan "$override" "$refresh"
   fi
@@ -140,6 +145,17 @@ handle() {
     core.system.link.service::apply
     core.system.link.console::print_changes
     core.system.link.console::print_errors
+    [ "$LINK_FAILURES" -eq 0 ]
+    return
+  fi
+  if $DOT_JSON; then
+    if $preview || ! $confirmed; then
+      core.system.link.console::print_json_plan
+      return 0
+    fi
+    core.system.link.service::apply
+    core.system.link.console::print_errors
+    core.system.link.console::print_json_result
     [ "$LINK_FAILURES" -eq 0 ]
     return
   fi

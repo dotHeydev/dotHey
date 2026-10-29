@@ -27,8 +27,8 @@ handle() {
   while IFS=$'\t' read -r kind self target section; do
     case "$kind" in
       checked) checked=$((checked + 1)); continue ;;
-      missing) $DOT_JSON || framework.console.output::detail "$(framework.console.output::bold "$(framework.console.output::red "$OUTPUT_ERROR_ICON")") $self → $target ($section): no such decision" ;;
-      self) $DOT_JSON || framework.console.output::detail "$(framework.console.output::bold "$(framework.console.output::red "$OUTPUT_ERROR_ICON")") $self ($section) points at itself" ;;
+      missing) $DOT_JSON || framework.console.output::detail "$(framework.console.output::paint "$UI_STYLE_ERROR" "$UI_ICON_ERROR") $self $UI_ARROW $target ($section): no such decision" ;;
+      self) $DOT_JSON || framework.console.output::detail "$(framework.console.output::paint "$UI_STYLE_ERROR" "$UI_ICON_ERROR") $self ($section) points at itself" ;;
       *) continue ;;
     esac
     broken=$((broken + 1))

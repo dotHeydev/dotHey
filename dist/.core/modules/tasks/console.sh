@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-dot::use framework.console.args core.modules.tasks.service framework.console.output framework.console.prompt framework.helpers.template framework.console.terminal
+dot::use framework.console.args core.modules.tasks.service framework.console.output framework.console.prompt framework.helpers.template framework.console.terminal framework.ui.spinner
 
 core.modules.tasks.console::section_flags_help() {
   local section
@@ -25,7 +25,7 @@ core.modules.tasks.console::ensure_service() {
 core.modules.tasks.console::call() {
   local verb="$1"
   shift
-  framework.console.output::spin "" "$(core.modules.tasks.service::driver "$verb")" "$@"
+  framework.ui.spinner::run "" "$(core.modules.tasks.service::driver "$verb")" "$@"
 }
 
 core.modules.tasks.console::print_location() {

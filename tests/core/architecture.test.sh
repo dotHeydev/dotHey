@@ -28,10 +28,10 @@ misnamed_functions() {
   done < <(find "$root" -name '*.sh' "$@")
 }
 
-test_helpers_and_console_know_nothing_about_dotdot() {
+test_helpers_console_and_ui_know_nothing_about_dotdot() {
   local found
-  found=$(search "core\.|plugins\.|integrations\.|$FRAMEWORK_VARIABLES_PATTERN" "$(core_dir)/framework/helpers" "$(core_dir)/framework/console")
-  [ -z "$found" ] || fail "helpers and console must stay project-agnostic:
+  found=$(search "core\.|plugins\.|integrations\.|$FRAMEWORK_VARIABLES_PATTERN" "$(core_dir)/framework/helpers" "$(core_dir)/framework/console" "$(core_dir)/framework/ui")
+  [ -z "$found" ] || fail "helpers, console, and ui must stay project-agnostic:
 $found"
 }
 

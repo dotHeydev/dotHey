@@ -82,15 +82,16 @@ handle() {
   old="$DOTDOT_NAME"
   target="$BASE/$dir"
   framework.console.output::line "This will:"
-  framework.console.output::entry blue "~" "$old/ → $dir/" "every path in dotdot's files rewritten"
-  framework.console.output::entry blue "~" "dot → $dir/.core/system/bin/dot"
-  framework.console.output::entry blue "~" "every link to $old/" "relinked to $dir/"
+  framework.console.output::entry blue "$UI_MARK_LINKED" "$old/ $UI_ARROW $dir/" "every path in dotdot's files rewritten"
+  framework.console.output::entry blue "$UI_MARK_LINKED" "dot $UI_ARROW $dir/.core/system/bin/dot"
+  framework.console.output::entry blue "$UI_MARK_LINKED" "every link to $old/" "relinked to $dir/"
   if $preview || { ! $confirmed && ! framework.console.prompt::can_ask; }; then
     $preview || framework.console.output::line "No one at a terminal to confirm, so this is only a preview."
     framework.console.output::line "Preview only — nothing changed."
     return 0
   fi
   $confirmed || framework.console.prompt::confirm_or_exit "Do you want to move dotdot to $dir/?" n "bash dot relocate $dir"
+  framework.console.output::detach || framework.console.output::fail "Couldn't create a temporary directory; please check free space and \$TMPDIR."
   rewrite_paths "$old" "$dir" || framework.console.output::fail "Couldn't rewrite dotdot's paths; please check that its files are writable."
   mkdir -p -- "${target%/*}" && { [ ! -d "$target" ] || rmdir -- "$target"; } && mv -- "$DOTDOT_ROOT" "$target" \
     || framework.console.output::fail "Couldn't move $old/ to $dir/." "bash dot relocate $dir runs it again."

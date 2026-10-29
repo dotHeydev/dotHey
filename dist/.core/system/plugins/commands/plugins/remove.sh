@@ -44,7 +44,7 @@ handle() {
   left=$(core.system.plugins.service::uninstall "$plugin")
   core.system.plugins.manifest::unlock "$plugin"
   framework.console.output::success "Removed $plugin."
-  framework.console.output::entry red "-" "$directory/"
+  framework.console.output::entry red "$UI_MARK_REMOVED" "$directory/"
   dot::call link --remove-uninstalled -y || framework.console.output::fail "Some of $plugin's links or appended sections couldn't be removed (see above)." "Please finish with: bash dot link"
   framework.console.output::newline
   if [ -n "$left" ]; then

@@ -115,11 +115,13 @@ dot::is_allowed() {
   [ -z "$home" ] || [ "${importer#"$home"/}" != "$importer" ]
 }
 
-# A stop from before the output tool can load: its error icon bold and red
-# on a terminal, as the output tool's.
+# A stop from before the output tool can load: the theme's error icon, bold
+# and red on a terminal, as the output tool's.
 dot::fail_early() {
-  local icon="✗"
-  [ ! -t 2 ] || [ -n "${NO_COLOR-}" ] || [ "${TERM-}" = dumb ] || icon=$'\033[1;31m✗\033[0m'
+  local icon
+  [ -n "${UI_ICON_ERROR-}" ] || . "$FRAMEWORK_DIR/ui/theme.sh" 2>/dev/null || true
+  icon="${UI_ICON_ERROR-}"
+  [ ! -t 2 ] || [ -n "${NO_COLOR-}" ] || [ "${TERM-}" = dumb ] || icon=$'\033[1;31m'"$icon"$'\033[0m'
   printf '%s %s\n' "$icon" "$1" >&2
   exit 1
 }

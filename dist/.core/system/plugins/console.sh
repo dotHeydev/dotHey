@@ -24,7 +24,7 @@ core.system.plugins.console::warn() {
 # A plugin as previewed: its id in bold, then where it comes from.
 core.system.plugins.console::header() {
   local detail="${2% @ -}"
-  framework.console.output::line "$(framework.console.output::bold "$1") $OUTPUT_SEPARATOR $detail"
+  framework.console.output::line "$(framework.console.output::bold "$1") $UI_SEPARATOR $detail"
 }
 
 core.system.plugins.console::preview() {
@@ -34,7 +34,7 @@ core.system.plugins.console::preview() {
   while IFS=$'\t' read -r kind first second; do
     [ "$kind" = file ] || continue
     case "$first" in
-      *.sh) framework.console.output::change "$second" "$first $(framework.console.output::yellow "$(framework.console.output::bold "$OUTPUT_WARNING_ICON") script, runs on your machine")" ;;
+      *.sh) framework.console.output::change "$second" "$first $(framework.console.output::yellow "$(framework.console.output::bold "$UI_ICON_WARNING") script, runs on your machine")" ;;
       *) framework.console.output::change "$second" "$first" ;;
     esac
   done <<< "$rows"
@@ -68,7 +68,7 @@ core.system.plugins.console::report() {
   local verb path note
   while IFS=$'\t' read -r verb path note; do
     [ -n "$verb" ] || continue
-    framework.console.output::entry yellow "$OUTPUT_WARNING_ICON" "$path" "$note"
+    framework.console.output::entry yellow "$UI_ICON_WARNING" "$path" "$note"
   done
 }
 

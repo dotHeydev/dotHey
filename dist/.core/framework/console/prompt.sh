@@ -23,10 +23,18 @@ framework.console.prompt::answered() {
   framework.console.output::line "$(framework.console.prompt::question "$1" 2>&1) $2"
 }
 
+# Yes or no to <question>, <default> (y or n) on Enter: at a terminal that
+# reads keys, framework.ui.confirm; else a typed y/n.
 framework.console.prompt::confirm() {
   local question="$1" default="${2:-n}" hint="[y/N]" reply=""
   [ "$default" != y ] || hint="[Y/n]"
   framework.console.prompt::can_ask || return 1
+  dot::use framework.ui.screen
+  if framework.ui.screen::reads_keys; then
+    dot::use framework.ui.confirm
+    framework.ui.confirm::ask "$question" "$default"
+    return
+  fi
   read -r -p "$(framework.console.prompt::question "$question") $hint " reply || return 1
   [[ ${reply:-$default} =~ $PROMPT_YES_PATTERN ]]
 }
@@ -83,19 +91,32 @@ framework.console.prompt::secret() {
   printf '%s' "$reply"
 }
 
+# The number of the <option> picked for <question>: at a terminal that reads
+# keys, with framework.ui.select; else typed from a numbered list.
 framework.console.prompt::choice() {
-  local question="$1" option
+  local question="$1" option index=0
   shift
   framework.console.prompt::can_ask || return 1
+  dot::use framework.ui.screen
+  if framework.ui.screen::reads_keys; then
+    dot::use framework.ui.select
+    option=$(framework.ui.select::ask "$question" "$@") || return
+    for ((index = 1; index < $#; index++)); do
+      [ "${!index}" != "$option" ] || break
+    done
+    printf '%s\n' "$index"
+    return 0
+  fi
   framework.console.prompt::question "$question" >&2
   printf '\n' >&2
-  PS3="Choose 1–$# (Ctrl-D cancels): "
+  # shellcheck disable=SC2059
+  PS3=$(printf "$UI_HINT_CHOICE" "$#")
   select option in "$@"; do
     if [ -n "$option" ]; then
       printf '%s\n' "$REPLY"
       return 0
     fi
-    framework.console.output::line "Please pick a number from the list." >&2
+    framework.console.output::line "$UI_HINT_INVALID" >&2
   done
   return 1
 }

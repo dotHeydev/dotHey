@@ -219,20 +219,20 @@ Every command follows the same conventions:
 
 ## Setting up
 
-The installer only installs. `bash dot setup` puts dotdot where your harnesses read it, out of the box, for Claude Code, Codex, Cursor, GitHub Copilot, OpenCode, and `.agents/`.
+The installer places dotdot, then hands over to `bash dot setup`, which puts dotdot where your harnesses read it, out of the box, for Claude Code, Codex, Cursor, GitHub Copilot, OpenCode, and `.agents/`. With no one at a terminal, the installer links only `AGENTS.md`, so any agent finds dotdot, and names the setup command.
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/dotdot-sh/dotdot/main/install.sh | bash      # install; offers setup
+curl -fsSL https://raw.githubusercontent.com/dotdot-sh/dotdot/main/install.sh | bash      # install, then set up
 curl … | bash -s -- --harness claude,cursor --strategy combine --yes                        # install and set up
-bash dot setup                                       # detect, choose, preview, link
+bash dot setup                                       # look, ask, show the plan, apply
 bash dot setup --harness claude --strategy own --preview
 bash dot adopt --scan --json                         # what the project already holds
 ```
 
-Setup finds what each harness already holds (instructions, skills, agents, rules; `adopt --scan` also lists other top-level docs as *unsure*, for `dot-ready` to raise with you), offers the detected harnesses first, and asks one question when it finds existing skills or agents:
+Setup first looks through the project ("Getting dotdot ready for your project…"): what each harness already holds (instructions, skills, agents, rules; `adopt --scan` also lists other top-level docs as *unsure*, for `dot-ready` to raise with you). Then it asks its questions, numbered (1/4), only those that apply: which harnesses to link, the detected ones checked; what happens to existing skills and agents, when there are any; and where dotdot lives, when `.agents/` holds more than skills or is linked into. It shows the plan, condensed by what changes in your project and in dotdot, and applies it once you agree, as a list of steps ticking off. Esc, q, or Ctrl-C stops at any question, changing nothing.
 
-- **Combine** (the default): they stay where they are, and dotdot's are linked beside them.
-- **Own**: they move into `.dot/Skills/` and `.dot/Agents/` and are linked back into every chosen harness, so they're edited in `.dot/` from then on. An agent in a harness's own format is taken into dotdot's (Codex's TOML becomes Markdown). A name dotdot already uses, a link leading elsewhere, or a file that can't be read as an agent is left in place.
+- **In parallel** (`combine`, the default): they stay where they are, and dotdot's are linked beside them.
+- **Centralize** (`own`): they move into `.dot/Skills/` and `.dot/Agents/` and are linked back into every chosen harness, so they're edited in `.dot/` from then on. An agent in a harness's own format is taken into dotdot's (Codex's TOML becomes Markdown). The same item in several harnesses moves once, its identical copies replaced by links; a copy that differs, a name dotdot already uses, a link leading elsewhere, or a file that can't be read as an agent is left in place.
 
 A harness's own instructions file is never replaced: dotdot appends an import of `AGENTS.md` in that harness's syntax (`@.dot/AGENTS.md` for Claude Code), or links `AGENTS.md` where the harness reads one. Setup changes only the [links](#the-links) and lets `bash dot link` do the linking, so everything is previewed, backed up, and reversible. Run it again to change the choice: harnesses no longer chosen are unlinked. It records the choice in `setup.harnesses`, `setup.strategy`, and `setup.links`, and what only your agent can finish in `setup.pending`: the context, with own the split of your instruction files and a check that every harness reads what moved, and any unsure docs to ask you about. Your agent picks it up at its next session, confirms with you once, finishes it, and marks each item with `bash dot setup:done <item>`; the default setup leaves it only the context.
 
