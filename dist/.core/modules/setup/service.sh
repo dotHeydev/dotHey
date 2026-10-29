@@ -379,6 +379,17 @@ core.modules.setup.service::build() {
   done
 }
 
+# Centralizing: dotdot's Skills/ and Agents/ made (kept by a .gitkeep, as
+# git tracks no empty folder), and the planned items moved in.
+core.modules.setup.service::centralize() {
+  local folder
+  for folder in "$SETUP_SKILLS_DIR" "$SETUP_AGENTS_DIR"; do
+    mkdir -p -- "$DOTDOT_ROOT/$folder" && touch -- "$DOTDOT_ROOT/$folder/$KEEP_FILE" \
+      || { dot::raise "Couldn't create $DOTDOT_NAME/$folder/."; return 1; }
+  done
+  core.modules.setup.service::move
+}
+
 # Moves each planned item into dotdot; an agent in a harness's own format is
 # imported into dotdot's, and the original removed. Then the duplicates go:
 # link puts dotdot's copy in their place.

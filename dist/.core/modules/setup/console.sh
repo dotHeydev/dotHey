@@ -54,10 +54,11 @@ core.modules.setup.console::names() {
 }
 
 # The plan, condensed: link's <plan> (its --json preview), the moves own
-# makes, and dotdot's move to <dir>, as what changes in the project, then in
-# dotdot, a line per kind of change and folder.
+# makes with <strategy>, and dotdot's move to <dir>, as what changes in the project, then in
+# dotdot, a line per kind of change and folder. Status 1, saying so, when
+# everything is already in place.
 core.modules.setup.console::plan() {
-  local plan="$1" dir="$2" rows skills=0 agents=0 move skipped scope verb text previous=""
+  local plan="$1" dir="$2" strategy="$3" rows skills=0 agents=0 move skipped scope verb text previous="" folder missing=""
   for move in ${SETUP_MOVES[@]+"${SETUP_MOVES[@]}"}; do
     case "${move#*"$SETUP_TAB"}" in
       "$SETUP_AGENTS_DIR"/*) agents=$((agents + 1)) ;;
@@ -69,6 +70,12 @@ core.modules.setup.console::plan() {
   for skipped in ${SETUP_SKIPPED[@]+"${SETUP_SKIPPED[@]}"}; do
     rows="$rows"$'\n'"project${SETUP_TAB}Leave${SETUP_TAB}${skipped%%"$SETUP_TAB"*} ($(framework.console.output::paint "$UI_STYLE_MUTED" "${skipped#*"$SETUP_TAB"}"))"
   done
+  if [ "$strategy" = own ]; then
+    for folder in "$SETUP_SKILLS_DIR" "$SETUP_AGENTS_DIR"; do
+      [ -d "$DOTDOT_ROOT/$folder" ] || missing="$missing${missing:+ and }$DOTDOT_NAME/$folder/"
+    done
+    [ -z "$missing" ] || rows="$rows"$'\n'"dotdot${SETUP_TAB}Create${SETUP_TAB}$missing, for your own skills and agents"
+  fi
   if [ $((skills + agents)) -eq 1 ]; then
     move="${SETUP_MOVES[0]}"
     rows="$rows"$'\n'"dotdot${SETUP_TAB}Take in${SETUP_TAB}${move%%"$SETUP_TAB"*} as $DOTDOT_NAME/$(printf '%s' "${move#*"$SETUP_TAB"}" | cut -f1), linked back in place"
@@ -77,10 +84,9 @@ core.modules.setup.console::plan() {
   fi
   [ -z "$dir" ] || [ "$dir" = "$DOTDOT_NAME" ] || rows="$rows"$'\n'"dotdot${SETUP_TAB}Move${SETUP_TAB}dotdot to $dir/, and relink it"
   rows=$(printf '%s\n' "$rows" | grep -v '^$' || true)
-  framework.console.output::newline
   if [ -z "$rows" ]; then
-    framework.console.output::line "Everything is already in place."
-    return
+    framework.console.output::success "Everything is already in place."
+    return 1
   fi
   framework.console.output::title "Here's the plan:"
   while IFS="$SETUP_TAB" read -r scope verb text; do
@@ -174,4 +180,5 @@ core.modules.setup.console::finish() {
   fi
   framework.console.output::newline
   framework.console.output::line "$SETUP_ENDING"
+  framework.console.output::newline
 }

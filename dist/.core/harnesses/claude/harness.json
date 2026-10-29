@@ -6,7 +6,6 @@
     ".claude/"
   ],
   "instructions": {
-    "link": ".claude/CLAUDE.md",
     "existing": [
       "CLAUDE.md",
       ".claude/CLAUDE.md"

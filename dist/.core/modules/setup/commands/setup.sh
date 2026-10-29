@@ -16,6 +16,7 @@ SETUP_CHOSEN=""
 SETUP_STRATEGY=""
 SETUP_DIR=""
 SETUP_RESUME="Resume any time: bash dot setup"
+SETUP_CANCEL_INFO="Press Esc to stop at any time; nothing changes until you agree."
 
 usage() {
   cat <<EOF
@@ -52,14 +53,18 @@ Examples:
 EOF
 }
 
-# The harnesses to link, those in <detected> checked, each with what <rows>
-# say it holds.
+# The harnesses to link, those in <detected> checked: each noted as already
+# in use, with what <rows> say it holds, or as new.
 ask_harnesses() {
-  local detected="$1" rows="$2" id index=0 checked="" picked label summary labels=() ids=()
+  local detected="$1" rows="$2" id index=0 checked="" picked label note labels=() ids=()
   for id in $SETUP_IDS; do
-    label=$(core.harnesses.harness::data "$id" .name)
-    summary=$(core.modules.setup.service::summary "$id" "$rows")
-    [ -z "$summary" ] || label="$label  $(framework.console.output::paint "$UI_STYLE_MUTED" "($summary)")"
+    if [[ " $detected " == *" $id "* ]]; then
+      note=$(core.modules.setup.service::summary "$id" "$rows")
+      note="in use${note:+: $note}"
+    else
+      note="new"
+    fi
+    label="$(core.harnesses.harness::data "$id" .name)  $(framework.console.output::paint "$UI_STYLE_MUTED" "($note)")"
     labels+=("$label")
     ids+=("$id")
     index=$((index + 1))
@@ -90,10 +95,10 @@ ask_strategy() {
 
 ask_dir() {
   local choice
-  choice=$(framework.ui.select::ask "$(core.modules.setup.console::question "Where should dotdot live?")" \
-    "$DOTDOT_NAME/, where it is" "$SETUP_AGENTS_HOME/.dot/, with your other agent files") || return 1
+  choice=$(framework.ui.select::ask "$(core.modules.setup.console::question "You seem to keep your agent files in $SETUP_AGENTS_HOME/. Should dotdot live there too?")" \
+    "Yes, move it to $SETUP_AGENTS_HOME/.dot/" "No, keep it in $DOTDOT_NAME/") || return 1
   case "$choice" in
-    "$SETUP_AGENTS_HOME"/*) printf '%s\n' "$SETUP_AGENTS_HOME/.dot" ;;
+    Yes*) printf '%s\n' "$SETUP_AGENTS_HOME/.dot" ;;
     *) printf '%s\n' "$DOTDOT_NAME" ;;
   esac
 }
@@ -151,7 +156,7 @@ $(core.modules.setup.service::unsure "$all")")
 apply_step() {
   # shellcheck disable=SC2086
   case "$1" in
-    "$SETUP_LABEL_MOVE") core.modules.setup.service::move ;;
+    "$SETUP_LABEL_MOVE") core.modules.setup.service::centralize ;;
     "$SETUP_LABEL_BUILD") core.modules.setup.service::build $SETUP_CHOSEN ;;
     "$SETUP_LABEL_LINK") link_all ;;
     "$SETUP_LABEL_SAVE") save_choices ;;
@@ -198,6 +203,7 @@ handle() {
       "Name them: bash dot setup --harness <a,b> (from: ${SETUP_IDS// /, })"
     asking=true
     framework.ui.screen::on_cancel "$SETUP_RESUME"
+    framework.console.output::info "$SETUP_CANCEL_INFO"
   fi
   framework.helpers.fs::make_temp_dir SETUP_WORK || framework.console.output::fail "Couldn't create a temporary directory; please check free space and \$TMPDIR."
   if $asking; then
@@ -208,7 +214,7 @@ handle() {
   detected=$(tr '\n' ' ' < "$SETUP_WORK/detected")
   rows=$(cat -- "$SETUP_WORK/rows")
   if $asking; then
-    SETUP_STEPS=2
+    SETUP_STEPS=1
     [ -n "$SETUP_STRATEGY" ] || ! core.modules.setup.service::holds_items "$rows" || { ask_strategy=true; SETUP_STEPS=$((SETUP_STEPS + 1)); }
     [ -n "$SETUP_DIR" ] || ! core.modules.setup.service::agents_home_in_use || { ask_dir=true; SETUP_STEPS=$((SETUP_STEPS + 1)); }
     SETUP_STEP=1
@@ -229,9 +235,18 @@ handle() {
   # shellcheck disable=SC2086
   [ "$SETUP_STRATEGY" != own ] || core.modules.setup.service::plan_moves $SETUP_CHOSEN
   core.modules.setup.service::plan_map "$SETUP_CHOSEN" "$SETUP_IDS"
+  # shellcheck disable=SC2086
+  names=$(core.modules.setup.console::names $SETUP_CHOSEN)
   if ! $confirmed || $preview; then
-    plan=$(link_plan) || framework.console.output::fail "Couldn't plan the links."
-    core.modules.setup.console::plan "$plan" "$SETUP_DIR"
+    framework.console.output::newline
+    plan=$(UI_SPINNER_KEEP=false framework.ui.spinner::run "Preparing the plan…" link_plan) || framework.console.output::fail "Couldn't plan the links."
+    if ! core.modules.setup.console::plan "$plan" "$SETUP_DIR" "$SETUP_STRATEGY"; then
+      # Nothing to change on disk; the choice is still saved, once agreed to.
+      ! $preview && framework.console.prompt::can_ask || return 0
+      save_choices || framework.console.output::fail "Couldn't save the setup."
+      core.modules.setup.console::finish "$names" "$(cat -- "$SETUP_WORK/pending" 2>/dev/null)"
+      return 0
+    fi
   fi
   if $preview || { ! $confirmed && ! framework.console.prompt::can_ask; }; then
     framework.console.output::newline
@@ -240,11 +255,9 @@ handle() {
     return 0
   fi
   if ! $confirmed; then
-    ! $asking || SETUP_STEP=$((SETUP_STEP + 1))
-    framework.ui.confirm::ask "$(core.modules.setup.console::question "Apply this setup?")" y \
-      || { framework.console.output::aborted "$SETUP_RESUME"; return 1; }
+    framework.ui.confirm::ask "Apply this setup?" y || { framework.console.output::aborted "$SETUP_RESUME"; return 1; }
   fi
-  [ ${#SETUP_MOVES[@]} -eq 0 ] && [ ${#SETUP_DUPLICATES[@]} -eq 0 ] || steps+=("$SETUP_LABEL_MOVE")
+  [ "$SETUP_STRATEGY" != own ] || steps+=("$SETUP_LABEL_MOVE")
   steps+=("$SETUP_LABEL_BUILD" "$SETUP_LABEL_LINK" "$SETUP_LABEL_SAVE")
   if [ -n "$SETUP_DIR" ] && [ "$SETUP_DIR" != "$DOTDOT_NAME" ]; then
     SETUP_LABEL_RELOCATE="Move dotdot to $SETUP_DIR/"
@@ -252,8 +265,6 @@ handle() {
     # dotdot moves from under this run: it keeps printing from copies.
     framework.console.output::detach || framework.console.output::fail "Couldn't create a temporary directory; please check free space and \$TMPDIR."
   fi
-  # shellcheck disable=SC2086
-  names=$(core.modules.setup.console::names $SETUP_CHOSEN)
   framework.console.output::newline
   UI_STEPS_CURRENT=loader framework.ui.steps::run "Setting up" apply_step "${steps[@]}" \
     || framework.console.output::fail "The setup didn't finish; run it again with: bash dot setup"

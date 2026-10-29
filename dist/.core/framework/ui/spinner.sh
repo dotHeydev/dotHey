@@ -3,13 +3,14 @@
 dot::use framework.ui.screen
 
 # <command> run under <label> with a spinner turning beside it, its errors
-# printed once it's done; the label alone in plain output.
+# printed once it's done; the label alone in plain output. With
+# UI_SPINNER_KEEP=false, the label goes too.
 framework.ui.spinner::run() {
   local label="$1" errors status=0 process tick=0 drawn=false count=${#UI_SPINNER_FRAMES[@]}
   shift
   errors=$(mktemp) || return 1
   if ! framework.ui.screen::is_rich; then
-    [ -z "$label" ] || framework.console.output::emit 2 "$label"
+    [ -z "$label" ] || ! $UI_SPINNER_KEEP || framework.console.output::emit 2 "$label"
     "$@" 2>"$errors" || status=$?
     framework.console.output::emit_file 2 "$errors"
     return "$status"
@@ -26,7 +27,7 @@ framework.ui.spinner::run() {
   done
   wait "$process" || status=$?
   ! $drawn || printf '\r\033[K' >&2
-  [ -z "$label" ] || framework.console.output::emit 2 "$label"
+  [ -z "$label" ] || ! $UI_SPINNER_KEEP || framework.console.output::emit 2 "$label"
   framework.console.output::emit_file 2 "$errors"
   return "$status"
 }

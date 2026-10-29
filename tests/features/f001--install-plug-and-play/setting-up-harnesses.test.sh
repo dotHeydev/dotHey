@@ -7,7 +7,7 @@ test_setup_links_every_chosen_harness() {
   dot setup --harness claude,agents --yes
   assert_success
   assert_link_to "$SANDBOX/AGENTS.md" "$DOTDOT/AGENTS.md"
-  assert_link_to "$SANDBOX/.claude/CLAUDE.md" "$DOTDOT/AGENTS.md"
+  assert_no_file "$SANDBOX/.claude/CLAUDE.md"
   assert_link_to "$SANDBOX/.claude/skills/dot-onboard" "$DOTDOT/.core/modules/onboarding/skills/dot-onboard"
   assert_link_to "$SANDBOX/.agents/skills/dot-onboard" "$DOTDOT/.core/modules/onboarding/skills/dot-onboard"
   assert_equal "$(setting_value '.setup.harnesses[]' | tr '\n' ,)" "claude,agents"
@@ -228,4 +228,28 @@ test_setup_asks_where_dotdot_lives_only_when_agents_holds_more_than_skills() {
   ln -s ../.agents/skills "$SANDBOX/.claude/skills"
   core "$check"
   assert_success
+}
+
+test_centralizing_makes_dotdots_skills_and_agents_folders() {
+  dot setup --harness claude --strategy own --yes
+  assert_success
+  assert_file "$DOTDOT/Skills/.gitkeep"
+  assert_file "$DOTDOT/Agents/.gitkeep"
+}
+
+test_claude_imports_dotdot_into_the_claude_md_the_project_uses() {
+  own_instructions .claude/CLAUDE.md
+  dot setup --harness claude --yes
+  assert_success
+  assert_contains "$(cat "$SANDBOX/.claude/CLAUDE.md")" "@../.dot/AGENTS.md"
+  assert_no_file "$SANDBOX/CLAUDE.md"
+}
+
+test_commands_point_a_person_at_setup_until_it_ran() {
+  DOT_INTERNAL_CALL="" dot notes:create idea
+  assert_success
+  assert_contains "$ERRORS" "bash dot setup"
+  dot setup --harness agents --yes
+  DOT_INTERNAL_CALL="" dot notes:create other
+  assert_not_contains "$ERRORS" "bash dot setup"
 }

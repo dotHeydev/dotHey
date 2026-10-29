@@ -10,6 +10,8 @@ KERNEL_UNPREFIXED=""
 KERNEL_UNPREFIXED_READ=false
 # Old names that still run a command, never listed: "<old>=<new>".
 KERNEL_ALIASES=("scan:frontmatter=frontmatter:show")
+# The commands that set dotdot up, or run before it is: no reminder to.
+KERNEL_SETUP_COMMANDS=" setup setup:done adopt relocate migrate upgrade "
 
 # Each command in <directory> as "<prefix><name>|<file>|<fallback><name>":
 # the fallback is the name it takes when the first one is already taken.
@@ -336,7 +338,17 @@ kernel::run() {
       return 0
       ;;
   esac
+  kernel::suggest_setup "$name"
   handle "$@"
+}
+
+# Until setup has run (setup.harnesses is empty), a person running any other
+# <command> is told to.
+kernel::suggest_setup() {
+  ! $DOT_INTERNAL && ! $DOT_JSON || return 0
+  [[ "$KERNEL_SETUP_COMMANDS" != *" $1 "* ]] || return 0
+  [ "$(dot::setting setup.harnesses "[]" 2>/dev/null)" = "[]" ] || return 0
+  framework.console.output::info "dotdot isn't set up yet: run bash dot setup to link it where your agents read it." >&2
 }
 
 kernel::docs_section() {
@@ -360,7 +372,10 @@ kernel::wants_json() {
 kernel::handle() {
   ! kernel::wants_json "$@" || DOT_JSON=true
   case "${1-}" in
-    '' | list | -h | --help | --json) kernel::list ;;
+    '' | list | -h | --help | --json)
+      kernel::suggest_setup list
+      kernel::list
+      ;;
     version | -v | --version) kernel::print_version ;;
     help)
       shift

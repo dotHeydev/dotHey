@@ -135,6 +135,8 @@ UI_SPINNER_FRAMES=(' ·●' ' •⏺' ' ⏺•' ' ●·' ' ⏺•' ' •⏺' ' �
 UI_SPINNER_FRAMES_ASCII=(' |' ' /' ' -' " \\")
 UI_SPINNER_INTERVAL=0.07
 UI_SPINNER_GRACE_FRAMES=4
+# Whether the label stays once the command is done, or goes with the spinner.
+UI_SPINNER_KEEP=true
 
 # Words.
 UI_LABEL_YES="Yes"
