@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 
-dot::use core.modules.setup.service framework.console.output framework.helpers.json framework.helpers.text framework.ui.list
+dot::use core.modules.setup.service core.modules.setup.alias framework.console.output framework.helpers.json framework.helpers.text framework.ui.list
 
 SETUP_STEP=0
 SETUP_STEPS=0
 SETUP_VERB_WIDTH=11
 SETUP_ENDING="🚀 Build something amazing!"
+SETUP_ALIAS_TIP="Run bash dot alias:add to type dot instead of bash dot."
+SETUP_ALIAS_LINE_TIP="To type dot instead of bash dot, add this line to your shell's rc file:"
 
 # A warning for each harness whose data couldn't be read.
 core.modules.setup.console::warn_invalid() {
@@ -41,24 +43,12 @@ core.modules.setup.console::question() {
   fi
 }
 
-# The display names of <harness>..., as "A, B and C".
-core.modules.setup.console::names() {
-  local id names=() last
-  for id in "$@"; do
-    names+=("$(core.harnesses.harness::data "$id" .name)")
-  done
-  [ ${#names[@]} -gt 1 ] || { printf '%s' "${names[0]-}"; return; }
-  last="${names[${#names[@]} - 1]}"
-  unset 'names[${#names[@]}-1]'
-  printf '%s and %s' "$(IFS=,; printf '%s' "${names[*]}" | sed 's/,/, /g')" "$last"
-}
-
-# The plan, condensed: link's <plan> (its --json preview), the moves own
-# makes with <strategy>, and dotdot's move to <dir>, as what changes in the project, then in
+# The plan, condensed: link's <plan> (its --json preview), the moves centralizing
+# makes with <type>, and dotdot's move to <dir>, as what changes in the project, then in
 # dotdot, a line per kind of change and folder. Status 1, saying so, when
 # everything is already in place.
 core.modules.setup.console::plan() {
-  local plan="$1" dir="$2" strategy="$3" rows skills=0 agents=0 move skipped scope verb text previous="" folder missing=""
+  local plan="$1" dir="$2" type="$3" rows skills=0 agents=0 move skipped scope verb text previous="" folder missing=""
   for move in ${SETUP_MOVES[@]+"${SETUP_MOVES[@]}"}; do
     case "${move#*"$SETUP_TAB"}" in
       "$SETUP_AGENTS_DIR"/*) agents=$((agents + 1)) ;;
@@ -81,7 +71,7 @@ core.modules.setup.console::plan() {
   for skipped in ${SETUP_SKIPPED[@]+"${SETUP_SKIPPED[@]}"}; do
     rows="$rows"$'\n'"project${SETUP_TAB}Leave${SETUP_TAB}${skipped%%"$SETUP_TAB"*} ($(framework.console.output::paint "$UI_STYLE_MUTED" "${skipped#*"$SETUP_TAB"}"))"
   done
-  if [ "$strategy" = own ]; then
+  if [ "$type" = centralize ]; then
     for folder in "$SETUP_SKILLS_DIR" "$SETUP_AGENTS_DIR"; do
       [ -d "$DOTDOT_ROOT/$folder" ] || missing="$missing${missing:+ and }$DOTDOT_NAME/$folder/"
     done
@@ -172,7 +162,7 @@ core.modules.setup.console::items() {
   printf '%s' "$items"
 }
 
-# What own left in place, as warnings: for a run that showed no plan.
+# What centralizing left in place, as warnings: for a run that showed no plan.
 core.modules.setup.console::skipped() {
   local skipped
   for skipped in ${SETUP_SKIPPED[@]+"${SETUP_SKIPPED[@]}"}; do
@@ -180,15 +170,29 @@ core.modules.setup.console::skipped() {
   done
 }
 
-# Done: the <harnesses> set up, in green, the next step, and the send-off.
+# Done, all of it in green as the one message about the whole run, then the
+# next step (by what's left in <pending>), for a person a tip to type dot
+# without bash (bash dot alias:add, or the line itself for a shell it doesn't
+# know, with dotdot's entry in <location>), and the send-off.
 core.modules.setup.console::finish() {
-  local harnesses="$1" pending="$2"
+  local pending="$1" location="$2"
   framework.console.output::newline
-  framework.console.output::line "$(framework.console.output::paint "$UI_STYLE_SUCCESS" "$UI_ICON_SUCCESS dotdot is set up for $harnesses.")"
-  if [ -n "$pending" ]; then
+  framework.console.output::line "$(framework.console.output::paint "$UI_STYLE_SUCCESS" "$UI_ICON_SUCCESS dotdot is set up for the selected harnesses.")"
+  if [ -n "$pending" ] && framework.console.output::is_agent; then
+    framework.console.output::next "Finish what's left (setup.pending in bash dot adopt --scan --json) with the dot-ready skill."
+  elif [ -n "$pending" ]; then
     framework.console.output::next "Now open your coding agent and tell it you're using dotdot; it finishes the rest."
   else
     framework.console.output::next "Now open your coding agent; dotdot is ready for it."
+  fi
+  if ! framework.console.output::is_unattended; then
+    framework.console.output::newline
+    if [ -n "$(core.modules.setup.alias::shell)" ]; then
+      framework.console.output::tip "$SETUP_ALIAS_TIP"
+    else
+      framework.console.output::tip "$SETUP_ALIAS_LINE_TIP"
+      framework.console.output::line "$UI_INDENT$(framework.console.output::code "$(core.modules.setup.alias::line "" "$location/${DOT_BIN#"$DOTDOT_ROOT"/}")")"
+    fi
   fi
   framework.console.output::newline
   framework.console.output::line "$SETUP_ENDING"

@@ -26,7 +26,7 @@ test_install_without_a_person_links_only_agents_md() {
 }
 
 test_install_with_setup_flags_runs_setup() {
-  installer --harness agents --strategy combine --yes
+  installer --harness agents --type parallel --yes
   assert_success
   assert_equal "$(setting_value '.setup.harnesses[]' "$SANDBOX/project/.dot/dot.json")" "agents"
   assert_link_to "$SANDBOX/project/.agents/skills/dot-onboard" "$SANDBOX/project/.dot/.core/modules/onboarding/skills/dot-onboard"

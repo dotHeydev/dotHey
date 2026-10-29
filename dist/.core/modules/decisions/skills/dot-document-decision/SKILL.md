@@ -1,8 +1,10 @@
 ---
 name: dot-document-decision
 description: Turns a project decision the user has made into a documented decision in .dot/Decisions/, following the bundled decision template — after establishing what they actually mean, which existing decisions bear on it, and which built features it disturbs. Use whenever the user settles a question about how the project works and wants it written down: "we've decided to X", "from now on we always Y", "let's standardise on Z", "document this decision", "record an ADR", or when they state a rule or a tradeoff as though it is now settled. Reach for it even when they don't use the word "decision" — a sentence in the shape of "we should always/never ..." is one.
+license: MIT
 metadata:
   internal: true
+  author: dotdot
 ---
 
 # Document a Decision

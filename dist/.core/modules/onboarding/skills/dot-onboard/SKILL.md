@@ -1,8 +1,10 @@
 ---
 name: dot-onboard
 description: Onboards you to this project the way a team would onboard a new engineer — what the project is, the rules that bind your work, where the context lives, which tools and skills you have, and how work flows from feature to plan to tests to code. Run this at the start of a session, immediately after a context compaction, and whenever you are spawned as a subagent with no prior context — before touching code, answering a question about the codebase, or picking up a task. If you are unsure whether you have been onboarded in this session, you have not; run it.
+license: MIT
 metadata:
   internal: true
+  author: dotdot
 ---
 
 # Onboarding
@@ -13,10 +15,10 @@ Output exactly: 👋👋👋 STARTING MY ONBOARDING
 
 ## 0. Is dotdot set up and ready?
 
-Run `bash dot adopt --scan --json` once and read its `setup`: the user's choices (`harnesses`, `strategy`, `location`) and what setup left for you (`pending`). Never ask again for what is already chosen there.
+Run `bash dot adopt --scan --json` once and read its `setup`: the user's choices (`harnesses`, `type`, `location`) and what setup left for you (`pending`). Never ask again for what is already chosen there.
 
 - **`pending` lists items:** the user installed and chose; dotdot did its part; finishing is yours. In one plain message, say what they chose and what is left (e.g. "You set dotdot up for Claude Code and Cursor, owning your files. I'll finish it: write the context, propose how to split CLAUDE.md, ask about IDEAS.md, and check every harness reads what moved. Go ahead?"). Once they agree, or their message already asks for it, invoke `dot-ready`, which works through `pending`, and finish this onboarding once it's done.
-- **`harnesses` is empty:** dotdot isn't linked to any harness yet (the user chose to set up with you, or later). Ask the choices setup needs in one Interview Tool round: the harnesses (those in `detected` first), and, only when the scan lists skills or agents, combine or own (combine first). Then hand them the exact command to run in their terminal (`dot-tool-setup`), e.g. `bash dot setup --harness claude,cursor --strategy combine`; once they ran it, continue with the case above.
+- **`harnesses` is empty:** dotdot isn't linked to any harness yet (the user chose to set up with you, or later). Ask the choices setup needs in one Interview Tool round: the harnesses (those in `detected` first), and, only when the scan lists skills or agents, centralize or in parallel. Then apply it with `bash dot setup` (its `--help --json` says how), e.g. `bash dot setup --harness claude,cursor --type centralize --yes`, and continue with the case above.
 - **Neither, and `state.isReady` is `true`:** dotdot is set up and ready. Go on.
 - **Neither, and it is not:** offer `dot-ready` in one plain message, as above; if they decline, keep in mind that files marked `ignore: true` hold placeholders, not facts.
 
@@ -37,7 +39,7 @@ Everything that governs your work lives in dotdot (`.dot/`):
 
 ## 3. Read the rest on demand
 
-Don't read the other context files upfront: it wastes the context you need for the actual work. Each one declares a `description` in its frontmatter saying when it's the file to open, so survey with the `dot-tool-scan-frontmatter` skill and read in full only what the task calls for. Survey `.dot/Features/` and `.dot/Decisions/` the same way before you assume something is undocumented.
+Don't read the other context files upfront: it wastes the context you need for the actual work. Each one declares a `description` in its frontmatter saying when it's the file to open, so survey with `bash dot frontmatter:show <directory>` and read in full only what the task calls for. Survey `.dot/Features/` and `.dot/Decisions/` the same way before you assume something is undocumented.
 
 ## 4. You have tools and skills — use them
 

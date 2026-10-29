@@ -6,7 +6,7 @@
 # same owner, never falling back to the gh login. When every route fails, one
 # error names each attempt, its reason, and what to do.
 
-dot::use framework.integrations.github.internal.cli framework.integrations.github.internal.api
+dot::use framework.integrations.github.internal.cli framework.integrations.github.internal.api framework.helpers.fs
 
 GITHUB_TOKEN_KEY="DOT_GH_TOKEN"
 
@@ -61,7 +61,7 @@ framework.integrations.github.internal.route::run() {
   local what="$1" operation="$2" token installed=false logged_in=false who errors output attempts="" reason=""
   shift 2
   token=$(dot::secret "$GITHUB_TOKEN_KEY" 2>/dev/null) || token=""
-  errors=$(mktemp) || return 1
+  framework.helpers.fs::make_temp_file errors || return 1
   who="as your gh login"
   [ -z "$token" ] || who="as $GITHUB_TOKEN_KEY's owner"
   if framework.integrations.github.internal.cli::is_installed; then

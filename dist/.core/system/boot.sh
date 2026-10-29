@@ -30,6 +30,11 @@ DOT_MODULE_HOME=""
 SYSTEM_DIR=$(CDPATH='' cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 CORE_DIR=$(dirname -- "$SYSTEM_DIR")
 FRAMEWORK_DIR="$CORE_DIR/framework"
+# The fallback for temporary files (see FS_TEMP_FALLBACK below): .tmp/ in
+# .core/ for most runs, in dotdot's own folder for an upgrade (which replaces
+# .core/), and .dotdot_tmp/ at the project's root for a run that moves dotdot.
+DOT_TEMP_DIR=".tmp"
+DOT_PROJECT_TEMP_DIR=".dotdot_tmp"
 MODULES_DIR="$CORE_DIR/modules"
 DOTDOT_ROOT=$(dirname -- "$CORE_DIR")
 # The project is the nearest directory above dotdot whose dot entry runs this
@@ -183,7 +188,40 @@ dot::physical_to() {
   printf -v "$1" '%s' "$dot_physical_path"
 }
 
-# The .env prefix of a plugin's secrets: DOT_ACME_WIDGETS__ for acme/widgets.
+# Each installed plugin as "<name> <key>": its GitHub name, and the key its
+# folder gives it, <owner>/<directory> (the name's own when the lock records
+# no directory).
+dot::plugin_keys() {
+  local entry name directory
+  [ -f "$PLUGINS_LOCK" ] || return 0
+  dot::use framework.helpers.json
+  while IFS= read -r entry; do
+    name=$(framework.helpers.json::field "$entry" .id)
+    directory=$(framework.helpers.json::field "$entry" .directory)
+    printf '%s %s/%s\n' "$name" "${name%%/*}" "${directory:-${name#*/}}"
+  done < <(framework.helpers.json::values "$(cat -- "$PLUGINS_LOCK")" '.plugins[]')
+}
+
+# The key of the plugin named <name>; <name> itself when none is installed.
+dot::plugin_key() {
+  local name key
+  while read -r name key; do
+    [ "$name" != "$1" ] || { printf '%s\n' "$key"; return; }
+  done < <(dot::plugin_keys)
+  printf '%s\n' "$1"
+}
+
+# The name of the plugin whose key is <key>; <key> itself when none is.
+dot::plugin_name() {
+  local name key
+  while read -r name key; do
+    [ "$key" != "$1" ] || { printf '%s\n' "$name"; return; }
+  done < <(dot::plugin_keys)
+  printf '%s\n' "$1"
+}
+
+# The .env prefix of a plugin's secrets, from its key: DOT_ACME_WIDGETS__ for
+# acme/widgets.
 dot::env_prefix() {
   printf 'DOT_%s_%s__' "${1%%/*}" "${1#*/}" | tr 'a-z-' 'A-Z_'
 }
@@ -354,13 +392,13 @@ dot::get_setting() {
   fi
 }
 
-# The plugin whose code called (<file>), or a stop: plugin settings are for
+# The name of the plugin whose code called (<file>), or a stop: plugin settings are for
 # plugin code only.
 dot::calling_plugin() {
   local plugin
   plugin=$(dot::plugin_of_caller "$1")
   [ -n "$plugin" ] || { dot::raise "dot::plugin_setting and dot::save_plugin_setting only work from a plugin's own code."; return 1; }
-  printf '%s\n' "$plugin"
+  dot::plugin_name "$plugin"
 }
 
 # dot::setting <path> [default]: one of dotdot's settings (see
@@ -539,7 +577,6 @@ dot::use_timezone() {
   framework.console.output::warn "Unknown timezone \"$zone\" in $(dot::relative "$SETTINGS_FILE") settings (general.timezone); using the system's."
 }
 
-DOT_ERROR_FILE=$(mktemp)
 trap 'dot::finish' EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
@@ -566,10 +603,17 @@ dot::seal() {
   readonly BASE DOTDOT_ROOT DOTDOT_NAME CORE_DIR SYSTEM_DIR FRAMEWORK_DIR MODULES_DIR BIN_DIR DOT_BIN \
     PLUGINS_DIR PLUGINS_LOCK SETTINGS_FILE SETTINGS_DEFAULTS HOST_ENV_FILE LINK_MAP_SEPARATOR USER_FILE USER_EXAMPLE_FILE ENTRY_LINK \
     EXIT_FAILURE EXIT_USAGE EXIT_NOT_FOUND EXIT_PRECONDITION DOT_PACKAGES DOT_PRIVATE_SEGMENT DOT_MODULE_PATTERN DOT_COMMAND_PATTERN DOT_COMMAND_MAX_DEPTH DOT_CORE_COMMAND_MAX_DEPTH DOT_INTERNAL \
-    GUARDS_DOCUMENT_PATTERN GUARDS_SEGMENT_PATTERN GUARDS_SETTING_PATTERN GUARDS_RESERVED_ENV_PATTERN GUARDS_ENV_KEY_PATTERN GUARDS_JSON_ONLY_SETTINGS \
+    GUARDS_DOCUMENT_PATTERN GUARDS_SEGMENT_PATTERN GUARDS_OWNER_PATTERN GUARDS_REPOSITORY_PATTERN GUARDS_SETTING_PATTERN GUARDS_RESERVED_ENV_PATTERN GUARDS_ENV_KEY_PATTERN GUARDS_JSON_ONLY_SETTINGS \
     GUARDS_DOTDOT
   readonly -a SYSTEM_PARTS CORE_MODULES DOT_RESERVED_COMMANDS
 }
 
+# Temporary files fall back to .core/.tmp/ (git-ignored) when the system's
+# temporary folder can't take them; a run that moves dotdot points it
+# elsewhere.
+FS_TEMP_FALLBACK="$CORE_DIR/$DOT_TEMP_DIR"
+dot::use framework.helpers.fs
+# The error log lives through every run, those that move dotdot included.
+framework.helpers.fs::make_temp_file DOT_ERROR_FILE "$BASE/$DOT_PROJECT_TEMP_DIR" || dot::fail_early "Couldn't create a temporary file; please check free space and \$TMPDIR."
 . "$SYSTEM_DIR/kernel.sh"
 dot::seal

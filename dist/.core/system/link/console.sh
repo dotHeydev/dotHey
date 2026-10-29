@@ -177,7 +177,7 @@ core.system.link.console::plugin_links() {
     shift
   done
   [ -n "$plugin" ] || framework.console.args::invalid "Which plugin? Please give it as <owner>/<name>."
-  guards::plugin_id "$plugin" || framework.console.args::invalid "\"$plugin\" isn't a plugin name; please use <owner>/<name>."
+  guards::plugin_name "$plugin" || framework.console.args::invalid "\"$plugin\" isn't a plugin name; please use <owner>/<name>."
   ! $confirmed || guards::skip_confirmation \
     || framework.console.output::fail_as "$EXIT_PRECONDITION" "-y only works in a terminal, so nothing changed unseen." "$OUTPUT_MANUAL_RUN bash dot plugins:$mode $plugin"
   core.system.link.service::has_map \

@@ -1,8 +1,10 @@
 ---
 name: dot-create-task
 description: Turns a description of a piece of work into a documented task, following the bundled task template, and creates it with bash dot tasks:create in whichever service the project uses (plain files or GitHub issues). Use whenever the user wants something tracked as a task — "add a task for X", "make that a task", "track this", "put it on the list", "we need to do Y later" — or asks to break a feature or note into tasks. Documents only; never starts the work.
+license: MIT
 metadata:
   internal: true
+  author: dotdot
 ---
 
 # Create a Task

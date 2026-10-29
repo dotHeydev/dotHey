@@ -4,7 +4,7 @@
   },
   "setup": {
     "harnesses": [],
-    "strategy": "combine",
+    "type": "parallel",
     "links": {},
     "pending": [],
     "done": []
@@ -21,7 +21,7 @@
   "links": {
     "@dot:AGENTS.md": ["AGENTS.md"],
     "append": {},
-    "remove": {},
+    "skip": {},
     "inactive": {}
   },
   "release": {

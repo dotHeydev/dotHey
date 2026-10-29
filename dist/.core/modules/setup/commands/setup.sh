@@ -13,7 +13,7 @@ SETUP_LABEL_LINK="Link dotdot where your harnesses read it"
 SETUP_LABEL_SAVE="Save your choices"
 SETUP_LABEL_RELOCATE=""
 SETUP_CHOSEN=""
-SETUP_STRATEGY=""
+SETUP_TYPE=""
 SETUP_DIR=""
 SETUP_RESUME="Resume any time: bash dot setup"
 SETUP_CANCEL_INFO="Press Esc to stop at any time; nothing changes until you agree."
@@ -23,34 +23,34 @@ usage() {
   cat <<EOF
 Finds the harnesses the project uses and what they already hold, then links
 dotdot where the chosen ones read it: AGENTS.md (or an import into their own
-instructions file), and dotdot's skills and agents. In parallel (combine),
-the project's own skills and agents stay where they are; centralized (own),
-they move into $DOTDOT_NAME/Skills/ and $DOTDOT_NAME/Agents/ and are linked back.
+instructions file), and dotdot's skills and agents. In parallel, the
+project's own skills and agents stay where they are; centralized, they move
+into $DOTDOT_NAME/Skills/ and $DOTDOT_NAME/Agents/ and are linked back.
 It shows the plan and asks before changing anything; with no one at a
 terminal to ask, it only shows the plan. Run it again to change the choice:
 harnesses no longer chosen are unlinked.
 
 Usage:
-  bash dot setup [--harness <a,b>] [--strategy combine|own] [--dir <path>]
+  bash dot setup [--harness <a,b>] [--type parallel|centralize] [--dir <path>]
                  [--preview] [-y, --yes]
 
 Options:
   --harness <a,b>       The harnesses to link: $(core.harnesses.harness::ids | tr '\n' ' ')
                         Without it, a terminal asks, the detected ones checked.
-  --strategy <name>     combine (the default): in parallel, the project's files
-                        stay where they are. own: centralized, its skills and
-                        agents move into dotdot.
+  --type <name>         parallel (the default): the project's skills and
+                        agents stay where they are. centralize: they move
+                        into dotdot and are linked back.
   --dir <path>          Where dotdot lives afterwards: $DOTDOT_NAME (now) or
                         .agents/.dot; see bash dot relocate.
   --preview             Show the plan, and stop. Also --dry-run.
-  -y, --yes             Apply without asking. Only at a terminal, or when
-                        dotdot itself runs it.
+  -y, --yes             Apply without asking: at a terminal, for an AI agent,
+                        or when dotdot itself runs it.
   -h, --help            Show this help.
 
 Examples:
   bash dot setup
-  bash dot setup --harness claude,cursor --strategy combine --yes
-  bash dot setup --harness claude --strategy own --preview
+  bash dot setup --harness claude,cursor --type parallel --yes
+  bash dot setup --harness claude --type centralize --preview
 EOF
 }
 
@@ -84,14 +84,14 @@ ask_harnesses() {
   done <<< "$picked"
 }
 
-ask_strategy() {
+ask_type() {
   local choice
   choice=$(framework.ui.select::ask "$(core.modules.setup.console::question "How should dotdot treat your own skills and agents?")" \
-    "In parallel: they stay where they are, beside dotdot's" \
-    "Centralize: they move into $DOTDOT_NAME/ and are linked back") || return 1
+    "Centralize: they move into $DOTDOT_NAME/ and are linked back" \
+    "In parallel: they stay where they are, beside dotdot's") || return 1
   case "$choice" in
-    Centralize*) printf 'own\n' ;;
-    *) printf 'combine\n' ;;
+    Centralize*) printf 'centralize\n' ;;
+    *) printf 'parallel\n' ;;
   esac
 }
 
@@ -142,16 +142,17 @@ link_all() {
   dot::raise "Linking didn't finish." "bash dot link shows what's left."
 }
 
-# The choice saved, and what is left for the agent, also into
-# SETUP_WORK/pending for the send-off.
+# The choice saved, the dot entry in place, and what is left for the agent,
+# also into SETUP_WORK/pending for the send-off.
 save_choices() {
   local all pending
   # shellcheck disable=SC2086
   all=$(core.modules.setup.service::scan $SETUP_IDS)
-  pending=$(core.modules.setup.service::pending "$SETUP_STRATEGY" "$all
+  pending=$(core.modules.setup.service::pending "$SETUP_TYPE" "$all
 $(core.modules.setup.service::unsure "$all")")
   printf '%s' "$pending" > "$SETUP_WORK/pending"
-  core.modules.setup.service::save "$SETUP_CHOSEN" "$SETUP_STRATEGY" "$pending"
+  core.modules.setup.service::entry_link \
+    && core.modules.setup.service::save "$SETUP_CHOSEN" "$SETUP_TYPE" "$pending"
 }
 
 # One step of applying the setup, by its label.
@@ -167,7 +168,7 @@ apply_step() {
 }
 
 handle() {
-  local harnesses="" preview=false confirmed=false asking=false ask_strategy=false ask_dir=false id detected rows plan="" names steps=()
+  local harnesses="" preview=false confirmed=false asking=false ask_type=false ask_dir=false id detected rows plan="" steps=()
   while [ $# -gt 0 ]; do
     case "$1" in
       --harness)
@@ -176,10 +177,10 @@ handle() {
         [ -n "$harnesses" ] || framework.console.args::invalid "--harness needs at least one harness."
         shift
         ;;
-      --strategy)
+      --type)
         framework.console.args::require_value "$@"
-        core.modules.setup.service::is_strategy "$2" || framework.console.args::invalid "--strategy is combine or own (got $2)."
-        SETUP_STRATEGY="$2"
+        core.modules.setup.service::is_type "$2" || framework.console.args::invalid "--type is parallel or centralize (got $2)."
+        SETUP_TYPE="$2"
         shift
         ;;
       --dir)
@@ -193,7 +194,8 @@ handle() {
     esac
     shift
   done
-  ! $confirmed || guards::skip_confirmation \
+  # An agent may set dotdot up unattended, as the user asked it to.
+  ! $confirmed || guards::skip_confirmation || framework.console.output::is_agent \
     || framework.console.output::fail_as "$EXIT_PRECONDITION" "-y only works in a terminal, so nothing changed unseen." "$OUTPUT_MANUAL_RUN bash dot setup"
   core.modules.setup.service::harnesses
   core.modules.setup.console::warn_invalid
@@ -207,6 +209,8 @@ handle() {
     framework.ui.screen::on_cancel "$SETUP_RESUME"
     framework.ui.message::info "$SETUP_CANCEL_INFO" "$SETUP_RERUN_INFO"
   fi
+  # Setup may move dotdot (--dir), so a fallback for its files can't be in it.
+  FS_TEMP_FALLBACK="$BASE/$DOT_PROJECT_TEMP_DIR"
   framework.helpers.fs::make_temp_dir SETUP_WORK || framework.console.output::fail "Couldn't create a temporary directory; please check free space and \$TMPDIR."
   if $asking; then
     framework.ui.spinner::run "Getting dotdot ready for your project…" core.modules.setup.service::assess "$SETUP_WORK"
@@ -219,13 +223,13 @@ handle() {
   rows=$(cat -- "$SETUP_WORK/rows")
   if $asking; then
     SETUP_STEPS=1
-    [ -n "$SETUP_STRATEGY" ] || ! core.modules.setup.service::holds_items "$rows" || { ask_strategy=true; SETUP_STEPS=$((SETUP_STEPS + 1)); }
+    [ -n "$SETUP_TYPE" ] || ! core.modules.setup.service::holds_items "$rows" || { ask_type=true; SETUP_STEPS=$((SETUP_STEPS + 1)); }
     [ -n "$SETUP_DIR" ] || ! core.modules.setup.service::agents_home_in_use || { ask_dir=true; SETUP_STEPS=$((SETUP_STEPS + 1)); }
     SETUP_STEP=1
     harnesses=$(ask_harnesses "$detected" "$rows") || exit "$EXIT_PRECONDITION"
-    if $ask_strategy; then
+    if $ask_type; then
       SETUP_STEP=$((SETUP_STEP + 1))
-      SETUP_STRATEGY=$(ask_strategy) || exit "$EXIT_PRECONDITION"
+      SETUP_TYPE=$(ask_type) || exit "$EXIT_PRECONDITION"
     fi
     if $ask_dir; then
       SETUP_STEP=$((SETUP_STEP + 1))
@@ -235,20 +239,18 @@ handle() {
     harnesses="$detected"
   fi
   SETUP_CHOSEN="${harnesses% }"
-  SETUP_STRATEGY="${SETUP_STRATEGY:-$SETUP_DEFAULT_STRATEGY}"
+  SETUP_TYPE="${SETUP_TYPE:-$SETUP_DEFAULT_TYPE}"
   # shellcheck disable=SC2086
-  [ "$SETUP_STRATEGY" != own ] || core.modules.setup.service::plan_moves $SETUP_CHOSEN
+  [ "$SETUP_TYPE" != centralize ] || core.modules.setup.service::plan_moves $SETUP_CHOSEN
   core.modules.setup.service::plan_map "$SETUP_CHOSEN" "$SETUP_IDS"
-  # shellcheck disable=SC2086
-  names=$(core.modules.setup.console::names $SETUP_CHOSEN)
   if ! $confirmed || $preview; then
     framework.console.output::newline
     plan=$(UI_SPINNER_KEEP=false framework.ui.spinner::run "Preparing the plan…" link_plan) || framework.console.output::fail "Couldn't plan the links."
-    if ! core.modules.setup.console::plan "$plan" "$SETUP_DIR" "$SETUP_STRATEGY"; then
+    if ! core.modules.setup.console::plan "$plan" "$SETUP_DIR" "$SETUP_TYPE"; then
       # Nothing to change on disk; the choice is still saved, once agreed to.
       ! $preview && framework.console.prompt::can_ask || return 0
       save_choices || framework.console.output::fail "Couldn't save the setup."
-      core.modules.setup.console::finish "$names" "$(cat -- "$SETUP_WORK/pending" 2>/dev/null)"
+      core.modules.setup.console::finish "$(cat -- "$SETUP_WORK/pending" 2>/dev/null)" "${SETUP_DIR:-$DOTDOT_NAME}"
       return 0
     fi
   fi
@@ -261,7 +263,7 @@ handle() {
   if ! $confirmed; then
     framework.ui.confirm::ask "Apply this setup?" y || { framework.console.output::aborted "$SETUP_RESUME"; return 1; }
   fi
-  [ "$SETUP_STRATEGY" != own ] || steps+=("$SETUP_LABEL_MOVE")
+  [ "$SETUP_TYPE" != centralize ] || steps+=("$SETUP_LABEL_MOVE")
   steps+=("$SETUP_LABEL_BUILD" "$SETUP_LABEL_LINK" "$SETUP_LABEL_SAVE")
   if [ -n "$SETUP_DIR" ] && [ "$SETUP_DIR" != "$DOTDOT_NAME" ]; then
     SETUP_LABEL_RELOCATE="Move dotdot to $SETUP_DIR/"
@@ -273,5 +275,5 @@ handle() {
   UI_STEPS_CURRENT=loader framework.ui.steps::run "Setting up" apply_step "${steps[@]}" \
     || framework.console.output::fail "The setup didn't finish; run it again with: bash dot setup"
   [ -n "$plan" ] || core.modules.setup.console::skipped
-  core.modules.setup.console::finish "$names" "$(cat -- "$SETUP_WORK/pending" 2>/dev/null)"
+  core.modules.setup.console::finish "$(cat -- "$SETUP_WORK/pending" 2>/dev/null)" "${SETUP_DIR:-$DOTDOT_NAME}"
 }

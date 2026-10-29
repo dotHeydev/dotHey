@@ -277,9 +277,12 @@ framework.console.output::created() {
   framework.console.output::detail "$path"
 }
 
-# A side note: light blue, its text in italics.
+# A side note: its icon in the theme's info style.
+# A side note: its icon in the theme's info style. Under --json, a notice on
+# stderr (json_message), so stdout keeps only the result.
 framework.console.output::info() {
-  framework.console.output::emit 1 "$(framework.console.output::paint "$UI_STYLE_INFO" "$(framework.console.output::bold "$UI_ICON_INFO") $(framework.console.output::italic "$*")")"
+  [ "${DOT_JSON-}" != true ] || { framework.console.output::json_message notice "$*"; return; }
+  framework.console.output::emit 1 "$(framework.console.output::paint "$UI_STYLE_INFO" "$UI_ICON_INFO") $*"
 }
 
 framework.console.output::tip() {
@@ -292,6 +295,7 @@ framework.console.output::detail() {
 
 # The next step to take, under the message it follows.
 framework.console.output::next() {
+  [ "${DOT_JSON-}" != true ] || { framework.console.output::json_message next "$*"; return; }
   framework.console.output::emit 1 "$UI_INDENT$(framework.console.output::paint "$UI_STYLE_NEXT" "$UI_ICON_NEXT") $*"
 }
 
@@ -322,6 +326,7 @@ framework.console.output::item() {
 
 # A warning, all of it yellow.
 framework.console.output::warn() {
+  [ "${DOT_JSON-}" != true ] || { framework.console.output::json_message warning "$*"; return; }
   framework.console.output::emit 2 "$(framework.console.output::paint "$UI_STYLE_WARNING" "$UI_ICON_WARNING $*")"
 }
 
@@ -363,6 +368,17 @@ framework.console.output::json_error() {
     "$code" "$status" "$(framework.helpers.json::string "$message")" "$run" "$next" >&2
 }
 
+# A diagnostic under --json, one line of JSON on stderr, as an error is:
+# {"<kind>": {"message", "run"}} for a warning, notice, or next step; "run" is
+# the dotdot command in it, or null.
+framework.console.output::json_message() {
+  local kind="$1" message run=null
+  dot::use framework.helpers.json
+  message=$(framework.helpers.secrets::mask "$(framework.console.output::plain "$2")")
+  [[ "$message" != *"bash dot "* ]] || run=$(framework.helpers.json::string "bash dot ${message#*bash dot }")
+  printf '{"%s":{"message":%s,"run":%s}}\n' "$kind" "$(framework.helpers.json::string "$message")" "$run" >&2
+}
+
 # error, then exit <status> (one of EXIT_*).
 framework.console.output::fail_as() {
   local OUTPUT_ERROR_STATUS="$1"
@@ -384,6 +400,7 @@ framework.console.output::cancelled() {
   for step in "$@"; do
     framework.console.output::next "$step" >&2
   done
+  printf '\n' >&2
 }
 
 framework.console.output::aborted() {

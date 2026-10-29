@@ -90,7 +90,7 @@ test_local_plugin_repos_install_as_committed_and_record_their_commit() {
   commit=$(git -C "$SANDBOX/widgets" rev-parse HEAD)
   printf 'not committed\n' > "$SANDBOX/widgets/dotdot/context/DRAFT.md"
   add_plugin acme/widgets widgets
-  assert_contains "$(cat "$DOTDOT/.plugins/plugins-lock.json")" "{\"id\": \"acme/widgets\", \"origin\": \"path:widgets\", \"ref\": \"main\", \"commit\": \"$commit\"}"
+  assert_contains "$(cat "$DOTDOT/.plugins/plugins-lock.json")" "{\"id\": \"acme/widgets\", \"origin\": \"path:widgets\", \"ref\": \"main\", \"commit\": \"$commit\", \"directory\": \"widgets\"}"
   assert_no_file "$DOTDOT/.plugins/acme/widgets/context/DRAFT.md"
   core "dot::use core.system.plugins.service; core.system.plugins.service::fetch acme/widgets nope widgets"
   assert_failure
@@ -244,8 +244,8 @@ test_lock_keeps_plugin_names_apart() {
   add_plugin acme/x-y other
   assert_equal "$(cat "$DOTDOT/.plugins/plugins-lock.json")" '{
   "plugins": [
-    {"id": "acme-x/y", "origin": "path:y", "ref": "-", "commit": "-"},
-    {"id": "acme/x-y", "origin": "path:other", "ref": "-", "commit": "-"}
+    {"id": "acme-x/y", "origin": "path:y", "ref": "-", "commit": "-", "directory": "y"},
+    {"id": "acme/x-y", "origin": "path:other", "ref": "-", "commit": "-", "directory": "x-y"}
   ]
 }'
   core "dot::use core.system.plugins.manifest
@@ -326,9 +326,9 @@ theirs
   assert_equal "$(cat "$SANDBOX/mine.json")" '{"mine": true}'
   dot link -y
   assert_success
-  add_entry remove "@plugin:acme.widgets:stubs" widgets.conf
-  add_entry remove "@plugin:acme.widgets:stubs" conf/fresh.conf
-  add_entry remove "@plugin:acme.widgets:stubs" settings.json
+  add_entry skip "@plugin:acme.widgets:stubs" widgets.conf
+  add_entry skip "@plugin:acme.widgets:stubs" conf/fresh.conf
+  add_entry skip "@plugin:acme.widgets:stubs" settings.json
   dot link -y
   assert_success
   assert_equal "$(cat "$SANDBOX/widgets.conf")" "mine"
@@ -569,4 +569,89 @@ test_plugins_list_json_new_into_and_add_preview() {
   assert_equal "$(json_value "$OUTPUT" '.[0].name')" acme/widgets
   dot plugins:update nobody/here
   assert_equal "$STATUS" 4
+}
+
+test_plugin_remove_takes_its_settings_with_it() {
+  mkdir -p "$SANDBOX/widgets/dotdot"
+  printf '{"requires": 3, "description": "d", "settings": {"mode": "fast"}}\n' > "$SANDBOX/widgets/dotdot/plugin.json"
+  add_plugin acme/widgets widgets
+  core "dot::use core.system.plugins.service; core.system.plugins.service::uninstall acme/widgets"
+  assert_success
+  assert_equal "$(core "dot::use framework.helpers.json; framework.helpers.json::encoded \"\$(cat '$DOTDOT/dot.json')\" '.plugins[\"acme/widgets\"]'"; printf '%s' "$OUTPUT")" null
+}
+
+test_a_plugin_is_read_from_its_name_or_its_github_url_exactly() {
+  local given expected
+  while IFS='|' read -r given expected; do
+    core "dot::use core.system.plugins.manifest
+      id=\$(core.system.plugins.manifest::id '$given') || { printf refused; exit 0; }
+      core.system.plugins.manifest::parse '$given'
+      printf '%s %s %s' \"\$id\" \"\$PLUGIN_REPOSITORY\" \"\$PLUGIN_SPEC_REF\""
+    assert_equal "$OUTPUT" "$expected"
+  done <<'CASES'
+acme/Widgets.git|acme/widgets acme/Widgets 
+acme/my.plugin|acme/my.plugin acme/my.plugin 
+acme/my_plugin@release/v1@2|acme/my_plugin acme/my_plugin release/v1@2
+acme/_w|acme/_w acme/_w 
+acme/w@fix#12|acme/w acme/w fix#12
+https://github.com/acme/widgets/?tab=readme#top|acme/widgets acme/widgets 
+https://github.com/acme/widgets/tree/feature/a-b|acme/widgets acme/widgets feature/a-b
+https://github.com/acme/widgets/commit/0123abc|acme/widgets acme/widgets 0123abc
+git@github.com:acme/widgets.git|acme/widgets acme/widgets 
+https://gitlab.com/acme/widgets|refused
+acme/w/blob/main/README.md|refused
+acme/..|refused
+-acme/w|refused
+acme-/w|refused
+acme--x/w|refused
+acme/w@|refused
+CASES
+}
+
+test_names_differing_only_in_dots_dashes_or_underscores_are_different_plugins() {
+  local plugin
+  for plugin in acme/my-plg acme/my.plg acme/my_plg; do
+    mkdir -p "$SANDBOX/src/$plugin/dotdot"
+    printf '{"requires": 3, "description": "%s", "settings": {"mode": "x"}}\n' "$plugin" > "$SANDBOX/src/$plugin/dotdot/plugin.json"
+    add_plugin "$plugin" "src/$plugin"
+  done
+  core "dot::use core.system.plugins.manifest; core.system.plugins.manifest::installed"
+  assert_equal "$OUTPUT" $'acme/my-plg\nacme/my.plg\nacme/my_plg'
+  assert_file "$DOTDOT/.plugins/acme/my-plg/plugin.json"
+  assert_equal "$(find "$DOTDOT/.plugins/acme" -mindepth 1 -maxdepth 1 -type d -name 'my-plg---*' | wc -l | tr -d ' ')" 2
+  assert_equal "$(core "dot::use framework.helpers.json; framework.helpers.json::keys \"\$(cat '$DOTDOT/dot.json')\" .plugins" ; printf '%s' "$OUTPUT" | sort | paste -sd ' ' -)" "acme/my-plg acme/my.plg acme/my_plg"
+}
+
+test_a_name_in_any_case_is_the_same_plugin() {
+  mkdir -p "$SANDBOX/src/dotdot"
+  printf '{"requires": 3, "description": "d"}\n' > "$SANDBOX/src/dotdot/plugin.json"
+  add_plugin acme/myplg src
+  core "dot::use core.system.plugins.manifest; core.system.plugins.manifest::lock_entry \$(core.system.plugins.manifest::id acme/mYpLg)"
+  assert_success
+  core "dot::use core.system.plugins.manifest; core.system.plugins.manifest::id https://github.com/ACME/MyPlg"
+  assert_equal "$OUTPUT" acme/myplg
+}
+
+test_a_plugin_in_a_suffixed_folder_works_by_its_name() {
+  local folder
+  mkdir -p "$SANDBOX/src/dotdot/skills/plg-skill"
+  printf -- '---\nname: plg-skill\ndescription: d\n---\n' > "$SANDBOX/src/dotdot/skills/plg-skill/SKILL.md"
+  printf '{"requires": 3, "description": "d", "settings": {"mode": "fast"}}\n' > "$SANDBOX/src/dotdot/plugin.json"
+  add_plugin acme/my.plg src
+  folder=$(find "$DOTDOT/.plugins/acme" -mindepth 1 -maxdepth 1 -type d -name 'my-plg---*')
+  [ -n "$folder" ] || fail "no suffixed folder"
+  assert_contains "$(cat "$DOTDOT/.plugins/plugins-lock.json")" "\"id\": \"acme/my.plg\""
+  assert_contains "$(cat "$DOTDOT/.plugins/plugins-lock.json")" "\"directory\": \"${folder##*/}\""
+  mkdir -p "$folder/commands"
+  printf '#!/usr/bin/env bash\nDESCRIPTION="Probe."\nusage() { :; }\nhandle() { dot::plugin_setting mode; }\n' > "$folder/commands/probe.sh"
+  dot acme:probe
+  assert_success
+  assert_equal "$OUTPUT" "fast"
+  take_suggestions acme/my.plg
+  dot link -y
+  assert_success
+  assert_link_to "$SANDBOX/.agents/skills/plg-skill" "$folder/skills/plg-skill"
+  core "dot::use core.system.plugins.service; core.system.plugins.service::uninstall acme/my.plg"
+  assert_success
+  assert_no_file "$folder"
 }

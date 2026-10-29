@@ -36,7 +36,7 @@ core.modules.tasks.drivers.file::row() {
 core.modules.tasks.drivers.file::rewrite() {
   local file="$1" title="$2" status="$3" body="$4" kept
   if [ -z "$body" ]; then
-    kept=$(mktemp) || return 1
+    framework.helpers.fs::make_temp_file kept || return 1
     framework.helpers.frontmatter::body "$file" > "$kept"
     body="$kept"
   fi

@@ -1,8 +1,10 @@
 ---
 name: dot-draft-feature-plan
 description: Drafts a sound, concrete implementation plan into a feature's Implementation Plan section, grounded in dotdot's Context docs instead of a fresh read of the codebase. Use whenever the user asks to plan, scope, sequence, or "figure out how to build" something, picks up a .dot/Features/fNNN doc to start work on it, or says anything like "how would we implement this", "what's the approach", or "let's build X" — reach for it even when they sound ready to jump straight into code. Plans only; never implements.
+license: MIT
 metadata:
   internal: true
+  author: dotdot
 ---
 
 # Draft a Plan

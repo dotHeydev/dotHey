@@ -1,8 +1,10 @@
 ---
 name: dot-document-feature
 description: Turns a raw description of a feature idea into a fully documented feature, following the bundled feature template. Use whenever the user describes a new feature, capability, or user-facing change to build.
+license: MIT
 metadata:
   internal: true
+  author: dotdot
 ---
 
 # Document a Feature

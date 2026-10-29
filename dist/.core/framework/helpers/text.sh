@@ -148,3 +148,15 @@ framework.helpers.text::width() {
   done
   printf '%s' "$total"
 }
+
+# Words for random names: <adjective>-<noun> (random_name), or a noun alone.
+TEXT_ADJECTIVES=(amber bold brisk calm clever cosmic crisp curious daring eager gentle golden happy hidden humble jolly keen lively lucky mellow merry nimble noble plucky quiet rapid rustic shiny silent snappy steady sunny swift tidy vivid witty)
+TEXT_NOUNS=(acorn anchor badger beacon breeze canyon comet compass falcon fern harbor heron island lantern maple meadow meteor otter pebble pine quartz raven ripple river sparrow spark summit thistle tide walnut willow zephyr)
+
+framework.helpers.text::random_noun() {
+  printf '%s\n' "${TEXT_NOUNS[RANDOM % ${#TEXT_NOUNS[@]}]}"
+}
+
+framework.helpers.text::random_name() {
+  printf '%s-%s\n' "${TEXT_ADJECTIVES[RANDOM % ${#TEXT_ADJECTIVES[@]}]}" "$(framework.helpers.text::random_noun)"
+}

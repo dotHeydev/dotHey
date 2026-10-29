@@ -18,7 +18,7 @@ test_agents_link_as_they_are_where_the_format_matches() {
   assert_link_to "$SANDBOX/.opencode/agents/reviewer.md" "$DOTDOT/Agents/reviewer.md"
 }
 
-test_copilot_reads_each_agent_under_its_own_file_name() {
+test_copilot_reads_each_agent_under_its_centralize_file_name() {
   owned_agent reviewer
   dot setup --harness copilot --yes
   assert_success
@@ -53,10 +53,10 @@ test_link_keeps_ported_agents_current() {
   assert_no_file "$SANDBOX/.github/agents/gone.agent.md"
 }
 
-test_own_takes_in_copilot_agents_in_dotdots_format() {
+test_centralize_takes_in_copilot_agents_in_dotdots_format() {
   mkdir -p "$SANDBOX/.github/agents"
   printf -- '---\nname: helper\ndescription: Helps.\n---\n\nHelp.\n' > "$SANDBOX/.github/agents/helper.agent.md"
-  dot setup --harness copilot --strategy own --yes
+  dot setup --harness copilot --type centralize --yes
   assert_success
   assert_file "$DOTDOT/Agents/helper.md"
   assert_equal "$(cat "$SANDBOX/.github/agents/helper.agent.md")" "$(cat "$DOTDOT/Agents/helper.md")"
@@ -64,20 +64,20 @@ test_own_takes_in_copilot_agents_in_dotdots_format() {
 
 # Edge
 
-test_own_takes_codex_agents_into_dotdots_format() {
+test_centralize_takes_codex_agents_into_dotdots_format() {
   mkdir -p "$SANDBOX/.codex/agents"
   printf 'name = "mine"\ndescription = "Mine: \\"quoted\\"."\ndeveloper_instructions = """\nYou help.\nAlways."""\n' > "$SANDBOX/.codex/agents/mine.toml"
-  dot setup --harness codex --strategy own --yes
+  dot setup --harness codex --type centralize --yes
   assert_success
   assert_equal "$(core "dot::use framework.helpers.frontmatter; framework.helpers.frontmatter::body '$DOTDOT/Agents/mine.md'"; printf '%s' "$OUTPUT")" "$(printf 'You help.\nAlways.')"
   assert_contains "$(cat "$SANDBOX/.codex/agents/mine.toml")" 'developer_instructions = "You help.\nAlways."'
   assert_link_to "$SANDBOX/.codex/agents/mine.toml" "$DOTDOT/.harnesses/codex/agents/mine.toml"
 }
 
-test_own_leaves_a_codex_file_that_isnt_an_agent() {
+test_centralize_leaves_a_codex_file_that_isnt_an_agent() {
   mkdir -p "$SANDBOX/.codex/agents"
   printf 'name = "half"\n' > "$SANDBOX/.codex/agents/half.toml"
-  dot setup --harness codex --strategy own --yes
+  dot setup --harness codex --type centralize --yes
   assert_success
   [ -f "$SANDBOX/.codex/agents/half.toml" ] && [ ! -L "$SANDBOX/.codex/agents/half.toml" ] || fail "an unreadable agent was moved"
   assert_no_file "$DOTDOT/Agents/half.md"

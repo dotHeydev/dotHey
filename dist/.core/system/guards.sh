@@ -8,6 +8,8 @@
 
 GUARDS_DOCUMENT_PATTERN='^[A-Za-z0-9][A-Za-z0-9._-]*\.md$'
 GUARDS_SEGMENT_PATTERN='^[a-z0-9][a-z0-9-]*$'
+GUARDS_OWNER_PATTERN='^[a-z0-9]([a-z0-9]|-[a-z0-9])*$'
+GUARDS_REPOSITORY_PATTERN='^[a-z0-9._-]+$'
 GUARDS_SETTING_PATTERN='^[a-z][A-Za-z0-9]*(\.[a-z][A-Za-z0-9]*)*$'
 # The .env keys dotdot reserves for secrets: DOT_GH_TOKEN, each
 # DOT_RELEASE_TOKEN_<REMOTE>, and each plugin's DOT_<OWNER>_<NAME>__<KEY>.
@@ -33,6 +35,17 @@ guards::stays_inside() {
 }
 
 # <owner>/<name>, each lowercase letters, digits, and -.
+# A plugin's name, its GitHub <owner>/<repository> in lowercase: an owner of
+# letters, digits, and single inner hyphens; a repository of letters, digits,
+# ., _, and -, never . or .. alone.
+guards::plugin_name() {
+  local owner="${1%%/*}" name="${1#*/}"
+  [ "$owner" != "$1" ] && [[ "$owner" =~ $GUARDS_OWNER_PATTERN ]] && [[ "$name" =~ $GUARDS_REPOSITORY_PATTERN ]] \
+    && [ "$name" != . ] && [ "$name" != .. ]
+}
+
+# A plugin's key, <owner>/<directory>: the folder it lives in under .plugins/,
+# and the part of its module names, link origins, and .env prefix.
 guards::plugin_id() {
   local owner="${1%%/*}" name="${1#*/}"
   [ "$owner" != "$1" ] && [[ "$owner" =~ $GUARDS_SEGMENT_PATTERN ]] && [[ "$name" =~ $GUARDS_SEGMENT_PATTERN ]]

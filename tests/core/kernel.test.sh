@@ -222,3 +222,38 @@ test_help_links_the_docs_on_main_whatever_the_installed_version() {
   assert_contains "$OUTPUT" "https://github.com/dotdot-sh/dotdot/blob/main/docs/usage.md#linking"
   assert_not_contains "$OUTPUT" "4d342b0"
 }
+
+test_json_help_says_what_the_help_page_says() {
+  local name page json
+  dot --json
+  assert_equal "$(json_value "$OUTPUT" '.usage[]' | grep -c . || true)" 2
+  assert_contains "$(json_value "$OUTPUT" '.options[].name')" "--agent"
+  assert_equal "$(json_value "$OUTPUT" '.sections[].title')" "Exit statuses"
+  for name in link setup tasks:update plugins:add; do
+    dot "$name" --help
+    page="$OUTPUT"
+    dot help "$name" --json
+    json="$OUTPUT"
+    assert_equal "$(json_value "$json" '.notes[]' | grep -c . || true)" "$(printf '%s\n' "$page" | awk '/^Notes:$/ { on = 1; next } /^[A-Z][^:]*:$/ { on = 0 } on && /^  - / { n++ } END { print n + 0 }')"
+    assert_equal "$(json_value "$json" '.options[].name' | grep -c . || true)" "$(printf '%s\n' "$page" | awk '/^Options:$/ { on = 1; next } /^[A-Z][^:]*:$/ { on = 0 } on && /^  [^ ]/ { n++ } END { print n + 0 }')"
+    [ -n "$(json_value "$json" .about)" ] || fail "$name's JSON help has no about"
+  done
+  dot help link --json
+  assert_equal "$(json_value "$OUTPUT" '.sections[].title')" "Links"
+}
+
+test_json_runs_keep_stdout_for_the_result_and_say_the_rest_as_json_on_stderr() {
+  local line
+  DOT_INTERNAL_CALL="" dot notes:create idea --json
+  assert_success
+  assert_equal "$(json_value "$OUTPUT" .id)" "n001--idea"
+  assert_contains "$(json_value "$ERRORS" .notice.run)" "bash dot setup"
+  printf '{not json' > "$DOTDOT/.core/harnesses/claude/harness.json"
+  dot adopt --scan --json
+  assert_success
+  [ -n "$(json_value "$OUTPUT" .harnesses)" ] || fail "stdout lost its result"
+  assert_contains "$ERRORS" '{"warning":'
+  while IFS= read -r line; do
+    [ -n "$(json_value "$line" .)" ] || fail "stderr holds a line that isn't JSON: $line"
+  done <<< "$ERRORS"
+}

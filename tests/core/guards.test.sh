@@ -86,7 +86,7 @@ test_appends_never_delete_files_they_did_not_create() {
   links "append:@dot:STANDARDS.md->empty.md->made.md"
   dot link -y
   assert_success
-  links "remove:@dot:STANDARDS.md->empty.md->made.md"
+  links "skip:@dot:STANDARDS.md->empty.md->made.md"
   dot link -y
   assert_success
   assert_file "$SANDBOX/empty.md"

@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 
 FS_MAX_LINK_HOPS=40
+# Where temporary files go when the system's temporary folder can't take
+# them: set by whoever runs the code (dotdot's boot), and changed for a run
+# that moves that place itself. Leftovers older than FS_TEMP_STALE_MINUTES,
+# from a run that was killed, are cleared as the fallback is used.
+: "${FS_TEMP_FALLBACK:=}"
+FS_TEMP_STALE_MINUTES=1440
 
 framework.helpers.fs::resolve() {
   local fs_resolved
@@ -89,10 +95,31 @@ framework.helpers.fs::within() {
   printf '%s\n' "$resolved"
 }
 
+# A temporary folder, its path into the variable named <target>, removed when
+# the run ends: in the system's temporary folder, or else in <fallback>
+# (FS_TEMP_FALLBACK by default).
 framework.helpers.fs::make_temp_dir() {
-  local fs_temp_target="$1" fs_temp_path
-  fs_temp_path=$(mktemp -d) || return 1
+  framework.helpers.fs::make_temp "$1" -d "${2-}"
+}
+
+# make_temp_dir, for a file.
+framework.helpers.fs::make_temp_file() {
+  framework.helpers.fs::make_temp "$1" "" "${2-}"
+}
+
+framework.helpers.fs::make_temp() {
+  local fs_temp_target="$1" fs_temp_kind="$2" fs_temp_fallback="${3:-$FS_TEMP_FALLBACK}" fs_temp_path fs_temp_fell_back=false
+  # shellcheck disable=SC2086
+  if ! fs_temp_path=$(mktemp $fs_temp_kind 2>/dev/null); then
+    [ -n "$fs_temp_fallback" ] && mkdir -p -- "$fs_temp_fallback" || return 1
+    find "$fs_temp_fallback" -mindepth 1 -maxdepth 1 -mmin +"$FS_TEMP_STALE_MINUTES" -exec rm -rf -- {} + 2>/dev/null || true
+    # shellcheck disable=SC2086
+    fs_temp_path=$(mktemp $fs_temp_kind "$fs_temp_fallback/XXXXXX") || return 1
+    fs_temp_fell_back=true
+  fi
   dot::on_exit "rm -rf -- $(printf '%q' "$fs_temp_path")"
+  # The fallback folder goes too, once nothing else is in it.
+  ! $fs_temp_fell_back || dot::on_exit "rmdir -- $(printf '%q' "$fs_temp_fallback") 2>/dev/null || true"
   printf -v "$fs_temp_target" '%s' "$fs_temp_path"
 }
 

@@ -55,6 +55,8 @@ handle() {
   framework.console.prompt::can_ask || framework.console.output::fail_as "$EXIT_PRECONDITION" "This needs your confirmation in a terminal, so nothing changed." "$OUTPUT_MANUAL_RUN bash dot upgrade"
   command -v git >/dev/null || framework.console.output::fail_as "$EXIT_PRECONDITION" "Upgrading needs git, which isn't installed here."
   old=$(core.system.update.service::installed_commit)
+  # The upgrade replaces .core/, so a fallback for its files can't be there.
+  FS_TEMP_FALLBACK="$DOTDOT_ROOT/$DOT_TEMP_DIR"
   framework.helpers.fs::make_temp_dir UPDATE_WORKSPACE || framework.console.output::fail "Couldn't create a temporary directory; please check free space and \$TMPDIR."
   UPDATE_REPOSITORY="$UPDATE_WORKSPACE/repository"
   framework.ui.spinner::run "Downloading dotdot…" core.system.update.service::download "$old" || framework.console.output::fail "The download didn't work, so nothing changed."

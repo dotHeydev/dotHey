@@ -173,7 +173,7 @@ timezone=$(dot::setting general.timezone "")              # dotdot's, read only
 
 Text prints raw; booleans, numbers, lists, and objects print as JSON (`framework.helpers.json::values "$value" '.[]'` lists one entry per line). An unset setting prints the default when one is given, and stops with how to set it otherwise.
 
-Secrets live in the project's `.env`, named `DOT_<OWNER>_<NAME>__<KEY>`, and only their plugin can read them:
+Secrets live in the project's `.env`, named `DOT_<OWNER>_<FOLDER>__<KEY>` (its folder's name, see [the public API](#the-public-api) on names and folders), and only their plugin can read them:
 
 ```bash
 token=$(dot::secret DOT_ACME_WIDGETS__TOKEN)
@@ -197,6 +197,7 @@ Plugin code may use this, and only this; `dot::use` refuses anything else.
 | `dot::setting <path> [default]` | Read one of dotdot's settings |
 | `dot::plugin_setting <key> [default]`, `dot::save_plugin_setting <key> <json>` | Read and write its own settings |
 | `dot::secret`, `dot::save_secret`, `dot::remove_secret` | Its own secrets |
+| `dot::plugin_key <name>`, `dot::plugin_name <key>` | A plugin's `<owner>/<folder>` from its name, and back |
 | `dot::call <command> [args]` | Run another `bash dot` command |
 | `dot::raise <message> [next step]...`, `dot::abort …` | Report an error (and exit) |
 | `dot::on_exit <function>` | Run cleanup when the command ends |
@@ -207,9 +208,11 @@ Plugin code may use this, and only this; `dot::use` refuses anything else.
 - `framework.console.*`: `output`, `prompt`, `terminal`, `args`.
 - `framework.ui.*`: `theme`, `screen`, and the components `banner`, `box`, `message`, `list`, `rule`, `select`, `checkbox`, `confirm`, `progress`, `steps`, `spinner`.
 - `framework.integrations.<name>.service`: `github`.
-- Its own code: `plugins.<owner>.<name>.<path>`.
+- Its own code: `plugins.<owner>.<folder>.<path>`.
 
-Every function is named after its module: `framework.console.output::success`, `plugins.acme.widgets.db::seed`. dotdot's `core.*` modules, `internal` parts of the framework, and other plugins are off limits.
+Every function is named after its module: `framework.console.output::success`, `plugins.acme.widgets.db::seed`.
+
+**A plugin's name is its GitHub repo's**, `<owner>/<name>` in lowercase, as GitHub tells repos apart: `acme/my-plg`, `acme/my.plg`, and `acme/my_plg` are three plugins, `acme/MyPlg` and `acme/myplg` one. Commands, settings (`plugins["acme/my.plg"]`), links, and the lock use the name. Its **folder** in `.dot/.plugins/<owner>/` is the name too, unless the name can't be a folder and module name (anything but letters, digits, and `-`, or a name Windows reserves): then it is the name with those characters as `-` and a random noun (`my-plg---otter`), and dotdot says so as it installs. The lock records it as `directory`. The folder names the plugin's modules (`plugins.acme.my-plg---otter.db`) and its secrets' prefix; `dot::plugin_key` and `dot::plugin_name` turn one into the other. dotdot's `core.*` modules, `internal` parts of the framework, and other plugins are off limits.
 
 ---
 

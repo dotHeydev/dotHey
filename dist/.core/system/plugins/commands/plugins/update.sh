@@ -38,13 +38,13 @@ USAGE
 update_plugin() {
   local plugin="$1" confirmed="$2" entry origin ref commit
   entry=$(core.system.plugins.manifest::lock_entry "$plugin") || framework.console.output::fail_as "$EXIT_NOT_FOUND" "$plugin isn't installed." "See what is: bash dot plugins:list"
-  read -r origin ref commit <<< "$entry"
+  read -r origin ref commit _ <<< "$entry"
   case "$origin" in
     "$PLUGIN_PATH_SOURCE"*)
       [ "$ref" != "$PLUGIN_LOCAL_REF" ] || ref=""
       core.system.plugins.console::fetch "$plugin" "$ref" "${origin#"$PLUGIN_PATH_SOURCE"}"
       ;;
-    *) core.system.plugins.console::fetch "$plugin" "$ref" ;;
+    *) core.system.plugins.console::fetch "$plugin" "$ref" "" "${origin#"$PLUGIN_GITHUB_SOURCE"}" ;;
   esac
   core.system.plugins.manifest::validate "$PLUGIN_SOURCE" "$plugin" || exit 1
   if [ "$PLUGIN_COMMIT" != "$PLUGIN_LOCAL_REF" ] && [ -n "$PLUGIN_COMMIT" ] && [ "$PLUGIN_COMMIT" = "$commit" ]; then

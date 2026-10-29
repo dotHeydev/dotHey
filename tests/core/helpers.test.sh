@@ -512,3 +512,24 @@ test_bright_brightens_the_colors_inside_it() {
   core "dot::use framework.console.output; printf '%s\n' \"\$(framework.console.output::bright \"\$(framework.console.output::red x) y\")\" | awk -v styled=1 -f \"\$OUTPUT_RENDERER\""
   assert_equal "$OUTPUT" $'\033[91mx\033[0m y'
 }
+
+test_temporary_files_fall_back_into_dotdot_and_go_when_the_run_ends() {
+  run env TMPDIR=/nonexistent bash -c ". '$DOTDOT/.core/system/boot.sh'; dot::use framework.helpers.fs
+    framework.helpers.fs::make_temp_dir work; framework.helpers.fs::make_temp_file note
+    printf '%s\n%s\n' \"\$work\" \"\$note\"; [ -d \"\$work\" ] && [ -f \"\$note\" ]"
+  assert_success
+  assert_contains "$OUTPUT" "$DOTDOT/.core/.tmp/"
+  assert_no_file "$DOTDOT/.core/.tmp"
+  assert_no_file "$SANDBOX/.dotdot_tmp"
+  run env TMPDIR=/nonexistent bash -c "cd '$SANDBOX' && DOT_INTERNAL_CALL=1 bash ./dot notes:create idea"
+  assert_success
+  assert_no_file "$DOTDOT/.core/.tmp"
+}
+
+test_a_temporary_file_takes_the_fallback_it_is_given() {
+  run env TMPDIR=/nonexistent bash -c ". '$DOTDOT/.core/system/boot.sh'; dot::use framework.helpers.fs
+    framework.helpers.fs::make_temp_file note '$SANDBOX/elsewhere'; printf '%s' \"\$note\""
+  assert_success
+  assert_contains "$OUTPUT" "$SANDBOX/elsewhere/"
+  assert_no_file "$SANDBOX/elsewhere"
+}

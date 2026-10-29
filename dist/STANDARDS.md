@@ -25,6 +25,7 @@ _What must happen before code merges?_
 ## Testing
 _What level of testing is expected for new work?_
 
+- Run tests only when executable code changed; a change to docs, comments, help text, or other prose needs no run.
 - While working, run only the tests that cover the code you changed (the runner's file and case filters); run the full suite once, when the work is done.
 - Assert behavior, not wording: status codes, state, files, and structured output. An expected failure asserts its exact status code, never just that it failed. Text is asserted only when it is the contract itself (a help page's sections, an API's field names).
 - Tests depend only on the project and its own fixtures and stubs, never on ignored or external files.

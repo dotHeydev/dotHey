@@ -1,11 +1,16 @@
 ---
 name: dot-xray
 description: Holds an extensive discussion with the user in an xray file (.dot/Xrays/xNNN--slug.md) instead of the chat, following the bundled xray template — topics, questions, propositions, one point per line, outcomes — so nothing gets lost and every point can be answered on its own. Use it when the user asks for an xray or adds --x / --xray to a message ("let's discuss this in an xray", "move this to an xray", "x004 has my replies"), to move a chat or an interview into one, to bring an xray back into the chat ("show x004 here", "--chat"), and on your own whenever an answer would hold several questions, options to weigh, or a design to agree on. Quick questions and short back-and-forth stay in the chat or the question tool.
+license: MIT
+metadata:
+  author: dotdot
 ---
 
 # Xray
 
 An xray is the project's place to discuss a topic at length: the chat is for short messages, the xray for anything with several questions, options, or points to answer one by one.
+
+**Follow the template's format exactly, in every xray and every edit of one.** Its spacing, blank lines, rules, marks, and nesting are deliberate, so the file reads and answers well in any editor: never tidy, reflow, or normalize its Markdown, even where it looks unusual or a linter would complain.
 
 ## Chat, question tool, or xray
 

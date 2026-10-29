@@ -12,7 +12,7 @@
 # <owner>/<name>. Output stays quiet; a failing step shows its output.
 #
 #   curl -fsSL https://raw.githubusercontent.com/dotdot-sh/dotdot/main/install.sh | bash
-#   curl … | bash -s -- --dir .agents/.dot --harness claude,cursor --strategy combine --yes
+#   curl … | bash -s -- --dir .agents/.dot --harness claude,cursor --type parallel --yes
 
 set -euo pipefail
 
@@ -27,17 +27,20 @@ DEFAULT_DIR=".dot"
 ENTRY_LINK="dot"
 BIN_PATH=".core/system/bin/dot"
 BOOT_FILE=".core/system/boot.sh"
+SELECT_FILE=".core/framework/ui/select.sh"
 TEMP_PREFIX=".dot-install."
 REQUIRED_COMMANDS=(curl tar gzip mktemp ln mv)
-# dotdot's spinner: one frame every SPINNER_INTERVAL seconds.
+# The look of dotdot's theme (.core/framework/ui/theme.sh), which can't load
+# before dotdot is here: its spinner, one frame every SPINNER_INTERVAL
+# seconds, and its colors, icons alone colored.
 SPINNER_FRAMES=(' ·●' ' •⏺' ' ⏺•' ' ●·' ' ⏺•' ' •⏺' ' ·●')
 SPINNER_INTERVAL=0.07
-USAGE="Usage: bash install.sh [--dir <path>] [--harness <a,b>] [--strategy combine|own] [--yes]"
+USAGE="Usage: bash install.sh [--dir <path>] [--harness <a,b>] [--type parallel|centralize] [--yes]"
 
 main() {
-  local GREEN="" RED="" YELLOW="" BLUE="" BOLD="" RESET=""
+  local GREEN="" RED="" YELLOW="" MAGENTA="" BOLD="" RESET=""
   if [ -t 1 ] && [ -z "${NO_COLOR-}" ]; then
-    GREEN=$'\033[32m' RED=$'\033[31m' YELLOW=$'\033[33m' BLUE=$'\033[34m' BOLD=$'\033[1m' RESET=$'\033[0m'
+    GREEN=$'\033[32m' RED=$'\033[31m' YELLOW=$'\033[33m' MAGENTA=$'\033[35m' BOLD=$'\033[1m' RESET=$'\033[0m'
   fi
   local name="${BOLD}dotdot${RESET}"
   DOTDOT_DIR="$DEFAULT_DIR"
@@ -91,7 +94,7 @@ parse_arguments() {
         DOTDOT_DIR="${2%/}"
         shift
         ;;
-      --harness | --strategy)
+      --harness | --type)
         [ $# -ge 2 ] || fail "$1 needs a value. $USAGE"
         SETUP_FLAGS+=("$1" "$2")
         shift
@@ -111,11 +114,20 @@ can_prompt() {
     && { : < /dev/tty; } 2>/dev/null
 }
 
-# A numbered choice read from the terminal, even when stdin is the script;
-# prints the number picked.
+# A choice read from the terminal, even when stdin is the script: the
+# installed dotdot's select when it has one, else a numbered list; prints the
+# number picked.
 choose() {
-  local question="$1" reply index=1 option
+  local question="$1" reply index=1 option picked
   shift
+  if [ -f "$base/$DOTDOT_DIR/$SELECT_FILE" ]; then
+    picked=$(cd "$base" && bash -c '. "$1"; shift; dot::use framework.ui.select; framework.ui.select::ask "$@"' _ \
+      "$base/$DOTDOT_DIR/$BOOT_FILE" "$question" "$@" < /dev/tty) || exit 130
+    for option in "$@"; do
+      [ "$option" != "$picked" ] || { printf '%s\n' "$index"; return; }
+      index=$((index + 1))
+    done
+  fi
   {
     printf '\n%s%s%s\n' "$BOLD" "$question" "$RESET"
     for option in "$@"; do
@@ -129,8 +141,8 @@ choose() {
 }
 
 next_steps() {
-  printf '   %s%s→%s Set it up for your harnesses: %sbash %s setup%s\n' "$BOLD" "$BLUE" "$RESET" "$BOLD" "$ENTRY_LINK" "$RESET"
-  printf "   %s%s→%s Or tell your coding agent \"set up dotdot\"; it takes it from there.\n" "$BOLD" "$BLUE" "$RESET"
+  printf '   %s%s→%s Set it up for your harnesses: %sbash %s setup%s\n' "$BOLD" "$MAGENTA" "$RESET" "$BOLD" "$ENTRY_LINK" "$RESET"
+  printf "   %s%s→%s Or tell your coding agent \"set up dotdot\"; it takes it from there.\n" "$BOLD" "$MAGENTA" "$RESET"
 }
 
 fail() {

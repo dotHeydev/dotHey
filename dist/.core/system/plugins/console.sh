@@ -3,13 +3,16 @@
 dot::use framework.console.output framework.console.prompt core.system.plugins.manifest core.system.plugins.service
 
 core.system.plugins.console::plugin() {
-  core.system.plugins.manifest::id "$1" || framework.console.output::fail "\"$1\" isn't a plugin name; please use <owner>/<name> (letters, digits and -)."
+  core.system.plugins.manifest::id "$1" \
+    || framework.console.output::fail "\"$1\" isn't a plugin dotdot can use." "Please give it as <owner>/<name>, or its GitHub URL; its name needs a letter or digit first."
 }
 
+# <plugin> fetched at <ref>, from <path> in the project, or from GitHub's
+# <repository> (the plugin itself by default).
 core.system.plugins.console::fetch() {
-  local plugin="$1" ref="$2" path="${3-}"
-  framework.console.output::line "Fetching $plugin${path:+ from $path}${ref:+@$ref}…"
-  core.system.plugins.service::fetch "$plugin" "$ref" "$path" || exit 1
+  local plugin="$1" ref="$2" path="${3-}" repository="${4:-$1}"
+  framework.console.output::line "Fetching $repository${path:+ from $path}${ref:+@$ref}…"
+  core.system.plugins.service::fetch "$plugin" "$ref" "$path" "$repository" || exit 1
 }
 
 core.system.plugins.console::warn() {
@@ -73,9 +76,14 @@ core.system.plugins.console::report() {
 }
 
 core.system.plugins.console::install() {
-  local plugin="$1" source="$2" added
+  local plugin="$1" source="$2" added directory
+  core.system.plugins.manifest::lock_entry "$plugin" >/dev/null || [ "$PLUGIN_PLACE_NAME" = "$plugin" ] \
+    || core.system.plugins.manifest::choose_place "$plugin"
+  directory=$(core.system.plugins.manifest::directory "$plugin")
   core.system.plugins.service::install "$plugin" "$source" || exit 1
-  core.system.plugins.manifest::lock "$plugin" "$PLUGIN_ORIGIN $PLUGIN_REF ${PLUGIN_COMMIT:-$PLUGIN_UNKNOWN_COMMIT}"
+  core.system.plugins.manifest::lock "$plugin" "$PLUGIN_ORIGIN $PLUGIN_REF ${PLUGIN_COMMIT:-$PLUGIN_UNKNOWN_COMMIT} ${directory##*/}"
+  [ "${directory##*/}" = "${plugin#*/}" ] \
+    || framework.console.output::info "Its folder is $(dot::relative "$directory")/, as ${plugin#*/} can't name one here; it's still $plugin everywhere else."
   added=$(core.system.plugins.service::register_settings "$plugin") || exit 1
   [ -z "$added" ] || framework.console.output::detail "Its settings are in $(dot::relative "$SETTINGS_FILE") under plugins[\"$plugin\"], with their defaults."
 }

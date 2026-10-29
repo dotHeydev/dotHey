@@ -107,3 +107,10 @@ test_migrations_declare_the_migration_contract() {
   done
   [ -z "$missing" ] || fail "migrations must be NNNN-<slug>.sh with DESCRIPTION and migrate:$missing"
 }
+
+test_temporary_files_come_only_from_the_fs_helper() {
+  local found
+  found=$(search '(^|[^a-z_])mktemp( |$|\))' "$(core_dir)" | grep -v "/framework/helpers/fs.sh:" || true)
+  [ -z "$found" ] || fail "temporary files go through framework.helpers.fs::make_temp_dir or make_temp_file, for their fallback:
+$found"
+}

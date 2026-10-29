@@ -1,8 +1,10 @@
 ---
 name: dot-write-feature-tests
 description: Derives and writes meaningful tests from a feature's Specification and Implementation Plan, before any implementation exists, so the tests drive the build (TDD). Use whenever a plan is approved and work is about to start, or the user says anything like "write the tests", "let's do this TDD", "add coverage for X", or asks to implement a planned feature — the tests come first, so reach for this even when they sound ready to write the code itself. Writes and runs tests only; never implements the feature.
+license: MIT
 metadata:
   internal: true
+  author: dotdot
 ---
 
 # Write Tests

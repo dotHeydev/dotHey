@@ -12,21 +12,113 @@ PLUGIN_SETTING_KEY_PATTERN='^[a-z][A-Za-z0-9]*$'
 PLUGIN_LINKED_DIRS=(skills agents)
 PLUGIN_SCRIPT_PATTERN='^[a-z][a-z0-9-]*\.sh$'
 PLUGIN_UNKNOWN_COMMIT="unknown"
+# GitHub's own rules: an owner is letters, digits, and single inner hyphens;
+# a repository is letters, digits, ., _, and -, never . or .. alone.
+PLUGIN_GITHUB_OWNER_PATTERN='^[A-Za-z0-9]([A-Za-z0-9]|-[A-Za-z0-9])*$'
+PLUGIN_GITHUB_REPOSITORY_PATTERN='^[A-Za-z0-9._-]+$'
+PLUGIN_GITHUB_HOSTS=("https://github.com/" "http://github.com/" "https://www.github.com/" "http://www.github.com/" "github.com/" "www.github.com/" "git@github.com:" "ssh://git@github.com/")
+PLUGIN_REPOSITORY=""
+PLUGIN_SPEC_REF=""
+# Folder names Windows refuses, whatever their case: a plugin named like one
+# gets a suffixed folder.
+PLUGIN_RESERVED_DIRECTORIES=" con prn aux nul com1 com2 com3 com4 com5 com6 com7 com8 com9 lpt1 lpt2 lpt3 lpt4 lpt5 lpt6 lpt7 lpt8 lpt9 "
+PLUGIN_DIRECTORY_SEPARATOR="---"
+# The folder chosen for a plugin being added, before the lock records it.
+PLUGIN_PLACE_NAME=""
+PLUGIN_PLACE=""
 
+# A plugin as given, <owner>/<repository>[@<ref>] or a GitHub URL to it (also
+# .../tree/<ref> or .../commit/<sha>), into PLUGIN_REPOSITORY (as GitHub names
+# it) and PLUGIN_SPEC_REF. An owner or a repository never holds @, so the
+# first @ after them starts the ref, which may itself hold @, #, and /; only
+# a URL loses its ?query and #fragment. Status 1, setting nothing, for
+# anything else.
+core.system.plugins.manifest::parse() {
+  local source="$1" host owner rest repository ref=""
+  PLUGIN_REPOSITORY=""
+  PLUGIN_SPEC_REF=""
+  for host in "${PLUGIN_GITHUB_HOSTS[@]}"; do
+    if [ "${source#"$host"}" != "$source" ]; then
+      source="${source#"$host"}"
+      source="${source%%[?#]*}"
+      source="${source%/}"
+      break
+    fi
+  done
+  owner="${source%%/*}"
+  [ "$owner" != "$source" ] || return 1
+  rest="${source#*/}"
+  case "$rest" in
+    *@*) ref="${rest#*@}"; rest="${rest%%@*}" ;;
+  esac
+  repository="${rest%%/*}"
+  rest="${rest#"$repository"}"
+  case "$rest" in
+    '') ;;
+    /tree/?* | /commit/?*) [ -z "$ref" ] || return 1; ref="${rest#/*/}" ;;
+    *) return 1 ;;
+  esac
+  repository="${repository%.git}"
+  [[ "$owner" =~ $PLUGIN_GITHUB_OWNER_PATTERN ]] && [[ "$repository" =~ $PLUGIN_GITHUB_REPOSITORY_PATTERN ]] || return 1
+  [ "$repository" != . ] && [ "$repository" != .. ] || return 1
+  [ "${source%@}" = "$source" ] || return 1
+  PLUGIN_REPOSITORY="$owner/$repository"
+  PLUGIN_SPEC_REF="$ref"
+}
+
+# A plugin's name as given (see parse): its GitHub <owner>/<repository> in
+# lowercase, as GitHub tells names apart: acme/my.plg, acme/my_plg, and
+# acme/my-plg are three plugins, acme/MyPlg and acme/myplg one.
 core.system.plugins.manifest::id() {
   local id
-  id=$(framework.helpers.text::lower "$1")
-  id="${id%.git}"
-  guards::plugin_id "$id" || return 1
+  core.system.plugins.manifest::parse "$1" || return 1
+  id=$(framework.helpers.text::lower "$PLUGIN_REPOSITORY")
+  guards::plugin_name "$id" || return 1
   printf '%s\n' "$id"
+}
+
+# The folder for a new plugin <name>, into PLUGIN_PLACE (<owner>/<directory>):
+# its repository's own name when that can name a folder and a module (letters,
+# digits, -) and is free, else that name with every other character as -, a
+# separator, and a random noun (myplg---otter), so a name never changes.
+core.system.plugins.manifest::choose_place() {
+  local name="$1" owner="${1%%/*}" repository="${1#*/}" directory stem
+  directory="$repository"
+  if ! core.system.plugins.manifest::is_free_place "$owner/$directory"; then
+    stem=$(printf '%s' "$repository" | tr -c 'a-z0-9-' '-' | sed 's/^-*//; s/-*$//')
+    [ -n "$stem" ] || stem="plugin"
+    directory="$stem$PLUGIN_DIRECTORY_SEPARATOR$(framework.helpers.text::random_noun)"
+    while ! core.system.plugins.manifest::is_free_place "$owner/$directory"; do
+      directory="$stem$PLUGIN_DIRECTORY_SEPARATOR$(framework.helpers.text::random_name)"
+    done
+  fi
+  PLUGIN_PLACE_NAME="$name"
+  PLUGIN_PLACE="$owner/$directory"
+}
+
+# Whether <owner>/<directory> can hold a new plugin: a key dotdot can use, not
+# a folder Windows refuses, and neither taken by a plugin nor on disk.
+core.system.plugins.manifest::is_free_place() {
+  local key="$1" taken
+  guards::plugin_id "$key" && [[ "$PLUGIN_RESERVED_DIRECTORIES" != *" ${key#*/} "* ]] || return 1
+  while read -r _ taken; do
+    [ "$taken" != "$key" ] || return 1
+  done < <(dot::plugin_keys)
+  [ ! -e "$PLUGINS_DIR/$key" ]
 }
 
 core.system.plugins.manifest::owner() {
   printf '%s\n' "${1%%/*}"
 }
 
+# Where the plugin named <name> lives: as the lock records it, or where it's
+# being added.
 core.system.plugins.manifest::directory() {
-  printf '%s\n' "$PLUGINS_DIR/$1"
+  if [ "$1" = "$PLUGIN_PLACE_NAME" ] && [ -n "$PLUGIN_PLACE" ]; then
+    printf '%s\n' "$PLUGINS_DIR/$PLUGIN_PLACE"
+    return
+  fi
+  printf '%s\n' "$PLUGINS_DIR/$(dot::plugin_key "$1")"
 }
 
 # A plugin's plugin.json, or nothing.
@@ -51,20 +143,22 @@ core.system.plugins.manifest::entries() {
   [ -f "$PLUGINS_LOCK" ] || return 0
   document=$(cat -- "$PLUGINS_LOCK")
   while IFS= read -r entry; do
-    printf '%s %s %s %s\n' "$(framework.helpers.json::field "$entry" .id)" "$(framework.helpers.json::field "$entry" .origin)" \
-      "$(framework.helpers.json::field "$entry" .ref)" "$(framework.helpers.json::field "$entry" .commit)"
+    printf '%s %s %s %s %s\n' "$(framework.helpers.json::field "$entry" .id)" "$(framework.helpers.json::field "$entry" .origin)" \
+      "$(framework.helpers.json::field "$entry" .ref)" "$(framework.helpers.json::field "$entry" .commit)" "$(framework.helpers.json::field "$entry" .directory)"
   done < <(framework.helpers.json::values "$document" '.plugins[]')
 }
 
-# Writes the lock from "<owner>/<name> <origin> <ref> <commit>" lines on stdin.
+# Writes the lock from "<name> <origin> <ref> <commit> <directory>" lines on
+# stdin.
 core.system.plugins.manifest::write_lock() {
-  local id origin ref commit separator=""
+  local id origin ref commit directory separator=""
   mkdir -p -- "$(dirname -- "$PLUGINS_LOCK")" || return 1
   {
     printf '{\n  "plugins": ['
-    while read -r id origin ref commit; do
-      printf '%s\n    {"id": %s, "origin": %s, "ref": %s, "commit": %s}' "$separator" "$(framework.helpers.json::string "$id")" \
-        "$(framework.helpers.json::string "$origin")" "$(framework.helpers.json::string "$ref")" "$(framework.helpers.json::string "$commit")"
+    while read -r id origin ref commit directory; do
+      printf '%s\n    {"id": %s, "origin": %s, "ref": %s, "commit": %s, "directory": %s}' "$separator" "$(framework.helpers.json::string "$id")" \
+        "$(framework.helpers.json::string "$origin")" "$(framework.helpers.json::string "$ref")" "$(framework.helpers.json::string "$commit")" \
+        "$(framework.helpers.json::string "${directory:-${id#*/}}")"
       separator=","
     done
     [ -z "$separator" ] || printf '\n  '
@@ -74,7 +168,7 @@ core.system.plugins.manifest::write_lock() {
 
 core.system.plugins.manifest::installed() {
   core.system.plugins.manifest::entries | while read -r id _; do
-    ! guards::plugin_id "$id" || printf '%s\n' "$id"
+    ! guards::plugin_name "$id" || printf '%s\n' "$id"
   done
 }
 
@@ -90,7 +184,7 @@ core.system.plugins.manifest::lock_entry() {
 
 core.system.plugins.manifest::lock() {
   local entries
-  guards::plugin_id "$1" || return 1
+  guards::plugin_name "$1" || return 1
   entries=$(core.system.plugins.manifest::entries)
   {
     printf '%s\n' "$entries" | awk -v wanted="$1" -v entry="$1 $2" '

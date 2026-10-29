@@ -29,9 +29,9 @@ core.system.plugins.service::plugin_root() {
 }
 
 core.system.plugins.service::fetch_github() {
-  local plugin="$1" ref="$2" top
+  local plugin="$1" ref="$2" repository="${3:-$1}" top
   framework.integrations.github.service::is_ref "$ref" || { dot::raise "\"$ref\" isn't a valid branch, tag or commit."; return 1; }
-  core.system.plugins.service::download "$plugin" "$ref" "$PLUGINS_WORKSPACE/plugin.tar.gz" || return 1
+  core.system.plugins.service::download "$repository" "$ref" "$PLUGINS_WORKSPACE/plugin.tar.gz" || return 1
   mkdir -p -- "$PLUGINS_WORKSPACE/tree"
   guards::archive "$PLUGINS_WORKSPACE/plugin.tar.gz" || { dot::raise "$plugin@$ref contains paths outside its own directory, so it wasn't installed."; return 1; }
   tar -xzf "$PLUGINS_WORKSPACE/plugin.tar.gz" -C "$PLUGINS_WORKSPACE/tree" || { dot::raise "Couldn't unpack $plugin@$ref."; return 1; }
@@ -39,7 +39,7 @@ core.system.plugins.service::fetch_github() {
   [ -n "$top" ] || { dot::raise "$plugin@$ref is empty."; return 1; }
   PLUGIN_SOURCE=$(core.system.plugins.service::plugin_root "$top" "$plugin") || return 1
   PLUGIN_COMMIT=$(framework.integrations.github.service::tarball_commit "$PLUGINS_WORKSPACE/plugin.tar.gz")
-  PLUGIN_ORIGIN="$PLUGIN_GITHUB_SOURCE$plugin"
+  PLUGIN_ORIGIN="$PLUGIN_GITHUB_SOURCE$repository"
   PLUGIN_REF="$ref"
 }
 
@@ -76,12 +76,12 @@ core.system.plugins.service::fetch_path() {
 }
 
 core.system.plugins.service::fetch() {
-  local plugin="$1" ref="$2" path="${3-}"
+  local plugin="$1" ref="$2" path="${3-}" repository="${4:-$1}"
   core.system.plugins.service::prepare_workspace
   if [ -n "$path" ]; then
     core.system.plugins.service::fetch_path "$plugin" "$path" "$ref"
   else
-    core.system.plugins.service::fetch_github "$plugin" "${ref:-$PLUGIN_DEFAULT_REF}"
+    core.system.plugins.service::fetch_github "$plugin" "${ref:-$PLUGIN_DEFAULT_REF}" "$repository"
   fi
 }
 
@@ -146,13 +146,20 @@ core.system.plugins.service::register_settings() {
   printf '%s\n' "$document" | framework.helpers.fs::write "$SETTINGS_FILE"
 }
 
+# Removes <plugin>'s folder and its settings in dot.json; its secrets in .env
+# are listed as left for the user, never removed.
 core.system.plugins.service::uninstall() {
-  local plugin="$1" directory
+  local plugin="$1" directory document path prefix
   directory=$(core.system.plugins.manifest::directory "$plugin")
-  ! framework.helpers.kv::keys "$HOST_ENV_FILE" | grep "^$(dot::env_prefix "$plugin")" >/dev/null \
-    || printf 'left\t%s\t%s\n' "$(dot::relative "$HOST_ENV_FILE")" "$(dot::env_prefix "$plugin")* secrets"
-  [ ! -f "$SETTINGS_FILE" ] || [ "$(framework.helpers.json::encoded "$(cat -- "$SETTINGS_FILE")" ".plugins[\"$plugin\"]")" = null ] \
-    || printf 'left\t%s\t%s\n' "$(dot::relative "$SETTINGS_FILE")" "plugins[\"$plugin\"] settings"
+  prefix=$(dot::env_prefix "$(dot::plugin_key "$plugin")")
+  ! framework.helpers.kv::keys "$HOST_ENV_FILE" | grep "^$prefix" >/dev/null \
+    || printf 'left\t%s\t%s\n' "$(dot::relative "$HOST_ENV_FILE")" "$prefix* secrets"
+  path=".plugins[$(framework.helpers.json::string "$plugin")]"
+  if [ -f "$SETTINGS_FILE" ] && [ "$(framework.helpers.json::encoded "$(cat -- "$SETTINGS_FILE")" "$path")" != null ]; then
+    document=$(framework.helpers.json::delete "$(cat -- "$SETTINGS_FILE")" "$path" --keep-format) \
+      && printf '%s\n' "$document" | framework.helpers.fs::write "$SETTINGS_FILE" \
+      || printf 'left\t%s\t%s\n' "$(dot::relative "$SETTINGS_FILE")" "plugins[\"$plugin\"] settings"
+  fi
   rm -rf -- "${directory:?}"
   rmdir -- "$(dirname -- "$directory")" 2>/dev/null || true
 }

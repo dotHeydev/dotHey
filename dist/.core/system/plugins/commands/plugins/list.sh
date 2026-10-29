@@ -24,7 +24,7 @@ handle() {
   [ $# -eq 0 ] || framework.console.args::unexpected "$1"
   while IFS= read -r plugin; do
     found=true
-    read -r origin ref commit <<< "$(core.system.plugins.manifest::lock_entry "$plugin")"
+    read -r origin ref commit _ <<< "$(core.system.plugins.manifest::lock_entry "$plugin")"
     if $DOT_JSON; then
       rows="$rows${rows:+,}{\"name\":$(framework.helpers.json::string "$plugin"),\"origin\":$(framework.helpers.json::string "$origin"),\"ref\":$(framework.helpers.json::string "$ref"),\"commit\":$(framework.helpers.json::string "$commit")}"
     else

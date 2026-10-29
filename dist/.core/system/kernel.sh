@@ -189,55 +189,64 @@ kernel::disabled_module_of() {
 
 # A command's help (usage) as JSON: its name, description, usage lines,
 # arguments, options, examples, and docs, read from the sections of the help.
-kernel::help_json() {
-  local name="$1" file="$2" kind entry text usage="" arguments="" options="" examples=""
+# A help page on stdin (plain) as JSON fields, all it says: "about",
+# "usage", "arguments", "options", "notes", "examples", and "sections" (any
+# other, as {"title", "text"}).
+kernel::help_fields() {
+  local kind entry text usage="" arguments="" options="" notes="" examples="" sections="" about=""
   dot::use framework.helpers.json
+  # A tab is whitespace to read, so an empty field collapses: about and note
+  # rows carry their text in the second field.
   while IFS=$'\t' read -r kind entry text; do
+    entry="${entry//$'\036'/$'\n'}"
+    text="${text//$'\036'/$'\n'}"
     case "$kind" in
+      about)
+        while [ "${entry%$'\n'}" != "$entry" ]; do entry="${entry%$'\n'}"; done
+        about="$entry"
+        ;;
       usage) usage="$usage${usage:+,}$(framework.helpers.json::string "$entry")" ;;
       example) examples="$examples${examples:+,}$(framework.helpers.json::string "$entry")" ;;
+      note) notes="$notes${notes:+,}$(framework.helpers.json::string "$entry")" ;;
+      section)
+        while [ "${text%$'\n'}" != "$text" ]; do text="${text%$'\n'}"; done
+        sections="$sections${sections:+,}{\"title\":$(framework.helpers.json::string "$entry"),\"text\":$(framework.helpers.json::string "$text")}"
+        ;;
       argument | option)
         entry=$(printf '{"name":%s,"description":%s}' "$(framework.helpers.json::string "$entry")" "$(framework.helpers.json::string "$text")")
         if [ "$kind" = argument ]; then arguments="$arguments${arguments:+,}$entry"; else options="$options${options:+,}$entry"; fi
         ;;
     esac
-  done < <(usage | awk -v styled=0 -f "$OUTPUT_RENDERER" | awk -f "$SYSTEM_DIR/help.awk")
-  printf '{"name":%s,"description":%s,"usage":[%s],"arguments":[%s],"options":[%s],"examples":[%s],"docs":%s}\n' \
+  done < <(awk -v styled=0 -f "$OUTPUT_RENDERER" | awk -f "$SYSTEM_DIR/help.awk")
+  printf '"about":%s,"usage":[%s],"arguments":[%s],"options":[%s],"notes":[%s],"examples":[%s],"sections":[%s]' \
+    "$(framework.helpers.json::string "$about")" "$usage" "$arguments" "$options" "$notes" "$examples" "$sections"
+}
+
+# A command's help as JSON: what its help page says, with its name,
+# description, and docs.
+kernel::help_json() {
+  local name="$1" file="$2"
+  dot::use framework.helpers.json
+  printf '{"name":%s,"description":%s,%s,"docs":%s}\n' \
     "$(framework.helpers.json::string "$name")" "$(framework.helpers.json::string "$(kernel::description "$file")")" \
-    "$usage" "$arguments" "$options" "$examples" "$(framework.helpers.json::string "$(kernel::docs "$file")")"
+    "$(usage | kernel::help_fields)" "$(framework.helpers.json::string "$(kernel::docs "$file")")"
 }
 
 # Every command with its description, grouped by namespace.
-kernel::list() {
-  local name file namespace previous="" commands=""
-  if $DOT_JSON; then
-    dot::use framework.helpers.json
-    while IFS='|' read -r name file; do
-      ! kernel::is_hidden "$file" || continue
-      commands="$commands${commands:+,}{\"name\":$(framework.helpers.json::string "$name"),\"description\":$(framework.helpers.json::string "$(kernel::description "$file")")}"
-    done < <(kernel::commands)
-    printf '{"version":%s,"commands":[%s]}\n' "$(name=$(kernel::version); [ -n "$name" ] && framework.helpers.json::string "$name" || printf null)" "$commands"
-    return
-  fi
-  {
-    cat <<EOF
+# The listing's page around its commands: what dotdot is and how to run it,
+# then (with "end") the options and exit statuses every command shares.
+kernel::list_page() {
+  if [ "${1-}" != end ]; then
+    cat <<PAGE
 dotdot: the context, rules, and tools your coding agents work by.
 
 Usage:
   bash dot <command> [arguments]
   bash dot <command> --help
-
-Commands:
-EOF
-    while IFS='|' read -r name file; do
-      ! kernel::is_hidden "$file" || continue
-      namespace="${name%%:*}"
-      [ "$name" = "$namespace" ] || [ "$namespace" = "$previous" ] || printf '\n'
-      previous="$namespace"
-      printf '  %s %s\n' "$(framework.console.output::bold "$(printf '%-*s' "$KERNEL_COLUMN_WIDTH" "$name")")" "$(kernel::description "$file")"
-    done < <(kernel::commands | awk -F'|' '{ print ($1 ~ /:/ ? 1 : 0) "|" $0 }' | sort -t'|' -k1,1 -k2,2 | cut -d'|' -f2-)
-    cat <<EOF
-
+PAGE
+    return
+  fi
+  cat <<PAGE
 Options:
   --agent         For AI agents: plain output, never a prompt (automatic under
                   AI_AGENT or CLAUDECODE).
@@ -251,7 +260,41 @@ Options:
 Exit statuses:
   0 success · 1 failure · 2 wrong usage · 4 not found · 5 needs something
   first (a person at a terminal, a clean tree, ...) · 130 interrupted
-EOF
+PAGE
+}
+
+# Every command listed, as "<name>|<file>": hidden ones left out, dotdot's
+# top-level ones first, then by name.
+kernel::listed_commands() {
+  local name file
+  while IFS='|' read -r name file; do
+    kernel::is_hidden "$file" || printf '%s|%s\n' "$name" "$file"
+  done < <(kernel::commands | awk -F'|' '{ print ($1 ~ /:/ ? 1 : 0) "|" $0 }' | sort -t'|' -k1,1 -k2,2 | cut -d'|' -f2-)
+}
+
+kernel::list() {
+  local name file namespace previous="" commands="" version
+  if $DOT_JSON; then
+    dot::use framework.helpers.json
+    while IFS='|' read -r name file; do
+      commands="$commands${commands:+,}{\"name\":$(framework.helpers.json::string "$name"),\"description\":$(framework.helpers.json::string "$(kernel::description "$file")")}"
+    done < <(kernel::listed_commands)
+    version=$(kernel::version)
+    printf '{"version":%s,%s,"commands":[%s]}\n' "$([ -n "$version" ] && framework.helpers.json::string "$version" || printf null)" \
+      "$({ kernel::list_page; printf '\n'; kernel::list_page end; } | kernel::help_fields)" "$commands"
+    return
+  fi
+  {
+    kernel::list_page
+    printf '\nCommands:\n'
+    while IFS='|' read -r name file; do
+      namespace="${name%%:*}"
+      [ "$name" = "$namespace" ] || [ "$namespace" = "$previous" ] || printf '\n'
+      previous="$namespace"
+      printf '  %s %s\n' "$(framework.console.output::bold "$(printf '%-*s' "$KERNEL_COLUMN_WIDTH" "$name")")" "$(kernel::description "$file")"
+    done < <(kernel::listed_commands)
+    printf '\n'
+    kernel::list_page end
   } | framework.console.output::help
 }
 
@@ -342,10 +385,10 @@ kernel::run() {
   handle "$@"
 }
 
-# Until setup has run (setup.harnesses is empty), a person running any other
-# <command> is told to.
+# Until setup has run (setup.harnesses is empty), anyone running any other
+# <command> is told to: a line for a person, a notice on stderr under --json.
 kernel::suggest_setup() {
-  ! $DOT_INTERNAL && ! $DOT_JSON || return 0
+  ! $DOT_INTERNAL || return 0
   [[ "$KERNEL_SETUP_COMMANDS" != *" $1 "* ]] || return 0
   [ "$(dot::setting setup.harnesses "[]" 2>/dev/null)" = "[]" ] || return 0
   framework.console.output::info "dotdot isn't set up yet: run bash dot setup to link it where your agents read it." >&2

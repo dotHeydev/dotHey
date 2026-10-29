@@ -1,8 +1,10 @@
 ---
 name: dot-build-full-feature
 description: Takes a feature from idea to working, tested code end-to-end by chaining dot-document-feature → dot-draft-feature-plan → dot-write-feature-tests → dot-implement-feature, entering at whatever stage the work is actually at. Use whenever the user wants a feature built rather than one isolated step — "build X", "add X and ship it", "take this all the way", "pick up f007 and finish it" — or when they describe something to build without naming a stage. Runs the chain; the sub-skills do the work.
+license: MIT
 metadata:
   internal: true
+  author: dotdot
 ---
 
 # Build Feature

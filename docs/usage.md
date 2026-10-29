@@ -81,7 +81,7 @@ Features go through four stages, each written down before the next begins:
 | `dot-create-task` | Turns a piece of work into a task |
 | `dot-xray` | Holds a long discussion in a file |
 | `dot-housekeeping` | Realigns docs, decisions, tests, and code |
-| `dot-tool-*` | Teach agents dotdot's commands: links, plugins, notes, tasks, decisions, frontmatter scans |
+| `dot-tools` | Points agents at `bash dot` for every dotdot operation, and at each command's `--help --json` |
 
 ### Reply flags
 
@@ -211,7 +211,7 @@ Every command follows the same conventions:
 - Common flags have short forms: `-y, --yes`, `-v, --verbose`, `-s, --status`, `-l, --limit`, `-p, --page`, `-h, --help`; `bash dot -v` is the version.
 - What changes things can be looked at first with `--preview` (also `--dry-run`); `--overwrite` (also `--force`) replaces what's already there.
 - At a terminal, a missing required value is asked for, then the full command is shown to reuse; without one, it fails naming the flag.
-- Data commands take `--json`: the result on stdout, an error as `{"error": {"code", "exitCode", "message", "run", "next"}}` on stderr. `bash dot --json` lists the commands, and `bash dot help <command> --json` describes one.
+- Data commands take `--json`: the result alone on stdout; on stderr, one JSON object per line for everything else, an error as `{"error": {"code", "exitCode", "message", "run", "next"}}`, and a warning, notice, or next step as `{"warning" | "notice" | "next": {"message", "run"}}` (`run`: the dotdot command it names, or `null`). `bash dot --json` lists the commands, and `bash dot help <command> --json` describes one; both hold everything their help page says (`about`, `usage`, `arguments`, `options`, `notes`, `examples`, and any other section under `sections`).
 - Exit statuses: `0` success (an empty result too), `1` failure (or problems found, for `decisions:check`), `2` wrong usage, `4` not found, `5` needs something first (a person at a terminal, a clean tree…), `130` interrupted.
 - A mistyped command suggests the closest one; a wrong argument shows the usage line and where the help is. Each help ends with a link to these docs.
 
@@ -223,16 +223,16 @@ The installer places dotdot, then hands over to `bash dot setup`, which puts dot
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/dotdot-sh/dotdot/main/install.sh | bash      # install, then set up
-curl … | bash -s -- --harness claude,cursor --strategy combine --yes                        # install and set up
+curl … | bash -s -- --harness claude,cursor --type parallel --yes                           # install and set up
 bash dot setup                                       # look, ask, show the plan, apply
-bash dot setup --harness claude --strategy own --preview
+bash dot setup --harness claude --type centralize --preview
 bash dot adopt --scan --json                         # what the project already holds
 ```
 
 Setup first looks through the project ("Getting dotdot ready for your project…"): what each harness already holds (instructions, skills, agents, rules; `adopt --scan` also lists other top-level docs as *unsure*, for `dot-ready` to raise with you). Then it asks its questions, numbered (1/4), only those that apply: which harnesses to link, the detected ones checked; what happens to existing skills and agents, when there are any; and where dotdot lives, when `.agents/` holds more than skills or is linked into. It shows the plan, condensed by what changes in your project and in dotdot, and applies it once you agree, as a list of steps ticking off. Esc, q, or Ctrl-C stops at any question, changing nothing.
 
-- **In parallel** (`combine`, the default): they stay where they are, and dotdot's are linked beside them.
-- **Centralize** (`own`): they move into `.dot/Skills/` and `.dot/Agents/` and are linked back into every chosen harness, so they're edited in `.dot/` from then on. An agent in a harness's own format is taken into dotdot's (Codex's TOML becomes Markdown). The same item in several harnesses moves once, its identical copies replaced by links; a copy that differs, a name dotdot already uses, a link leading elsewhere, or a file that can't be read as an agent is left in place.
+- **In parallel** (`--type parallel`, the default): they stay where they are, and dotdot's are linked beside them.
+- **Centralize** (`--type centralize`): they move into `.dot/Skills/` and `.dot/Agents/` and are linked back into every chosen harness, so they're edited in `.dot/` from then on. An agent in a harness's own format is taken into dotdot's (Codex's TOML becomes Markdown). The same item in several harnesses moves once, its identical copies replaced by links; a copy that differs, a name dotdot already uses, a link leading elsewhere, or a file that can't be read as an agent is left in place.
 
 A harness that reads only one instructions file gets dotdot in that one: Zed reads the first of `.rules`, `.cursorrules`, `.windsurfrules`, `.clinerules`, `.github/copilot-instructions.md`, `AGENT.md`, and `AGENTS.md`, and Junie reads `.junie/AGENTS.md` before `AGENTS.md`, so when the project has an earlier one, dotdot's `AGENTS.md` is appended to it.
 
@@ -243,7 +243,7 @@ A harness's own instructions file is never replaced: dotdot appends an import of
 | Flag | Meaning |
 |---|---|
 | `--harness <a,b>` | The harnesses to link; without it, a terminal asks |
-| `--strategy combine\|own` | What happens to the project's own skills and agents |
+| `--type parallel\|centralize` | What happens to the project's own skills and agents |
 | `--dir <path>` | Where dotdot lives afterwards ([Relocating](#relocating)) |
 | `--preview`, `-y` | Show only, or apply without asking (at a terminal) |
 
@@ -258,6 +258,10 @@ Each harness is a folder in `.dot/.core/harnesses/<id>/`: `harness.json` keeps t
 | Codex | rendered as TOML into `.codex/agents/<name>.toml` (`name`, `description`, `developer_instructions`) |
 
 Renamed and rendered agents are built into `.dot/.harnesses/<id>/` and linked from there; `bash dot link` rebuilds them, so they follow every change. `tools` and `model` don't port: each harness writes them its own way, so keep them out of an agent meant for more than one, or check it on each.
+
+### Typing `dot` instead of `bash dot`
+
+`bash dot alias:add` adds one line to your shell's rc file (bash, zsh, fish, ksh, mksh, tcsh, or csh, told by `$SHELL`), after showing it and asking: `dot` then runs `./dot`, or dotdot's own entry when that link is missing. Run it again after moving dotdot; `bash dot alias:remove` takes it back. Setup ends with this tip, and for any other shell shows the line to add yourself.
 
 ### Relocating
 
@@ -282,11 +286,11 @@ bash dot link --overwrite    # replace taken destinations; files are backed up f
   "@dot:AGENTS.md": ["AGENTS.md", ".claude/CLAUDE.md"],
   "@dotdotSkills": [".claude/skills/"],
   "append": { "@dot:STANDARDS.md": ["docs/STANDARDS.md"] },
-  "remove": { "@dot:RULES.md": ["old/rules.md"] },
+  "skip": { "@dot:RULES.md": ["old/rules.md"] },
   "acme/tools": {
     "@plugin:acme.tools:skills/*": [".agents/skills/"],
     "append": { "@plugin:acme.tools:context/STANDARDS.md": ["@dot:STANDARDS.md"] },
-    "remove": {}
+    "skip": {}
   },
   "inactive": {
     "acme/lint": { "@plugin:acme.lint:skills/*": [".agents/skills/"], "append": {} }
@@ -298,7 +302,7 @@ bash dot link --overwrite    # replace taken destinations; files are backed up f
 |---|---|
 | `"<origin>": [destinations]` | Symlink each destination to the origin |
 | `"append"` | Append the origin's file to each destination, between markers naming its owner |
-| `"remove"` | Unlink a destination still pointing at the origin, and take back what it appended; it wins over the rest |
+| `"skip"` | Never link or append these; a destination still pointing at the origin is unlinked, and what was appended there taken back. It wins over the rest |
 | `"<owner>/<name>"` | A plugin's active links, in the same shape |
 | `"inactive"` | A plugin's suggested links, never applied until `bash dot plugins:link` takes them |
 
@@ -332,6 +336,7 @@ dotdot ships with everything it needs. A plugin adds more, from any GitHub repo 
 ```sh
 bash dot plugins:add acme/laravel                 # github.com/acme/laravel
 bash dot plugins:add acme/svelte@v1.0.0           # at a branch, tag, or commit
+bash dot plugins:add https://github.com/acme/svelte/tree/v1.0.0   # or by its URL
 bash dot plugins:link acme/laravel               # take its suggested links
 bash dot link                                     # and apply them
 bash dot plugins:update acme/laravel              # or --all
@@ -343,7 +348,7 @@ bash dot plugins:remove acme/laravel
 
 - **Adding links nothing.** A plugin's suggested links go under `"inactive"` in `.dot/dot.json`; `bash dot plugins:link <owner>/<name>` links them (only them), and `plugins:unlink` takes them back.
 - **Updating** rewrites only its inactive links. `plugins:link <owner>/<name> --overwrite` takes the new ones.
-- **Removing** takes back everything it linked and appended. What's left (its settings, secrets, and records) is listed for you to review.
+- **Removing** takes back everything it linked and appended, and its settings in `.dot/dot.json`. What's left (its secrets in `.env`, and the records it made) is listed for you to review.
 - **Its commands** run as `bash dot <owner>:<command>`, or bare for an owner listed in `plugins.unprefixedCommandOwners`. dotdot's own commands are never overridden.
 - **Protected destinations** (`plugins.denyLinkDestination`; by default `AGENTS.md`, `RULES.md`, `SECURITY.md`, `USER.md`) are never touched by a plugin's links.
 
@@ -359,7 +364,7 @@ Every setting lives in `.dot/dot.json`, nested by area. A value comes from there
   "general": { "timezone": "Europe/Madrid" },
   "tasks":   { "service": "file", "githubRepo": "" },
   "plugins": { "unprefixedCommandOwners": ["acme"], "acme/widgets": { "apiUrl": "https://…" } },
-  "links":   { "@dot:AGENTS.md": ["AGENTS.md"], "append": {}, "remove": {}, "inactive": {} },
+  "links":   { "@dot:AGENTS.md": ["AGENTS.md"], "append": {}, "skip": {}, "inactive": {} },
   "release": { "destination": ".ignore/release", "branch": "main", "remotes": { "github": "https://github.com/<owner>/<repo>.git" } },
   "state":   { "version": "<commit>", "isReady": true, "migrations": ["0001-<slug>"] }
 }
@@ -374,7 +379,7 @@ Every setting lives in `.dot/dot.json`, nested by area. A value comes from there
 | `plugins.denyLinkOrigin`, `plugins.denyLinkDestination` | What no plugin may link or append from, or to |
 | `plugins["<owner>/<name>"]` | A plugin's own settings, written with their defaults when it's added |
 | `links` | What `bash dot link` links and appends ([Linking](#linking)) |
-| `setup.*` | [Setting up](#setting-up): the harnesses chosen, the strategy, the links setup wrote, and what is left for the agent (`pending`, `done`) |
+| `setup.*` | [Setting up](#setting-up): the harnesses chosen, the type (`parallel` or `centralize`), the links setup wrote, and what is left for the agent (`pending`, `done`) |
 | `release.*` | [Releases](#releases) |
 | `state.*` | dotdot's own: the installed version, whether the context is ready, the migrations applied |
 

@@ -156,7 +156,7 @@ manifest() {
 
 # Writes the links of .dot/dot.json from
 # "<kind>:<origin>-><destination>[-><destination>…]" entries (kind link,
-# append, or remove): the general ones.
+# append, or skip): the general ones.
 links() {
   local entry kind separator=""
   sandbox::settings "\"links\": $({
@@ -166,7 +166,7 @@ links() {
       entry="${entry#*:}"
       printf '"%s": ["%s"], ' "${entry%%->*}" "$(printf '%s' "${entry#*->}" | sed 's/->/", "/g')"
     done
-    for kind in append remove; do
+    for kind in append skip; do
       printf '"%s": {' "$kind"
       separator=""
       for entry in "$@"; do
@@ -193,7 +193,7 @@ take_suggestions() {
   assert_success "activate the links of $1"
 }
 
-# Adds an entry to the general links: link, append, or remove.
+# Adds an entry to the general links: link, append, or skip.
 add_entry() {
   core "dot::use core.system.link.service
     { core.system.link.service::read_map; printf '.\t%s\t%s\t%s\n' '$1' '$2' '$3'; } \

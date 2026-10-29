@@ -137,7 +137,7 @@ core.modules.release.service::decrypt_token() {
   local url="$1" key cipher plain status
   key=$(core.modules.release.service::token_key "$url") && cipher=$(dot::secret "$key") || return 1
   [[ "$cipher" =~ $RELEASE_CIPHER_PATTERN ]] || return 1
-  status=$(mktemp) || return 1
+  framework.helpers.fs::make_temp_file status || return 1
   plain=$(printf '%s' "$cipher" | base64 --decode | gpg --quiet --pinentry-mode loopback --no-symkey-cache \
     --status-file "$status" --decrypt) || { rm -f -- "$status"; return 1; }
   if ! grep -q '^\[GNUPG:\] NEED_PASSPHRASE_SYM ' "$status" || ! grep -q '^\[GNUPG:\] DECRYPTION_OKAY' "$status" \

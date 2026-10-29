@@ -91,6 +91,8 @@ handle() {
     return 0
   fi
   $confirmed || framework.console.prompt::confirm_or_exit "Do you want to move dotdot to $dir/?" n "bash dot relocate $dir"
+  # dotdot moves, so a fallback for this run's files can't be in it.
+  FS_TEMP_FALLBACK="$BASE/$DOT_PROJECT_TEMP_DIR"
   framework.console.output::detach || framework.console.output::fail "Couldn't create a temporary directory; please check free space and \$TMPDIR."
   rewrite_paths "$old" "$dir" || framework.console.output::fail "Couldn't rewrite dotdot's paths; please check that its files are writable."
   mkdir -p -- "${target%/*}" && { [ ! -d "$target" ] || rmdir -- "$target"; } && mv -- "$DOTDOT_ROOT" "$target" \

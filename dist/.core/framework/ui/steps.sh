@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-dot::use framework.ui.screen
+dot::use framework.ui.screen framework.helpers.fs
 
 UI_STEPS_SHOWN=-1
 
@@ -29,7 +29,7 @@ framework.ui.steps::show() {
 framework.ui.steps::run() {
   local label="$1" function="$2" output current process status=0 tick=0
   shift 2
-  output=$(mktemp) || return 1
+  framework.helpers.fs::make_temp_file output || return 1
   for ((current = 1; current <= $#; current++)); do
     if ! framework.ui.screen::is_rich; then
       framework.ui.steps::plain "$current" "$label" "$@"

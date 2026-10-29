@@ -1,8 +1,10 @@
 ---
 name: dot-ready
 description: Gets dotdot ready for this project — turns what the user tells you about the project, its tech, the company, and their rules into the context files at the top of .dot/. Use it when the user says they're using dotdot or just installed it, asks to set up, prepare, fill, or refine the project's context (or one file of it, e.g. "let's write PRODUCT.md"), or agrees to prepare it when onboarding finds dotdot not ready (state.isReady not true in .dot/dot.json), or says "set up dotdot". If it is true, the context was prepared before: offer to refine it instead.
+license: MIT
 metadata:
   internal: true
+  author: dotdot
 ---
 
 # Get dotdot ready
@@ -14,27 +16,27 @@ Short, accurate, project-specific context files, derived from the user talking f
 Output exactly: 🧭🧭🧭 GETTING DOTDOT READY
 
 ## Scope
-The Markdown files at the top of `.dot/`. Survey them with the `dot-tool-scan-frontmatter` skill: `ignore: true` marks a file still to fill. Read a file in full only once something goes into it.
+The Markdown files at the top of `.dot/`. Survey them with `bash dot frontmatter:show .dot`: `ignore: true` marks a file still to fill. Read a file in full only once something goes into it.
 
 - `RULES.md`, `SECURITY.md`, and `STANDARDS.md` ship with defaults: keep them, only extend them and replace placeholders.
 - `USER.md` holds the user's personal preferences: fill it only with what they say about how they like to work.
 - Out of scope: `AGENTS.md`, `SCHEMA.md` (generated), and plugin regions (between `<!-- <owner>/<name> -->` markers).
 
 ## 0. Pick up where setup left off
-Run `bash dot adopt --scan --json` once. Its `setup` holds the user's choices and `setup.pending` what is left for you, in order; work through it, and run `bash dot setup:done <item>` as each one is finished (also when the user decides to leave it), so nothing is raised twice. If `setup.harnesses` is empty, hand the user the setup first (`dot-tool-setup`), and carry on with the context meanwhile.
+Run `bash dot adopt --scan --json` once. Its `setup` holds the user's choices and `setup.pending` what is left for you, in order; work through it, and run `bash dot setup:done <item>` as each one is finished (also when the user decides to leave it), so nothing is raised twice. If `setup.harnesses` is empty, set dotdot up first (`bash dot setup`), and carry on with the context meanwhile.
 
-`setup.strategy` is how the user wants dotdot to treat the project's existing context:
+`setup.type` is how the user wants dotdot to treat the project's existing context:
 
-- **combine:** the project's files stay the source. Leave them where they are; take into dotdot's docs only what the user confirms, as a summary or a reference to the file, never moving or deleting it.
-- **own:** dotdot becomes the source. Once the user confirms, move a file's content into the dotdot docs it belongs to, and leave behind only what its harness needs (the import or link setup added).
+- **parallel:** the project's files stay the source. Leave them where they are; take into dotdot's docs only what the user confirms, as a summary or a reference to the file, never moving or deleting it.
+- **centralize:** dotdot becomes the source. Once the user confirms, move a file's content into the dotdot docs it belongs to, and leave behind only what its harness needs (the import or link setup added).
 - **`null`:** no one chose yet. Ask which of the two they intend before changing anything outside `.dot/`.
 
 The items:
 
 - **`context`:** steps 1 to 3 below.
-- **`split:<path>`** (own): propose, part by part, where the file's content belongs (RULES, STANDARDS, TECHSTACK, ...); move what the user approves, leaving the file with only what its harness needs.
-- **`unsure:<path>`:** a top-level doc no harness claims (`IDEAS.md`, `QUALITY.md`, ...). Raise all of them in one message, with your guess for each (fold into a context doc, reference it, keep it out, or a note), and ask whether they belong to the project's context; read one only once the user says it does, then act on it per the strategy.
-- **`verify`** (own): check that the integration works: `bash dot link --preview` says everything is linked, and `bash dot adopt --scan --json` lists none of the moved items back in a harness's places as real files. Point out any agent in `.dot/Agents/` with `tools` or `model` in its frontmatter: those fields don't port between harnesses. Fix what isn't right with dotdot's commands, or tell the user what is wrong.
+- **`split:<path>`** (centralize): propose, part by part, where the file's content belongs (RULES, STANDARDS, TECHSTACK, ...); move what the user approves, leaving the file with only what its harness needs.
+- **`unsure:<path>`:** a top-level doc no harness claims (`IDEAS.md`, `QUALITY.md`, ...). Raise all of them in one message, with your guess for each (fold into a context doc, reference it, keep it out, or a note), and ask whether they belong to the project's context; read one only once the user says it does, then act on it per the type.
+- **`verify`** (centralize): check that the integration works: `bash dot link --preview` says everything is linked, and `bash dot adopt --scan --json` lists none of the moved items back in a harness's places as real files. Point out any agent in `.dot/Agents/` with `tools` or `model` in its frontmatter: those fields don't port between harnesses. Fix what isn't right with dotdot's commands, or tell the user what is wrong.
 
 ## 1. Invite
 One friendly plain chat message, not the Interview Tool, then wait for the answer. If `state.isReady` is `true` in `.dot/dot.json`, say the context was prepared before and ask what they'd like to add or change. Otherwise, invite them to talk, for example:

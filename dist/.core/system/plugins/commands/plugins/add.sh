@@ -13,10 +13,14 @@ in $(dot::relative "$SETTINGS_FILE") under "inactive" until you take them.
 
 Usage:
   bash dot plugins:add <owner>/<name>[@<version>] [options]
+  bash dot plugins:add <GitHub URL> [options]
 
 Arguments:
-  <owner>/<name>       The plugin's GitHub repo.
+  <owner>/<name>       The plugin's GitHub repo, as GitHub names it; dotdot
+                       knows it by that name in lowercase, . and _ as -.
   @<version>           A branch, tag or commit (default: $PLUGIN_DEFAULT_REF).
+  <GitHub URL>         The repo's address: https://github.com/<owner>/<name>,
+                       .../tree/<version>, .../commit/<sha>, or its git@ form.
 
 Options:
   --from <directory>   Install from a local copy inside the project, to develop
@@ -28,6 +32,7 @@ Options:
 
 Examples:
   bash dot plugins:add acme/laravel
+  bash dot plugins:add https://github.com/acme/laravel/tree/v2
   bash dot plugins:add acme/svelte@v1.0.0 --preview
   bash dot plugins:add acme/widgets --from ./widgets
 
@@ -36,6 +41,9 @@ Notes:
   - Its commands run as bash dot <owner>:<command>. A plugin whose owner is a
     dotdot command name, or whose commands are taken, is refused.
   - Private repos need gh signed in, or DOT_GH_TOKEN in $(dot::relative "$HOST_ENV_FILE").
+  - Adding links nothing: its links wait under "inactive" in the links.
+    Only the user takes them (bash dot plugins:link <owner>/<name>, which
+    --preview shows first); never take them on their behalf.
   - Next: bash dot plugins:link <owner>/<name>.
 USAGE
 }
@@ -52,11 +60,13 @@ handle() {
     esac
   done
   [ -n "$source" ] || framework.console.args::invalid "Which plugin? Please give it as <owner>/<name>."
-  [ "${source%@*}" = "$source" ] || ref="${source##*@}"
-  plugin=$(core.system.plugins.console::plugin "${source%@*}")
+  plugin=$(core.system.plugins.console::plugin "$source")
+  core.system.plugins.manifest::parse "$source"
+  ref="$PLUGIN_SPEC_REF"
+  core.system.plugins.manifest::choose_place "$plugin"
   ! core.system.plugins.manifest::lock_entry "$plugin" >/dev/null \
     || framework.console.output::fail "$plugin is already installed." "To get its latest version: bash dot plugins:update $plugin"
-  core.system.plugins.console::fetch "$plugin" "$ref" "$path"
+  core.system.plugins.console::fetch "$plugin" "$ref" "$path" "$PLUGIN_REPOSITORY"
   core.system.plugins.manifest::validate "$PLUGIN_SOURCE" "$plugin" || exit 1
   core.system.plugins.console::warn "$plugin"
   core.system.plugins.console::header "$plugin" "$PLUGIN_ORIGIN${PLUGIN_COMMIT:+ @ ${PLUGIN_COMMIT:0:7}}"

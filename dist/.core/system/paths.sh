@@ -105,7 +105,7 @@ paths::plugins() {
   local directory plugin
   dot::use framework.helpers.json
   {
-    [ ! -f "$PLUGINS_LOCK" ] || framework.helpers.json::values "$(cat -- "$PLUGINS_LOCK")" '.plugins[].id' | while IFS= read -r plugin; do
+    dot::plugin_keys | while read -r _ plugin; do
       ! guards::plugin_id "$plugin" || printf '%s\n' "$plugin"
     done
     for directory in "$PLUGINS_DIR"/*/*/; do
@@ -121,7 +121,7 @@ paths::plugins() {
 # The links map (the project settings' links, or dotdot's default while they
 # have none) as rows "<group>\t<kind>\t<origin>\t<destination>", one per
 # destination: <group> is "." for the general ones (each "<origin>":
-# [destinations] at the top, and the "append" and "remove" sections), +<owner>/<name>
+# [destinations] at the top, and the "append" and "skip" sections), +<owner>/<name>
 # for an active plugin's group (the same shape, under "<owner>/<name>"), and
 # <owner>/<name> for its inactive ones (under "inactive"), never applied; a
 # leaf outside that structure is a row with "!" as its group. Fails when the settings file or its
@@ -141,8 +141,9 @@ paths::links_rows() {
     *) return 1 ;;
   esac
   framework.helpers.json::leaves "$document" | awk -F '\t' -v OFS='\t' '
-    function id(text) { return text ~ /^[a-z0-9][a-z0-9-]*\/[a-z0-9][a-z0-9-]*$/ }
-    function section(text) { return text == "append" || text == "remove" }
+    # A plugin group: its name, as guards::plugin_name reads one.
+    function id(text) { return text ~ /^[a-z0-9]([a-z0-9]|-[a-z0-9])*\/[a-z0-9._-]+$/ && text !~ /\/\.\.?$/ }
+    function section(text) { return text == "append" || text == "skip" }
     NF == 3 && !section($1) && $1 != "inactive" && !id($1) && $2 ~ /^[0-9]+$/ && $3 != "" { print ".", "link", $1, $3; next }
     NF == 4 && section($1) && $3 ~ /^[0-9]+$/ && $4 != "" { print ".", $1, $2, $4; next }
     NF == 4 && id($1) && !section($2) && $3 ~ /^[0-9]+$/ && $4 != "" { print "+" $1, "link", $2, $4; next }

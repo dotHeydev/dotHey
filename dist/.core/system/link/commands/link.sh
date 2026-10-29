@@ -38,7 +38,8 @@ Links:
   "<origin>": ["<destination>", ...]   symlink each destination to the origin
   "append": {"<origin>": [...]}        append the file to each destination,
                                        between markers naming its owner
-  "remove": {"<origin>": [...]}        unlink, and take back what it appended
+  "skip": {"<origin>": [...]}          never link or append these; what dotdot
+                                       linked or appended there is taken back
   "<owner>/<name>": {...}              a plugin's active links, same shape
   "inactive": {"<owner>/<name>": ...}  a plugin's links, never applied until
                                        they are activated
@@ -118,7 +119,7 @@ handle() {
       -y | --yes) confirmed=true ;;
       --refresh-plugin)
         framework.console.args::require_value "$@"
-        [[ "$2" =~ ^[a-z0-9][a-z0-9-]*/[a-z0-9][a-z0-9-]*$ ]] || framework.console.args::invalid "--refresh-plugin needs a plugin as <owner>/<name> (got $2)."
+        guards::plugin_name "$2" || framework.console.args::invalid "--refresh-plugin needs a plugin as <owner>/<name> (got $2)."
         refresh="$refresh $2"
         shift
         ;;

@@ -1,8 +1,10 @@
 ---
 name: dot-housekeeping
 description: Autonomously audits and realigns a project so concept, dotdot docs, decisions, tests, and code agree — fixes drift, dead code and dead docs, tests that cannot fail, stale File Maps, and violated or missing decisions, involving the user only for decisions that are genuinely theirs. Use when the user asks for a cleanup, an alignment pass, a health check, "make sure docs and code match", "is anything stale or dead", "check the test suite", "clean up the features/decisions", or after a large rework.
+license: MIT
 metadata:
   internal: true
+  author: dotdot
 ---
 
 # Housekeeping

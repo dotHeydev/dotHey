@@ -142,7 +142,7 @@ test_plugins_get_suggestions_in_the_map_that_the_user_can_take() {
   assert_success
   assert_equal "$(map_value '.inactive["acme/widgets"]["@plugin:acme.widgets:plugin.json"]')" '["widgets.conf"]'
   assert_link_to "$SANDBOX/widgets.conf" "$plugin/plugin.json"
-  links "link:@plugin:acme.widgets:plugin.json->widgets.conf" "remove:@plugin:acme.widgets:plugin.json->widgets.conf"
+  links "link:@plugin:acme.widgets:plugin.json->widgets.conf" "skip:@plugin:acme.widgets:plugin.json->widgets.conf"
   dot link -y
   assert_success
   assert_no_file "$SANDBOX/widgets.conf"
@@ -163,12 +163,12 @@ test_removals_only_take_back_what_their_origin_made() {
   add_plugin acme/widgets widgets
   links "link:@dot:AGENTS.md->AGENTS.md" "link:@dot:RULES.md->rules.md" "append:@plugin:acme.widgets:plugin.json->notes.conf"
   dot link -y
-  links "link:@dot:AGENTS.md->AGENTS.md" "remove:@dot:SECURITY.md->rules.md->notes.conf"
+  links "link:@dot:AGENTS.md->AGENTS.md" "skip:@dot:SECURITY.md->rules.md->notes.conf"
   dot link -y
   assert_success
   assert_link_to "$SANDBOX/rules.md" "$DOTDOT/RULES.md"
   assert_contains "$(cat "$SANDBOX/notes.conf")" "# acme/widgets (new file)"
-  links "link:@dot:AGENTS.md->AGENTS.md" "link:@dot:RULES.md->rules.md" "remove:@dot:RULES.md->rules.md" "remove:@plugin:acme.widgets:commands->notes.conf"
+  links "link:@dot:AGENTS.md->AGENTS.md" "link:@dot:RULES.md->rules.md" "skip:@dot:RULES.md->rules.md" "skip:@plugin:acme.widgets:commands->notes.conf"
   dot link -y
   assert_success
   assert_no_file "$SANDBOX/rules.md"
@@ -224,7 +224,7 @@ widgets rule
   dot link -y --refresh-plugin acme/widgets
   assert_success
   assert_contains "$(cat "$DOTDOT/STANDARDS.md")" "widgets rule"
-  links "remove:@plugin:acme.widgets:context/WIDGETS.md->@dot:WIDGETS.md" "remove:@plugin:acme.widgets:context/STANDARDS.md->@dot:STANDARDS.md"
+  links "skip:@plugin:acme.widgets:context/WIDGETS.md->@dot:WIDGETS.md" "skip:@plugin:acme.widgets:context/STANDARDS.md->@dot:STANDARDS.md"
   dot link -y
   assert_success
   assert_no_file "$DOTDOT/WIDGETS.md"
@@ -255,16 +255,16 @@ test_link_map_shortcuts_resolve_dotdot_modules_plugins_and_sets() {
   add_plugin acme/widgets widgets
   mkdir -p "$DOTDOT/Notes/deep.er"
   : > "$DOTDOT/Notes/deep.er/n.md"
-  links "link:@module:notes:skills/dot-tool-notes->one/dot-tool-notes" "link:@module:notes:skills->whole/skills" "link:@module:tasks:skills/*->each/" \
-    "link:@module:link:skills/dot-tool-link->system/dot-tool-link" "link:@plugin:acme.widgets:skills/widgets-example->plugin/widgets-example" \
+  links "link:@module:onboarding:skills/dot-tools->one/dot-tools" "link:@module:onboarding:skills->whole/skills" "link:@module:tasks:skills/*->each/" \
+    "link:@module:link:commands/link.sh->system/link.sh" "link:@plugin:acme.widgets:skills/widgets-example->plugin/widgets-example" \
     "link:@plugin:acme.widgets:plugin.json->plugin/widgets.json" "link:@dot:Notes/deep.er/n.md->dotted/n.md" "link:@dot:Notes/*->notes/" \
     "link:@dotdotSkills->dotdot/" "link:@pluginsSkills->plugins/"
   dot link -y
   assert_success
-  assert_link_to "$SANDBOX/one/dot-tool-notes" "$DOTDOT/.core/modules/notes/skills/dot-tool-notes"
-  assert_link_to "$SANDBOX/whole/skills" "$DOTDOT/.core/modules/notes/skills"
+  assert_link_to "$SANDBOX/one/dot-tools" "$DOTDOT/.core/modules/onboarding/skills/dot-tools"
+  assert_link_to "$SANDBOX/whole/skills" "$DOTDOT/.core/modules/onboarding/skills"
   assert_link_to "$SANDBOX/each/dot-create-task" "$DOTDOT/.core/modules/tasks/skills/dot-create-task"
-  assert_link_to "$SANDBOX/system/dot-tool-link" "$DOTDOT/.core/system/link/skills/dot-tool-link"
+  assert_link_to "$SANDBOX/system/link.sh" "$DOTDOT/.core/system/link/commands/link.sh"
   assert_link_to "$SANDBOX/plugin/widgets-example" "$DOTDOT/.plugins/acme/widgets/skills/widgets-example"
   assert_link_to "$SANDBOX/plugin/widgets.json" "$DOTDOT/.plugins/acme/widgets/plugin.json"
   assert_link_to "$SANDBOX/dotted/n.md" "$DOTDOT/Notes/deep.er/n.md"
@@ -280,7 +280,7 @@ test_link_map_removals_win_and_never_touch_real_files() {
   printf 'mine\n' > "$SANDBOX/real.md"
   dot link -y
   assert_link_to "$SANDBOX/rules.md" "$DOTDOT/RULES.md"
-  links "link:@dot:AGENTS.md->AGENTS.md" "link:@dot:RULES.md->rules.md" "remove:@dot:RULES.md->rules.md->real.md->.git/config"
+  links "link:@dot:AGENTS.md->AGENTS.md" "link:@dot:RULES.md->rules.md" "skip:@dot:RULES.md->rules.md->real.md->.git/config"
   dot link -y
   assert_success
   assert_no_file "$SANDBOX/rules.md"
@@ -309,7 +309,7 @@ test_plugin_links_are_activated_and_lose_to_the_general_ones() {
   assert_equal "$(map_value '["acme/widgets"]["@plugin:acme.widgets:plugin.json"]')" '["widgets.conf","rules.md"]'
   assert_equal "$(core "dot::use framework.helpers.json; framework.helpers.json::keys \"\$(cat '$DOTDOT/dot.json')\" .links"; printf '%s' "$OUTPUT")" "@dot:RULES.md
 append
-remove
+skip
 acme/widgets
 inactive" "the group lands right before inactive"
   dot plugins:link acme/widgets -y
@@ -369,7 +369,7 @@ test_skill_and_agent_sets_follow_the_skills_standard() {
   links "link:@dotdotSkills->.claude/skills/" "link:@dotdotAgents->.claude/agents/"
   dot link -y
   assert_success
-  assert_link_to "$SANDBOX/.claude/skills/dot-tool-link" "$DOTDOT/.core/system/link/skills/dot-tool-link"
+  assert_link_to "$SANDBOX/.claude/skills/dot-tools" "$DOTDOT/.core/modules/onboarding/skills/dot-tools"
   assert_link_to "$SANDBOX/.claude/skills/dot-onboard" "$DOTDOT/.core/modules/onboarding/skills/dot-onboard"
   assert_link_to "$SANDBOX/.claude/skills/new-skill" "$DOTDOT/.core/modules/newmodule/skills/new-skill"
   assert_no_file "$SANDBOX/.claude/skills/not-a-skill"
@@ -386,7 +386,7 @@ test_an_origin_links_and_appends_to_several_destinations() {
   assert_link_to "$SANDBOX/three.md" "$DOTDOT/RULES.md"
   assert_contains "$(cat "$SANDBOX/a.md")" "<!-- dotdot (new file) -->"
   assert_contains "$(cat "$SANDBOX/b.md")" "<!-- dotdot (new file) -->"
-  links "link:@dot:RULES.md->one.md->two/rules.md" "remove:@dot:RULES.md->three.md->a.md->b.md"
+  links "link:@dot:RULES.md->one.md->two/rules.md" "skip:@dot:RULES.md->three.md->a.md->b.md"
   dot link -y
   assert_success
   assert_no_file "$SANDBOX/three.md"
@@ -416,7 +416,7 @@ test_link_edits_only_what_changed_in_the_map() {
   "links": {
   "@dot:AGENTS.md": ["AGENTS.md"],    "@dot:RULES.md": ["rules.md"],
   "append": {},
-  "remove": {},
+  "skip": {},
   "inactive": {}
   }
 }
@@ -439,11 +439,11 @@ test_link_leaves_out_everything_of_a_module_a_feature_flag_turns_off() {
   mkdir -p "$DOTDOT/.core/modules/release/skills/dot-release-example"
   printf -- '---\nname: dot-release-example\ndescription: An example.\n---\n' > "$DOTDOT/.core/modules/release/skills/dot-release-example/SKILL.md"
   : > "$DOTDOT/.core/modules/release/notes.md"
-  sandbox::settings '"featureFlags": {"release": true}, "links": {"@dotdotSkills": ["skills/"], "append": {}, "remove": {}, "inactive": {}}'
+  sandbox::settings '"featureFlags": {"release": true}, "links": {"@dotdotSkills": ["skills/"], "append": {}, "skip": {}, "inactive": {}}'
   dot link -y
   assert_success
   assert_link_to "$SANDBOX/skills/dot-release-example" "$DOTDOT/.core/modules/release/skills/dot-release-example"
-  sandbox::settings '"featureFlags": {}, "links": {"@dotdotSkills": ["skills/"], "@module:release:skills/dot-release-example": ["one/dot-release-example"], "append": {"@module:release:notes.md": ["notes.md"]}, "remove": {}, "inactive": {}}'
+  sandbox::settings '"featureFlags": {}, "links": {"@dotdotSkills": ["skills/"], "@module:release:skills/dot-release-example": ["one/dot-release-example"], "append": {"@module:release:notes.md": ["notes.md"]}, "skip": {}, "inactive": {}}'
   dot link -y
   assert_link_to "$SANDBOX/skills/dot-onboard" "$DOTDOT/.core/modules/onboarding/skills/dot-onboard"
   assert_no_file "$SANDBOX/skills/dot-release-example"

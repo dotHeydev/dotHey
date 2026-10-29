@@ -96,10 +96,10 @@ core.system.link.service::compact_map() {
       return out
     }
     function join(a, b) { return a == "" ? b : b == "" ? a : a "," b }
-    # A group: its links, then "append" (and "remove", for one that is applied).
+    # A group: its links, then "append" (and "skip", for one that is applied).
     function group(id, applied,   out) {
       out = join(entries(id, "link"), "\"append\":{" entries(id, "append") "}")
-      if (applied) out = out ",\"remove\":{" entries(id, "remove") "}"
+      if (applied) out = out ",\"skip\":{" entries(id, "skip") "}"
       return out
     }
     NF >= 7 { total++; GROUP[total] = $1; KIND[total] = $2; ORIGIN[total] = $3; QGROUP[total] = $5; QORIGIN[total] = $6; QDEST[total] = $7 }
@@ -151,8 +151,9 @@ core.system.link.service::has_entries() {
 # What a plugin's plugin.json declares under link and append, as rows of its
 # group: a path in the plugin becomes @plugin:<owner>.<name>:<path>.
 core.system.link.service::declared_suggestions() {
-  local plugin="$1" shortcut="$LINK_PLUGIN_SHORTCUT${1/\//.}:" kind origin _ destination
-  [ -f "$PLUGINS_DIR/$plugin/$PLUGIN_MANIFEST" ] || return 0
+  local plugin="$1" shortcut="$LINK_PLUGIN_SHORTCUT${1/\//.}:" kind origin _ destination manifest
+  manifest="$PLUGINS_DIR/$(dot::plugin_key "$plugin")/$PLUGIN_MANIFEST"
+  [ -f "$manifest" ] || return 0
   while IFS="$LINK_TAB" read -r kind origin _ destination; do
     case "$kind" in
       link | append) ;;
@@ -163,7 +164,7 @@ core.system.link.service::declared_suggestions() {
       *) origin="$shortcut$origin" ;;
     esac
     printf '%s\t%s\t%s\t%s\n' "$plugin" "$kind" "$origin" "$destination"
-  done < <(framework.helpers.json::leaves "$(cat -- "$PLUGINS_DIR/$plugin/$PLUGIN_MANIFEST")")
+  done < <(framework.helpers.json::leaves "$(cat -- "$manifest")")
 }
 
 # Whether one of a plugin's rows (on stdin) takes an origin from its <kind>
@@ -183,7 +184,8 @@ core.system.link.service::suggests() {
 # its context/*.md appended to dotdot's doc of that name (created when
 # missing), and each stubs/<path>.stub to <path>.
 core.system.link.service::discovered_suggestions() {
-  local plugin="$1" declared="$2" directory="$PLUGINS_DIR/$1" shortcut="$LINK_PLUGIN_SHORTCUT${1/\//.}:" kind destination file
+  local plugin="$1" declared="$2" directory shortcut="$LINK_PLUGIN_SHORTCUT${1/\//.}:" kind destination file
+  directory="$PLUGINS_DIR/$(dot::plugin_key "$1")"
   for kind in skills agents; do
     ! core.system.link.service::suggests "$shortcut" "$kind" <<< "$declared" || continue
     core.system.link.service::has_entries "$directory/$kind" || continue
@@ -214,7 +216,8 @@ core.system.link.service::plugin_suggestions() {
   } | awk '!seen[$0]++'
 }
 
-# The plugin an origin belongs to, <owner>/<name>, or nothing.
+# The plugin an origin belongs to, by name, or nothing: @plugin:<owner>.<name>
+# (an owner holds no dot), or a path in a plugin's folder.
 core.system.link.service::origin_plugin() {
   local rest
   case "$1" in
@@ -225,7 +228,7 @@ core.system.link.service::origin_plugin() {
       ;;
     "$LINK_DOT_SHORTCUT${PLUGINS_DIR#"$DOTDOT_ROOT"/}"/*/*/*)
       rest="${1#"$LINK_DOT_SHORTCUT${PLUGINS_DIR#"$DOTDOT_ROOT"/}"/}"
-      printf '%s\n' "$rest" | cut -d/ -f1-2
+      dot::plugin_name "$(printf '%s\n' "$rest" | cut -d/ -f1-2)"
       ;;
   esac
 }
@@ -278,14 +281,14 @@ core.system.link.service::prepare_map() {
     [ "$group" = "!" ] && core.system.link.service::fail "This entry in the links of $(dot::relative "$SETTINGS_FILE") doesn't fit their shape: ${kind//$LINK_TAB/ }" "See their shape: bash dot link --help"
   done <<< "$rows"
   [ "$LINK_FAILURES" -eq 0 ] || return 0
-  installed=" $(paths::plugins | sed "s|^$PLUGINS_DIR/||" | tr '\n' ' ') "
+  installed=" $(paths::plugins | sed "s|^$PLUGINS_DIR/||" | while IFS= read -r key; do dot::plugin_name "$key"; done | tr '\n' ' ') "
   kept=""
   while IFS="$LINK_TAB" read -r group kind origin destination; do
     [ -n "$kind" ] || continue
     if [ -n "$LINK_ONLY_GROUP" ]; then
       case "$LINK_ONLY_MODE:$group" in
         link:"$LINK_ONLY_GROUP") group="+$LINK_ONLY_GROUP" ;;
-        unlink:"+$LINK_ONLY_GROUP") kind=remove ;;
+        unlink:"+$LINK_ONLY_GROUP") kind=skip ;;
         *) continue ;;
       esac
       kept="$kept$group$LINK_TAB$kind$LINK_TAB$origin$LINK_TAB$destination"$'\n'
@@ -399,10 +402,11 @@ core.system.link.service::shortcut_path() {
       ;;
     "$LINK_PLUGIN_SHORTCUT"*)
       rest="${origin#"$LINK_PLUGIN_SHORTCUT"}"
+      # <owner>.<name>: an owner holds no dot, a name may.
       name="${rest%%:*}"
       owner="${name%%.*}"
-      [ "$owner" != "$name" ] && guards::plugin_id "$owner/${name#*.}" || return 1
-      base="$PLUGINS_DIR/$owner/${name#*.}"
+      [ "$owner" != "$name" ] && guards::plugin_name "$owner/${name#*.}" || return 1
+      base="$PLUGINS_DIR/$(dot::plugin_key "$owner/${name#*.}")"
       ;;
     *) return 1 ;;
   esac
@@ -511,7 +515,7 @@ core.system.link.service::plan_removals() {
         core.system.link.service::plan_removal "$path/${child##*/}" "${destination%/}/${child##*/}"
       done < <(find "$DOTDOT_ROOT/$path" -mindepth 1 -maxdepth 1 ! -name "$KEEP_FILE" -print0 | sort -z)
     done < <(core.system.link.service::map_link "$origin" "$destination")
-  done < <(core.system.link.service::rows remove)
+  done < <(core.system.link.service::rows skip)
 }
 
 core.system.link.service::plan_removal() {
@@ -882,7 +886,7 @@ core.system.link.service::plan_appends() {
   local group origin destination
   while IFS="$LINK_TAB" read -r _ _ origin destination; do
     core.system.link.service::plan_append "$origin" "$destination" true
-  done < <(core.system.link.service::rows remove)
+  done < <(core.system.link.service::rows skip)
   while IFS="$LINK_TAB" read -r group _ origin destination; do
     ! core.system.link.service::is_denied "$group" append "$origin" "$destination" || { LINK_NOTICES+=("$LINK_DENIAL"); continue; }
     core.system.link.service::plan_append "$origin" "$destination" false

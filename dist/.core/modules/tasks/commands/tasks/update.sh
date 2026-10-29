@@ -34,6 +34,11 @@ Examples:
 
 Notes:
   - A section flag replaces that section only; the rest stays as it is.
+  - Statuses are todo, doing, paused, done, discarded; bash dot tasks:<status>
+    <id> moves one, --status here alongside other changes.
+  - Working on a task you were handed: move it to doing when you start, record
+    progress and answers in its sections (ticking its Done When items), and
+    move it to done once every item is checked.
 USAGE
 }
 

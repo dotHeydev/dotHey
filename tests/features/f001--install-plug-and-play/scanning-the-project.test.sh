@@ -15,10 +15,10 @@ test_scan_reports_each_detected_harness_and_its_items() {
   assert_contains "$(json_value "$OUTPUT" '.items[].kind')" "instructions"
 }
 
-test_scan_reports_no_strategy_until_one_is_chosen() {
+test_scan_reports_no_type_until_one_is_chosen() {
   dot adopt --scan --json
   assert_success
-  assert_contains "$OUTPUT" '"strategy":null'
+  assert_contains "$OUTPUT" '"type":null'
 }
 
 test_scan_lists_other_top_level_docs_as_unsure() {
@@ -41,7 +41,7 @@ test_scan_lists_an_unsure_doc_once_and_never_a_harness_s_one() {
 
 # Edge
 
-test_scan_leaves_out_the_readme_and_dotdot_s_own_links() {
+test_scan_leaves_out_the_readme_and_dotdot_s_centralize_links() {
   printf '# Readme\n' > "$SANDBOX/README.md"
   dot link -y
   dot adopt --scan --json
@@ -80,7 +80,7 @@ test_scan_never_follows_a_link_out_of_the_project() {
   assert_not_contains "$(json_value "$OUTPUT" '.items[].path')" "spy.md"
 }
 
-test_the_scan_reports_mcp_and_settings_files_and_own_never_moves_them() {
+test_the_scan_reports_mcp_and_settings_files_and_centralize_never_moves_them() {
   printf '{}\n' > "$SANDBOX/.mcp.json"
   mkdir -p "$SANDBOX/.claude"
   printf '{}\n' > "$SANDBOX/.claude/settings.json"
@@ -88,7 +88,7 @@ test_the_scan_reports_mcp_and_settings_files_and_own_never_moves_them() {
   assert_success
   assert_contains "$OUTPUT" '"kind":"mcp","path":".mcp.json"'
   assert_contains "$OUTPUT" '"kind":"setting","path":".claude/settings.json"'
-  dot setup --harness claude --strategy own --yes
+  dot setup --harness claude --type centralize --yes
   assert_success
   assert_file "$SANDBOX/.mcp.json"
   [ ! -L "$SANDBOX/.claude/settings.json" ] || fail "a settings file was moved"

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-dot::use framework.ui.screen
+dot::use framework.ui.screen framework.helpers.fs
 
 # <command> run under <label> with a spinner turning beside it, its errors
 # printed once it's done; the label alone in plain output. With
@@ -8,7 +8,7 @@ dot::use framework.ui.screen
 framework.ui.spinner::run() {
   local label="$1" errors status=0 process tick=0 drawn=false count=${#UI_SPINNER_FRAMES[@]}
   shift
-  errors=$(mktemp) || return 1
+  framework.helpers.fs::make_temp_file errors || return 1
   if ! framework.ui.screen::is_rich; then
     [ -z "$label" ] || ! $UI_SPINNER_KEEP || framework.console.output::emit 2 "$label"
     "$@" 2>"$errors" || status=$?
