@@ -1,0 +1,14 @@
+{
+  "name": "Grok Build",
+  "detect": [
+    ".grok/"
+  ],
+  "instructions": null,
+  "skills": ".grok/skills/",
+  "agents": null,
+  "context": {
+    "setting": [
+      ".grok/config.toml"
+    ]
+  }
+}

@@ -7,9 +7,23 @@
     ".opencode/"
   ],
   "instructions": null,
-  "skills": ".opencode/skills/",
+  "skills": ".agents/skills/",
   "agents": {
     "dir": ".opencode/agents/"
   },
-  "context": {}
+  "context": {
+    "skill": [
+      ".opencode/skills/"
+    ],
+    "setting": [
+      "opencode.json",
+      "opencode.jsonc"
+    ],
+    "command": [
+      ".opencode/commands/"
+    ],
+    "plugin": [
+      ".opencode/plugins/"
+    ]
+  }
 }

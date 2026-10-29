@@ -65,8 +65,19 @@ core.modules.setup.console::plan() {
       *) skills=$((skills + 1)) ;;
     esac
   done
-  rows=$(core.modules.setup.console::plan_rows "$plan")
-  [ ${#SETUP_DUPLICATES[@]} -eq 0 ] || rows="$rows"$'\n'"project${SETUP_TAB}Replace${SETUP_TAB}$(framework.helpers.text::plural ${#SETUP_DUPLICATES[@]} duplicate) of what moves, with links"
+  rows=$(core.modules.setup.console::plan_rows "$plan" | while IFS="$SETUP_TAB" read -r scope verb text; do
+    # A section added to a file not there yet makes the file.
+    if [ "$verb" = Add ] && [ ! -e "$BASE/${text##* }" ]; then
+      printf '%s\tCreate\t%s, with dotdot'"'"'s section\n' "$scope" "${text##* }"
+    else
+      printf '%s\t%s\t%s\n' "$scope" "$verb" "$text"
+    fi
+  done)
+  case ${#SETUP_DUPLICATES[@]} in
+    0) ;;
+    1) rows="$rows"$'\n'"project${SETUP_TAB}Remove${SETUP_TAB}${SETUP_DUPLICATES[0]}, a copy of what moves into dotdot" ;;
+    *) rows="$rows"$'\n'"project${SETUP_TAB}Remove${SETUP_TAB}${#SETUP_DUPLICATES[@]} copies of what moves into dotdot" ;;
+  esac
   for skipped in ${SETUP_SKIPPED[@]+"${SETUP_SKIPPED[@]}"}; do
     rows="$rows"$'\n'"project${SETUP_TAB}Leave${SETUP_TAB}${skipped%%"$SETUP_TAB"*} ($(framework.console.output::paint "$UI_STYLE_MUTED" "${skipped#*"$SETUP_TAB"}"))"
   done
@@ -78,9 +89,9 @@ core.modules.setup.console::plan() {
   fi
   if [ $((skills + agents)) -eq 1 ]; then
     move="${SETUP_MOVES[0]}"
-    rows="$rows"$'\n'"dotdot${SETUP_TAB}Take in${SETUP_TAB}${move%%"$SETUP_TAB"*} as $DOTDOT_NAME/$(printf '%s' "${move#*"$SETUP_TAB"}" | cut -f1), linked back in place"
+    rows="$rows"$'\n'"dotdot${SETUP_TAB}Take in${SETUP_TAB}${move%%"$SETUP_TAB"*} as $DOTDOT_NAME/$(printf '%s' "${move#*"$SETUP_TAB"}" | cut -f1), linked where your harnesses read it"
   elif [ $((skills + agents)) -gt 1 ]; then
-    rows="$rows"$'\n'"dotdot${SETUP_TAB}Take in${SETUP_TAB}$(core.modules.setup.console::items "$skills" "$agents"), each linked back in place"
+    rows="$rows"$'\n'"dotdot${SETUP_TAB}Take in${SETUP_TAB}$(core.modules.setup.console::items "$skills" "$agents"), linked where your harnesses read them"
   fi
   [ -z "$dir" ] || [ "$dir" = "$DOTDOT_NAME" ] || rows="$rows"$'\n'"dotdot${SETUP_TAB}Move${SETUP_TAB}dotdot to $dir/, and relink it"
   rows=$(printf '%s\n' "$rows" | grep -v '^$' || true)
@@ -127,7 +138,8 @@ core.modules.setup.console::plan_rows() {
         folder = destination
         sub(/\/$/, "", folder)
         if (!sub(/\/[^\/]*$/, "", folder)) folder = ""
-        key = scope SUBSEP verb(value[i, "action"]) SUBSEP folder
+        # Files at the root, or appended to, each on their own line.
+        key = scope SUBSEP verb(value[i, "action"]) SUBSEP (folder == "" || value[i, "action"] == "append" ? destination : folder)
         if (!(key in total)) order[++keys] = key
         total[key]++
         only[key] = value[i, "action"] == "append" ? "dotdot'"'"'s section to " destination : destination (value[i, "action"] == "link" ? " to " value[i, "origin"] : "")

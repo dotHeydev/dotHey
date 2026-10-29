@@ -1,0 +1,20 @@
+{
+  "name": "Antigravity",
+  "docs": "https://antigravity.google/docs/skills",
+  "detect": [
+    ".gemini/",
+    ".agents/mcp_config.json",
+    ".agents/rules/"
+  ],
+  "instructions": null,
+  "skills": ".agents/skills/",
+  "agents": null,
+  "context": {
+    "rule": [
+      ".agents/rules/"
+    ],
+    "mcp": [
+      ".agents/mcp_config.json"
+    ]
+  }
+}

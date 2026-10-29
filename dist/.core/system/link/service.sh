@@ -759,7 +759,8 @@ core.system.link.service::plan_mapping() {
 # # everywhere else.
 core.system.link.service::marker_style() {
   case "$1" in
-    *.md) printf 'html\n' ;;
+    # Markdown, and the Markdown rules files agents read under their own names.
+    *.md | .rules | */.rules | *.cursorrules | *.windsurfrules | *.clinerules) printf 'html\n' ;;
     *.json) printf 'none\n' ;;
     *) printf 'hash\n' ;;
   esac

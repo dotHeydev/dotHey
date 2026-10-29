@@ -1,12 +1,12 @@
 {
   "name": "Cursor",
-  "docs": "https://cursor.com/docs/subagents",
+  "docs": "https://cursor.com/docs/context/skills",
   "detect": [
     ".cursor/",
     ".cursorrules"
   ],
   "instructions": null,
-  "skills": ".cursor/skills/",
+  "skills": ".agents/skills/",
   "agents": {
     "dir": ".cursor/agents/"
   },
@@ -14,6 +14,12 @@
     "rule": [
       ".cursor/rules/",
       ".cursorrules"
+    ],
+    "skill": [
+      ".cursor/skills/"
+    ],
+    "mcp": [
+      ".cursor/mcp.json"
     ]
   }
 }

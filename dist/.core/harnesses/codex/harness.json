@@ -2,14 +2,23 @@
   "name": "Codex",
   "docs": "https://learn.chatgpt.com/docs/build-skills",
   "detect": [
-    ".codex/"
+    ".codex/",
+    "AGENTS.override.md"
   ],
-  "instructions": null,
+  "instructions": {
+    "existing": [
+      "AGENTS.override.md"
+    ]
+  },
   "skills": ".agents/skills/",
   "agents": {
     "dir": ".codex/agents/",
     "file": "{name}.toml",
     "port": "render"
   },
-  "context": {}
+  "context": {
+    "setting": [
+      ".codex/config.toml"
+    ]
+  }
 }

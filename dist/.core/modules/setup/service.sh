@@ -100,6 +100,9 @@ core.modules.setup.service::summary() {
     case "$kind" in
       instructions) kind=$(framework.helpers.text::plural "$count" "instructions file") ;;
       unsure) kind="$(framework.helpers.text::plural "$count" doc) to check" ;;
+      mcp) kind=$(framework.helpers.text::plural "$count" "MCP config") ;;
+      setting) kind=$(framework.helpers.text::plural "$count" "settings file") ;;
+      personal) kind=$(framework.helpers.text::plural "$count" "personal instructions file") ;;
       *) kind=$(framework.helpers.text::plural "$count" "$kind") ;;
     esac
     summary="$summary${summary:+, }$kind"

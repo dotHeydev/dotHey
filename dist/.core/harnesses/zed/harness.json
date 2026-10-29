@@ -1,0 +1,25 @@
+{
+  "name": "Zed",
+  "docs": "https://zed.dev/docs/ai/instructions",
+  "detect": [
+    ".zed/",
+    ".rules"
+  ],
+  "instructions": {
+    "existing": [
+      ".rules",
+      ".cursorrules",
+      ".windsurfrules",
+      ".clinerules",
+      ".github/copilot-instructions.md",
+      "AGENT.md"
+    ]
+  },
+  "skills": ".agents/skills/",
+  "agents": null,
+  "context": {
+    "setting": [
+      ".zed/settings.json"
+    ]
+  }
+}

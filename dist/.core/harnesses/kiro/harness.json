@@ -1,0 +1,18 @@
+{
+  "name": "Kiro",
+  "docs": "https://kiro.dev/docs/skills/",
+  "detect": [
+    ".kiro/"
+  ],
+  "instructions": null,
+  "skills": ".kiro/skills/",
+  "agents": null,
+  "context": {
+    "rule": [
+      ".kiro/steering/"
+    ],
+    "mcp": [
+      ".kiro/settings/mcp.json"
+    ]
+  }
+}

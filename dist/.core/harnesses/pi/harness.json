@@ -1,0 +1,21 @@
+{
+  "name": "Pi",
+  "docs": "https://github.com/badlogic/pi-mono/blob/main/packages/coding-agent/docs/skills.md",
+  "detect": [
+    ".pi/"
+  ],
+  "instructions": null,
+  "skills": ".agents/skills/",
+  "agents": null,
+  "context": {
+    "skill": [
+      ".pi/skills/"
+    ],
+    "setting": [
+      ".pi/settings.json"
+    ],
+    "mcp": [
+      ".pi/mcp.json"
+    ]
+  }
+}

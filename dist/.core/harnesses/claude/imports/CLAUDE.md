@@ -1,6 +1,6 @@
 ---
 name: dotdot
-description: dotdot's instructions, imported from .dot/AGENTS.md.
+description: The project's AGENTS.md, with dotdot's instructions in it, imported so Claude Code reads it beside CLAUDE.md.
 ---
 
-@.dot/AGENTS.md
+@AGENTS.md

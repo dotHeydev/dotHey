@@ -79,3 +79,36 @@ test_scan_never_follows_a_link_out_of_the_project() {
   assert_success
   assert_not_contains "$(json_value "$OUTPUT" '.items[].path')" "spy.md"
 }
+
+test_the_scan_reports_mcp_and_settings_files_and_own_never_moves_them() {
+  printf '{}\n' > "$SANDBOX/.mcp.json"
+  mkdir -p "$SANDBOX/.claude"
+  printf '{}\n' > "$SANDBOX/.claude/settings.json"
+  dot adopt --scan --json
+  assert_success
+  assert_contains "$OUTPUT" '"kind":"mcp","path":".mcp.json"'
+  assert_contains "$OUTPUT" '"kind":"setting","path":".claude/settings.json"'
+  dot setup --harness claude --strategy own --yes
+  assert_success
+  assert_file "$SANDBOX/.mcp.json"
+  [ ! -L "$SANDBOX/.claude/settings.json" ] || fail "a settings file was moved"
+}
+
+test_only_harness_specific_places_detect_a_harness() {
+  own_skill .agents/skills/mine
+  dot adopt --scan --json
+  assert_success
+  assert_equal "$(json_value "$OUTPUT" '.detected[]')" "agents"
+  mkdir -p "$SANDBOX/.zed"
+  printf '{}\n' > "$SANDBOX/.zed/settings.json"
+  : > "$SANDBOX/CLAUDE.local.md"
+  dot adopt --scan --json
+  assert_equal "$(json_value "$OUTPUT" '.detected[]' | paste -sd ' ' -)" "agents claude zed"
+}
+
+test_folders_holding_only_dotdots_links_detect_nothing() {
+  dot setup --harness cursor --yes
+  assert_success
+  dot adopt --scan --json
+  assert_equal "$(json_value "$OUTPUT" '.detected[]')" ""
+}

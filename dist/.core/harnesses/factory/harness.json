@@ -1,0 +1,20 @@
+{
+  "name": "Factory Droid",
+  "docs": "https://docs.factory.com/cli/configuration/skills",
+  "detect": [
+    ".factory/"
+  ],
+  "instructions": null,
+  "skills": ".agents/skills/",
+  "agents": {
+    "dir": ".factory/droids/"
+  },
+  "context": {
+    "skill": [
+      ".factory/skills/"
+    ],
+    "mcp": [
+      ".factory/mcp.json"
+    ]
+  }
+}

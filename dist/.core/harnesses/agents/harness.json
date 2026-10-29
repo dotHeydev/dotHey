@@ -1,7 +1,9 @@
 {
   "name": ".agents",
   "docs": "https://agentskills.io",
-  "detect": [".agents/"],
+  "detect": [
+    ".agents/"
+  ],
   "instructions": null,
   "skills": ".agents/skills/",
   "agents": null,

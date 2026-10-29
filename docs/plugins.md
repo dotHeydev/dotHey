@@ -32,6 +32,8 @@ Everything that touches the project is a *suggestion*: it lands under `"inactive
 
 Harness plugins, like `dotdot-sh/claude-code`, are ordinary plugins that link dotdot's skills, agents, and docs where one agent reads them.
 
+**Instructions reach agents through the root `AGENTS.md`**, which `bash dot setup` always provides: linked to dotdot's, or with dotdot's section appended to the project's own. Link a plugin's context into dotdot's docs (or append to `AGENTS.md`), never into a harness's own instructions file. Claude Code is the one exception to know: it skips `AGENTS.md` whenever a `CLAUDE.md` exists, so setup always gives it a `CLAUDE.md` importing `@AGENTS.md` (appended to the project's `CLAUDE.md` or `.claude/CLAUDE.md`, or a new `CLAUDE.md`). Anything reaching `AGENTS.md` therefore reaches Claude Code too, with nothing more to link.
+
 ---
 
 ## Creating a plugin

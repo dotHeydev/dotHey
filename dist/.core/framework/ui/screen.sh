@@ -83,13 +83,20 @@ framework.ui.screen::hint() {
 }
 
 # <text> (marked up, one line or more) on stderr as the current frame, in
-# place of the one before it; boxed inside box::wrap.
+# place of the one before it; boxed inside box::wrap. Built before anything
+# is written, then written over the old frame at once, each line cleared only
+# past its end and what's left below cleared last: nothing blanks in between,
+# so nothing flickers.
 framework.ui.screen::draw() {
-  local text="$1" newlines
+  local text="$1" rendered newlines up=""
   ! $UI_BOX_ACTIVE || text=$(framework.ui.screen::boxed "$UI_BOX_TITLE" "$text")
-  framework.ui.screen::erase
-  framework.console.output::render 2 "$text" >&2
-  printf '\n' >&2
+  rendered=$(framework.console.output::render 2 "$text")
+  if framework.ui.screen::is_rich; then
+    [ "$UI_FRAME_LINES" -eq 0 ] || up=$(printf '\033[%dA\r' "$UI_FRAME_LINES")
+    printf '%s%s\033[K\n\033[J' "$up" "${rendered//$'\n'/$'\033[K\n'}" >&2
+  else
+    printf '%s\n' "$rendered" >&2
+  fi
   newlines="${text//[!$'\n']/}"
   UI_FRAME_LINES=$((${#newlines} + 1))
 }

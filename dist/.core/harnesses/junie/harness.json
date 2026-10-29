@@ -1,0 +1,28 @@
+{
+  "name": "Junie",
+  "docs": "https://junie.jetbrains.com/docs/agent-skills.html",
+  "detect": [
+    ".junie/"
+  ],
+  "instructions": {
+    "existing": [
+      ".junie/AGENTS.md"
+    ]
+  },
+  "skills": ".agents/skills/",
+  "agents": null,
+  "context": {
+    "skill": [
+      ".junie/skills/"
+    ],
+    "instructions": [
+      ".junie/guidelines.md"
+    ],
+    "rule": [
+      ".junie/rules/"
+    ],
+    "mcp": [
+      ".junie/mcp/mcp.json"
+    ]
+  }
+}

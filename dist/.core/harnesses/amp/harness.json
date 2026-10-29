@@ -1,0 +1,15 @@
+{
+  "name": "Amp",
+  "docs": "https://ampcode.com/docs/customize/skills",
+  "detect": [
+    ".amp/"
+  ],
+  "instructions": null,
+  "skills": ".agents/skills/",
+  "agents": null,
+  "context": {
+    "setting": [
+      ".amp/settings.json"
+    ]
+  }
+}

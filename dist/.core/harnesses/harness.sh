@@ -134,18 +134,41 @@ core.harnesses.harness::leaves_project() {
   ! framework.helpers.fs::is_inside "$physical" "$BASE"
 }
 
-# Whether <path> is dotdot's own: a link into dotdot.
+# Whether <path> is dotdot's own: a link into dotdot, or a file link made
+# only to hold dotdot's section (its marker says new file).
 core.harnesses.harness::is_dotdots() {
   local physical
-  [ -L "$1" ] && framework.helpers.fs::resolve_to physical "$1" && framework.helpers.fs::is_inside "$physical" "$DOTDOT_ROOT"
+  if [ -L "$1" ]; then
+    framework.helpers.fs::resolve_to physical "$1" && framework.helpers.fs::is_inside "$physical" "$DOTDOT_ROOT"
+    return
+  fi
+  [ -f "$1" ] && grep -qF -- '<!-- dotdot (new file) -->' "$1" 2>/dev/null
 }
 
-# detect <id>: whether any of its detection paths exists.
+# Whether <path> is the project's own: a file that isn't dotdot's, an empty
+# folder, or a folder holding one of those within <depth> levels (deeper is
+# taken as the project's). Folders holding only dotdot's links, or dotdot
+# itself, are not.
+core.harnesses.harness::holds_own() {
+  local path="$1" depth="${2:-3}" entry empty=true
+  ! core.harnesses.harness::is_dotdots "$path" && ! framework.helpers.fs::is_inside "$path" "$DOTDOT_ROOT" || return 1
+  [ -d "$path" ] && [ ! -L "$path" ] && [ "$depth" -gt 0 ] || return 0
+  for entry in "$path"/* "$path"/.[!.]*; do
+    [ -e "$entry" ] || [ -L "$entry" ] || continue
+    empty=false
+    core.harnesses.harness::holds_own "$entry" $((depth - 1)) && return 0
+  done
+  $empty
+}
+
+# detect <id>: whether any of its detection paths holds something of the
+# project's own. Detection paths are the harness's alone: never a place
+# other harnesses read too, like AGENTS.md or .agents/skills/.
 core.harnesses.harness::detect() {
   local path absolute
   while IFS= read -r path; do
     absolute=$(core.harnesses.harness::project_path "$path") || continue
-    [ -e "$absolute" ] && ! core.harnesses.harness::is_dotdots "$absolute" && return 0
+    [ -e "$absolute" ] && core.harnesses.harness::holds_own "$absolute" && return 0
   done < <(core.harnesses.harness::data "$1" '.detect[]')
   return 1
 }

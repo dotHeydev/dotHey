@@ -8,6 +8,7 @@ test_setup_links_every_chosen_harness() {
   assert_success
   assert_link_to "$SANDBOX/AGENTS.md" "$DOTDOT/AGENTS.md"
   assert_no_file "$SANDBOX/.claude/CLAUDE.md"
+  assert_contains "$(cat "$SANDBOX/CLAUDE.md")" "@AGENTS.md"
   assert_link_to "$SANDBOX/.claude/skills/dot-onboard" "$DOTDOT/.core/modules/onboarding/skills/dot-onboard"
   assert_link_to "$SANDBOX/.agents/skills/dot-onboard" "$DOTDOT/.core/modules/onboarding/skills/dot-onboard"
   assert_equal "$(setting_value '.setup.harnesses[]' | tr '\n' ,)" "claude,agents"
@@ -33,7 +34,7 @@ test_combine_keeps_existing_files_and_imports_dotdot() {
   assert_success
   [ -f "$SANDBOX/CLAUDE.md" ] && [ ! -L "$SANDBOX/CLAUDE.md" ] || fail "CLAUDE.md is no longer the project's own file"
   assert_contains "$(cat "$SANDBOX/CLAUDE.md")" "Keep this line."
-  assert_contains "$(cat "$SANDBOX/CLAUDE.md")" "@.dot/AGENTS.md"
+  assert_contains "$(cat "$SANDBOX/CLAUDE.md")" "@AGENTS.md"
   [ -d "$SANDBOX/.claude/skills/mine" ] && [ ! -L "$SANDBOX/.claude/skills/mine" ] || fail "the project's skill was moved"
   assert_link_to "$SANDBOX/.claude/skills/dot-onboard" "$DOTDOT/.core/modules/onboarding/skills/dot-onboard"
 }
@@ -45,7 +46,7 @@ test_own_moves_skills_into_dotdot_and_links_them_back() {
   assert_success
   assert_file "$DOTDOT/Skills/mine/SKILL.md"
   assert_link_to "$SANDBOX/.claude/skills/mine" "$DOTDOT/Skills/mine"
-  assert_contains "$(cat "$SANDBOX/CLAUDE.md")" "@.dot/AGENTS.md"
+  assert_contains "$(cat "$SANDBOX/CLAUDE.md")" "@AGENTS.md"
   assert_equal "$(setting_value '.setup.strategy')" "own"
 }
 
@@ -105,7 +106,7 @@ test_rerunning_setup_unlinks_harnesses_no_longer_chosen() {
   dot setup --harness agents --yes
   assert_success
   assert_no_file "$SANDBOX/.claude/skills/dot-onboard"
-  assert_not_contains "$(cat "$SANDBOX/CLAUDE.md")" "@.dot/AGENTS.md"
+  assert_not_contains "$(cat "$SANDBOX/CLAUDE.md")" "@AGENTS.md"
   assert_contains "$(cat "$SANDBOX/CLAUDE.md")" "Keep this line."
   assert_link_to "$SANDBOX/.agents/skills/dot-onboard" "$DOTDOT/.core/modules/onboarding/skills/dot-onboard"
   assert_equal "$(setting_value '.setup.harnesses[]')" "agents"
@@ -124,7 +125,7 @@ test_rerunning_setup_duplicates_nothing() {
   dot setup --harness claude --yes
   dot setup --harness claude --yes
   assert_success
-  assert_equal "$(grep -c '@.dot/AGENTS.md' "$SANDBOX/CLAUDE.md")" 1
+  assert_equal "$(grep -c '@AGENTS.md' "$SANDBOX/CLAUDE.md")" 1
   assert_equal "$(setting_value '.links["@dotdotSkills"][]' | grep -c '^.claude/skills/$')" 1
 }
 
@@ -177,10 +178,10 @@ test_an_unknown_strategy_is_refused() {
 }
 
 test_the_plan_groups_changes_by_folder_rather_than_listing_files() {
-  dot setup --harness claude,cursor --preview
+  dot setup --harness claude,kiro --preview
   assert_success
   assert_contains "$OUTPUT" ".claude/"
-  assert_contains "$OUTPUT" ".cursor/"
+  assert_contains "$OUTPUT" ".kiro/"
   assert_not_contains "$OUTPUT" ".claude/skills/dot-onboard"
 }
 
@@ -241,7 +242,7 @@ test_claude_imports_dotdot_into_the_claude_md_the_project_uses() {
   own_instructions .claude/CLAUDE.md
   dot setup --harness claude --yes
   assert_success
-  assert_contains "$(cat "$SANDBOX/.claude/CLAUDE.md")" "@../.dot/AGENTS.md"
+  assert_contains "$(cat "$SANDBOX/.claude/CLAUDE.md")" "@../AGENTS.md"
   assert_no_file "$SANDBOX/CLAUDE.md"
 }
 
@@ -252,4 +253,28 @@ test_commands_point_a_person_at_setup_until_it_ran() {
   dot setup --harness agents --yes
   DOT_INTERNAL_CALL="" dot notes:create other
   assert_not_contains "$ERRORS" "bash dot setup"
+}
+
+test_harnesses_that_read_agents_skills_are_linked_there_only() {
+  dot setup --harness cursor,copilot --yes
+  assert_success
+  assert_link_to "$SANDBOX/.agents/skills/dot-onboard" "$DOTDOT/.core/modules/onboarding/skills/dot-onboard"
+  assert_no_file "$SANDBOX/.cursor/skills"
+  assert_no_file "$SANDBOX/.github/skills"
+}
+
+test_zed_gets_dotdot_in_the_one_instructions_file_it_reads() {
+  own_instructions .rules
+  dot setup --harness zed --yes
+  assert_success
+  assert_contains "$(cat "$SANDBOX/.rules")" "Keep this line."
+  assert_contains "$(cat "$SANDBOX/.rules")" "<!-- dotdot -->"
+}
+
+test_junie_gets_dotdot_in_its_own_agents_md_when_there_is_one() {
+  own_instructions .junie/AGENTS.md
+  dot setup --harness junie --yes
+  assert_success
+  assert_contains "$(cat "$SANDBOX/.junie/AGENTS.md")" "Keep this line."
+  assert_contains "$(cat "$SANDBOX/.junie/AGENTS.md")" "<!-- dotdot -->"
 }

@@ -4,7 +4,7 @@ DESCRIPTION="Set dotdot up for the project's harnesses."
 DOCS="setting-up"
 
 dot::use framework.console.args framework.console.output framework.console.prompt framework.helpers.fs framework.helpers.json \
-  framework.ui.checkbox framework.ui.select framework.ui.confirm framework.ui.spinner framework.ui.steps \
+  framework.ui.checkbox framework.ui.select framework.ui.confirm framework.ui.spinner framework.ui.steps framework.ui.message \
   core.modules.setup.service core.modules.setup.console
 
 SETUP_LABEL_MOVE="Move your skills and agents into dotdot"
@@ -17,6 +17,7 @@ SETUP_STRATEGY=""
 SETUP_DIR=""
 SETUP_RESUME="Resume any time: bash dot setup"
 SETUP_CANCEL_INFO="Press Esc to stop at any time; nothing changes until you agree."
+SETUP_RERUN_INFO="Change your choices later by running bash dot setup again."
 
 usage() {
   cat <<EOF
@@ -56,8 +57,9 @@ EOF
 # The harnesses to link, those in <detected> checked: each noted as already
 # in use, with what <rows> say it holds, or as new.
 ask_harnesses() {
-  local detected="$1" rows="$2" id index=0 checked="" picked label note labels=() ids=()
-  for id in $SETUP_IDS; do
+  local detected="$1" rows="$2" id name index=0 checked="" picked label note labels=() ids=()
+  # In the order of their names, as people look for them.
+  for id in $(for name in $SETUP_IDS; do printf '%s\t%s\n' "$(core.harnesses.harness::data "$name" .name)" "$name"; done | sort -f | cut -f2); do
     if [[ " $detected " == *" $id "* ]]; then
       note=$(core.modules.setup.service::summary "$id" "$rows")
       note="in use${note:+: $note}"
@@ -203,7 +205,7 @@ handle() {
       "Name them: bash dot setup --harness <a,b> (from: ${SETUP_IDS// /, })"
     asking=true
     framework.ui.screen::on_cancel "$SETUP_RESUME"
-    framework.console.output::info "$SETUP_CANCEL_INFO"
+    framework.ui.message::info "$SETUP_CANCEL_INFO" "$SETUP_RERUN_INFO"
   fi
   framework.helpers.fs::make_temp_dir SETUP_WORK || framework.console.output::fail "Couldn't create a temporary directory; please check free space and \$TMPDIR."
   if $asking; then
@@ -212,6 +214,8 @@ handle() {
     core.modules.setup.service::assess "$SETUP_WORK"
   fi || framework.console.output::fail "Couldn't look through the project's harnesses."
   detected=$(tr '\n' ' ' < "$SETUP_WORK/detected")
+  # Asked again, the harnesses chosen last time count as in use too.
+  $asking && detected="$detected $(core.modules.setup.service::list "$SETUP_HARNESSES_SETTING" | tr '\n' ' ')"
   rows=$(cat -- "$SETUP_WORK/rows")
   if $asking; then
     SETUP_STEPS=1
