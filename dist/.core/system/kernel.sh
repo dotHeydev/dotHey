@@ -243,11 +243,17 @@ kernel::help_json() {
 # The listing's page around its commands: what dotdot is and how to run it,
 # then (with "end") the options and exit statuses every command shares.
 kernel::list_page() {
-  local release
+  local release name="dotdot" version
   if [ "${1-}" != end ]; then
     release=$(dot::version)
+    version=$([ -n "$release" ] && printf '(v%s)' "$release" || printf '%s' "$KERNEL_UNRELEASED")
+    # The name in bold and the version in blue on the page; plain under --json.
+    if ! $DOT_JSON; then
+      name=$(framework.console.output::bold "$name")
+      version=$(framework.console.output::blue "$version")
+    fi
     cat <<PAGE
-dotdot $([ -n "$release" ] && printf '(v%s)' "$release" || printf '%s' "$KERNEL_UNRELEASED")
+$name $version
 The context, rules, and tools your coding agents work by.
 
 Usage:

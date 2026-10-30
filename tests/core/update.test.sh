@@ -1,9 +1,13 @@
 # shellcheck shell=bash
 
-test_update_needs_a_terminal() {
-  dot upgrade -y
+test_upgrade_goes_on_without_options_given_before_link() {
+  mkdir -p "$SANDBOX/bin"
+  printf '#!/bin/sh\nexit 1\n' > "$SANDBOX/bin/git"
+  chmod +x "$SANDBOX/bin/git"
+  PATH="$SANDBOX/bin:$PATH" dot upgrade -y --overwrite
   assert_failure
-  assert_equal "$STATUS" 5
+  assert_equal "$STATUS" 1
+  assert_contains "$ERRORS" "-y and 1 more"
 }
 
 test_update_records_the_version() {

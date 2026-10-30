@@ -96,7 +96,7 @@ Agents reply concisely by default. Add a flag to your message to change that one
 
 When an AI agent runs `bash dot`, output turns plain: no colors, highlighting, or spinner, nothing ever prompts (even in a terminal), and anything that needs a person asks the agent to hand it over. It switches on by itself when `AI_AGENT` or `CLAUDECODE=1` is set, or with `--agent` on any command. `--no-input` (automatic under `CI`) does the same for scripts.
 
-Commands that change what you'd want to review (linking, plugins, upgrades, migrations, deletions) always need a confirmation by a person at a terminal. `-y` skips the question but still needs one, so no agent can approve a change for you; `--preview` shows any of those changes to anyone, agents included.
+Commands that change what you'd want to review (linking, plugins, migrations, deletions) always need a confirmation by a person at a terminal; `bash dot upgrade` doesn't, so it can run unattended. `-y` skips the question but still needs one, so no agent can approve a change for you; `--preview` shows any of those changes to anyone, agents included.
 
 ---
 
@@ -471,7 +471,8 @@ Tokens live in your system's keychain (macOS) or keyring (libsecret), which ask 
 ## Updating dotdot
 
 ```sh
-bash dot upgrade                # shows both versions, asks, then offers to relink
+bash dot upgrade                # upgrades in one step; offers bash dot link when the links need it
+bash dot upgrade --link -y      # ...and relinks right after (options after --link are bash dot link's)
 bash dot plugins:update --all   # plugins update on their own
 ```
 

@@ -3,22 +3,27 @@
 DESCRIPTION="Update dotdot's core to its latest version."
 DOCS="updating-dotdot"
 
-dot::use framework.console.args framework.helpers.fs framework.console.output framework.console.prompt framework.ui.spinner core.system.update.service
+dot::use framework.console.args framework.helpers.fs framework.helpers.json framework.console.output framework.console.prompt framework.ui.spinner core.system.update.service
 
 usage() {
   cat <<EOF
 Updates dotdot's core ($(dot::relative "$CORE_DIR")/) from
-$UPDATE_REPOSITORY_URL ($UPDATE_BRANCH), after showing both
-versions and asking. Plugins and your context files are never touched; then
-it offers to refresh the links.
+$UPDATE_REPOSITORY_URL ($UPDATE_BRANCH) in one step, showing both
+versions. Plugins and your context files are never touched. When the links
+need refreshing, it offers to (at a terminal), or says to run bash dot link.
 
 Usage:
-  bash dot upgrade [-y, --yes]
+  bash dot upgrade [--link [<link options>...]]
 
 Options:
-  -y, --yes    Update without asking (refreshing the links still asks). It still needs
-               a terminal.
+  --link       Refresh the links right after, without asking: runs bash dot
+               link with the options that follow, e.g. --link -y --overwrite.
+               Options without --link are ignored, with a warning.
   -h, --help   Show this help.
+
+Examples:
+  bash dot upgrade
+  bash dot upgrade --link -y
 
 Notes:
   - A file is deleted only when the installed version had it and the latest
@@ -46,13 +51,54 @@ report() {
   fi
 }
 
-handle() {
-  local confirmed=false old new source tree failure
-  case "${1-}" in
-    -y | --yes) confirmed=true; shift ;;
+# Whether the upgraded links need refreshing: status 0 when bash dot link
+# would change something, 1 when nothing, 2 when it can't tell.
+links_need_refresh() {
+  local plan actions
+  plan=$(dot::call link --preview --json 2>/dev/null) || return 2
+  actions=$(framework.helpers.json::values "$plan" '.changes[].action' 2>/dev/null) || return 2
+  printf '%s\n' "$actions" | grep -qvx -e skip -e ''
+}
+
+# The links after an upgrade: refreshed when asked to (--link), else offered
+# when they need it, or the command to run for them.
+refresh_links() {
+  local status=0
+  if $1; then
+    shift
+    dot::call link "$@"
+    return
+  fi
+  links_need_refresh || status=$?
+  case "$status" in
+    1) return 0 ;;
+    2) framework.console.output::next "Run bash dot link to check the links." ;;
+    *)
+      # link shows what changes and asks before applying it.
+      if framework.console.prompt::can_ask && framework.console.prompt::confirm "Do you want to refresh the links now?"; then
+        dot::call link || return
+      else
+        framework.console.output::next "Run bash dot link to refresh the links."
+      fi
+      ;;
   esac
-  [ $# -eq 0 ] || framework.console.args::unexpected "$1"
-  framework.console.prompt::can_ask || framework.console.output::fail_as "$EXIT_PRECONDITION" "This needs your confirmation in a terminal, so nothing changed." "$OUTPUT_MANUAL_RUN bash dot upgrade"
+}
+
+handle() {
+  local old new source tree failure link=false link_options=() ignored=()
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --link) link=true; shift; link_options=("$@"); break ;;
+      *) ignored+=("$1"); shift ;;
+    esac
+  done
+  # Options are bash dot link's, and only after --link: the upgrade goes on
+  # without them.
+  if [ ${#ignored[@]} -eq 1 ]; then
+    framework.console.output::warn "Ignoring ${ignored[0]}, since it only works after --link."
+  elif [ ${#ignored[@]} -gt 1 ]; then
+    framework.console.output::warn "Ignoring ${ignored[0]} and $((${#ignored[@]} - 1)) more, since they only work after --link."
+  fi
   command -v git >/dev/null || framework.console.output::fail_as "$EXIT_PRECONDITION" "Upgrading needs git, which isn't installed here."
   old=$(core.system.update.service::installed_commit)
   # The upgrade replaces .core/, so a fallback for its files can't be there.
@@ -70,16 +116,13 @@ handle() {
   fi
   if [ "$old" = "$new" ]; then
     framework.console.output::success "dotdot is up to date (${new:0:7})."
-    return 0
+    # With --link, the links are refreshed anyway, so one run always ends linked.
+    ! $link || dot::call link ${link_options[@]+"${link_options[@]}"}
+    return
   fi
   framework.console.output::line "A new dotdot is available."
   framework.console.output::detail "Latest  $(core.system.update.service::summary "$new")"
   [ -z "$old" ] || framework.console.output::detail "Yours   $(core.system.update.service::summary "$old")"
-  if $confirmed; then
-    framework.console.prompt::answered "Do you want to update dotdot?" "yes (--yes)"
-  else
-    framework.console.prompt::confirm_or_exit "Do you want to update dotdot?" n "bash dot upgrade"
-  fi
   framework.console.output::line "Updating dotdot…"
   source="$UPDATE_SOURCE"
   core.system.update.service::extract "$new" "$source" "$UPDATE_WORKSPACE/tree" || framework.console.output::fail "The download doesn't look like dotdot (can't read $source/ at ${new:0:7}), so nothing changed."
@@ -102,9 +145,5 @@ handle() {
   # process, asks only when a migration is pending here.
   dot::call migrate --if-pending || true
   report "$new"
-  if framework.console.prompt::confirm "Do you want to refresh the links now?"; then
-    dot::call link || true
-  else
-    framework.console.output::next "Run bash dot link when you're ready."
-  fi
+  refresh_links "$link" ${link_options[@]+"${link_options[@]}"}
 }
