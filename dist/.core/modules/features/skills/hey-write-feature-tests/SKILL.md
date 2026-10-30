@@ -37,7 +37,7 @@ Output exactly: 🧪🧪🧪 BEGIN WRITING TESTS
 
 5. **Write the tests**, ordered to match the plan's steps so implementation can go one step at a time.
 
-6. **Run them and read the failures.** Each must fail because the behavior is missing, not because of a typo or setup error. A test that errors before reaching its assertion proves nothing. Fix the test until it fails for the intended reason.
+6. **Run them and read the failures.** Run only these tests, through the runner's case, file, or directory filters (check its options), never the whole suite. Each must fail because the behavior is missing, not because of a typo or setup error. A test that errors before reaching its assertion proves nothing. Fix the test until it fails for the intended reason.
 
 7. **Verify each one can fail.** Break the behaviour a test covers and confirm that test goes red. A test whose setup guarantees its own assertion proves nothing.
 
@@ -51,7 +51,8 @@ Output exactly: 🧪🧪🧪 BEGIN WRITING TESTS
 - **Arrange, act, assert — no branching.** No `if`, loops, or try/catch in a test body. A test that needs control flow is testing more than one thing; split it. Use the framework's data-driven tests for the same assertion over varying input.
 - **Minimal setup.** Only what the behavior needs. Reach for the suite's existing fixtures or factories rather than hand-building data. Sprawling setup usually means the test is aimed too wide.
 - **Independently failing.** When it goes red, it should be obvious which single thing broke.
-- **Assert behavior, not wording.** Check status codes, state, files, and structured output (JSON); an expected failure asserts its exact status code, so it can't pass for the wrong reason. A message, hint, or note can be reworded without the behavior changing, so a test asserting it breaks for nothing; assert text only when it is the contract itself, such as a help page's sections or a field name.
+- **Assert functionality, not content.** Check status codes, state, files, and structured output (JSON); an expected failure asserts its exact status code, so it can't pass for the wrong reason. Text is no proof of an outcome: a success message can be wrong, and a message, hint, or note can be reworded without the behavior changing, so a test asserting it breaks for nothing. Assert a specific value only when it is a keyed part of the functionality — an `errors` key in its place proves errors were reported; which error is proven by its code, not its message. Assert text only when it is the contract itself, such as a help page's sections or a field name.
+- **Improve, never weaken.** A test can always get sharper; it never gets a looser assertion, a dropped case, or a skip.
 - **Depend on nothing outside the project.** Use the suite's own fixtures and stubs, never ignored or external files; an external plugin's tests belong to that plugin.
 - **Don't test the framework.** Validation rules firing, relationships loading, a route resolving — the framework has its own tests. Test what your feature decided.
 

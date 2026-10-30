@@ -26,8 +26,11 @@ _What must happen before code merges?_
 _What level of testing is expected for new work?_
 
 - Run tests only when executable code changed; a change to docs, comments, help text, or other prose needs no run.
-- While working, run only the tests that cover the code you changed (the runner's file and case filters); run the full suite once, when the work is done.
-- Assert behavior, not wording: status codes, state, files, and structured output. An expected failure asserts its exact status code, never just that it failed. Text is asserted only when it is the contract itself (a help page's sections, an API's field names).
+- Target every run: check the test runner's options (its `--help`, the suite's scripts) for filters by case, file, and directory, and run only the tests that cover the code you changed.
+- The full suite is rare: run it once, at the end of a coding round, never after each change.
+- A test can always be improved, never weakened: no looser assertion, removed case, or skip to make it pass.
+- Test functionality, not content: status and exit codes, state, files, and the structure of output. An expected failure asserts its exact code, never just that it failed.
+- Text is no proof of an outcome: a message can say "all went ok" when it didn't, and its wording changes, so a test asserting it fails for nothing or passes for the wrong reason. Assert a value only when it is a keyed part of the functionality: an `errors` key in its place in a JSON proves errors were reported, while which error is proven by its code, not its message. Text is asserted only when it is the contract itself (a help page's sections, an API's field names).
 - Tests depend only on the project and its own fixtures and stubs, never on ignored or external files.
 
 ## Critical Paths

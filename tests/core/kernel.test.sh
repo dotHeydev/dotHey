@@ -83,12 +83,13 @@ test_a_typo_suggests_the_closest_command() {
 }
 
 test_agents_get_plain_output_and_hand_over_what_needs_a_person() {
-  hey upgrade
-  local person="$ERRORS"; assert_contains "$ERRORS" "bash hey upgrade"
-  hey --agent upgrade
-  assert_contains "$ERRORS" "bash hey upgrade"; [ "$ERRORS" != "$person" ] || fail "an agent got the hand-over a person gets"
-  run env AI_AGENT=some-agent bash ./hey upgrade
-  assert_contains "$ERRORS" "bash hey upgrade"; [ "$ERRORS" != "$person" ] || fail "AI_AGENT got the hand-over a person gets"
+  sandbox::settings '"release": {"remotes": {"github": "https://github.com/acme/repo.git"}}'
+  hey release:token github
+  local person="$ERRORS"; assert_contains "$ERRORS" "bash hey release:token github"
+  hey --agent release:token github
+  assert_contains "$ERRORS" "bash hey release:token github"; [ "$ERRORS" != "$person" ] || fail "an agent got the hand-over a person gets"
+  run env AI_AGENT=some-agent bash ./hey release:token github
+  assert_contains "$ERRORS" "bash hey release:token github"; [ "$ERRORS" != "$person" ] || fail "AI_AGENT got the hand-over a person gets"
 }
 
 test_flag_values_may_follow_an_equals_sign() {

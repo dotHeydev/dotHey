@@ -27,7 +27,7 @@ ignore: true
 ## Always
 - Make Critical Path changes (see STANDARDS.md) only when they serve the project's principles and priorities, and report each one to the user.
 - Always ensure you follow the Definition of Done for each feature before marking work as done.
-- Always run the full test suite before marking work as done.
+- Always run the full test suite once, at the end of a coding round, before marking work as done — never after each change; while working, run only the tests targeted to it.
 - Always update the relevant Context file (Features, Decisions) when behavior or scope changes.
 - Always prefer the project's existing patterns and libraries over introducing new ones.
 - Always use migrations to make changes on the data model.
