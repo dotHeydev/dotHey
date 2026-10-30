@@ -49,7 +49,7 @@ handle() {
     guards::skip_confirmation || framework.console.output::fail_as "$EXIT_PRECONDITION" "-y only works in a terminal, so nothing ran unseen." "$OUTPUT_MANUAL_RUN bash dot migrate"
     framework.console.output::line "Migrating (-y)…"
   else
-    framework.console.prompt::confirm_or_exit "Do you want to run $(framework.helpers.text::plural "${#pending[@]}" migration)?" n "bash dot migrate"
+    framework.console.prompt::confirm_or_exit "Do you want to run $(framework.helpers.text::plural "${#pending[@]}" migration)?" y "bash dot migrate"
   fi
   for file in "${pending[@]}"; do
     ( . "$file"; migrate ) || framework.console.output::fail "${file##*/} didn't finish, so the ones after it didn't run." "Please fix the errors above, then run: bash dot migrate"

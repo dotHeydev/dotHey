@@ -75,7 +75,7 @@ refresh_links() {
     2) framework.console.output::next "Run bash dot link to check the links." ;;
     *)
       # link shows what changes and asks before applying it.
-      if framework.console.prompt::can_ask && framework.console.prompt::confirm "Do you want to refresh the links now?"; then
+      if framework.console.prompt::can_ask && framework.console.prompt::confirm "Do you want to refresh the links now?" y; then
         dot::call link || return
       else
         framework.console.output::next "Run bash dot link to refresh the links."

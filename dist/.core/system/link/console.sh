@@ -156,7 +156,7 @@ core.system.link.console::confirm_changes() {
   if $confirmed; then
     framework.console.output::line "Applying $(framework.helpers.text::plural "$LINK_CHANGES" change) (-y)…"
   else
-    framework.console.prompt::confirm_or_exit "Do you want to apply $(framework.helpers.text::plural "$LINK_CHANGES" change)?" n "$command"
+    framework.console.prompt::confirm_or_exit "Do you want to apply $(framework.helpers.text::plural "$LINK_CHANGES" change)?" y "$command"
   fi
 }
 

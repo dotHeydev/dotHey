@@ -74,7 +74,7 @@ offer_merge() {
     framework.console.output::line "These can't be merged automatically; please merge them by hand."
     return 0
   fi
-  framework.console.prompt::confirm "Do you want to merge them in $(dot::relative "$SETTINGS_FILE"), keeping every destination?" n || return 0
+  framework.console.prompt::confirm "Do you want to merge them in $(dot::relative "$SETTINGS_FILE"), keeping every destination?" y || return 0
   printf '%s\n' "$merged" | framework.helpers.fs::write "$SETTINGS_FILE" \
     || framework.console.output::fail "Couldn't write $(dot::relative "$SETTINGS_FILE"); please check that it's writable."
   framework.console.output::success "Merged them in $(dot::relative "$SETTINGS_FILE")."
@@ -95,7 +95,7 @@ map_only() {
   if $confirmed; then
     framework.console.output::line "Writing $(dot::relative "$SETTINGS_FILE") (-y)…"
   else
-    framework.console.prompt::confirm_or_exit "Do you want to write $(dot::relative "$SETTINGS_FILE")?" n "bash dot link --settings-only"
+    framework.console.prompt::confirm_or_exit "Do you want to write $(dot::relative "$SETTINGS_FILE")?" y "bash dot link --settings-only"
   fi
   core.system.link.service::save_map
   core.system.link.console::print_errors
