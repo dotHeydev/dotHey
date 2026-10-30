@@ -68,7 +68,7 @@ test_record_folders_ship_with_dothey() {
   assert_success
   while IFS= read -r folder; do
     assert_file "$DOTHEY/$folder/.gitkeep"
-    ! git -C "$REPOSITORY_DIR" check-ignore -q "dist/$folder/.gitkeep" || fail "dist/$folder/.gitkeep is git-ignored, so installs would not get it"
+    ! git -C "$REPOSITORY_DIR" check-ignore -q "$SOURCE_NAME/$folder/.gitkeep" || fail "$SOURCE_NAME/$folder/.gitkeep is git-ignored, so installs would not get it"
   done <<< "$OUTPUT"
 }
 

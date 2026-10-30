@@ -2,14 +2,28 @@
 
 TESTS_DIR=$(CDPATH='' cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 REPOSITORY_DIR=$(dirname -- "$TESTS_DIR")
-SOURCE_DIR="$REPOSITORY_DIR/dist"
+CORE_ENTRY=".core/system/bin/hey"
 DOTHEY_DIRECTORY=".hey"
+
+# The source: the repository's one top-level folder that ships the core, so its
+# name is declared only where upgrade reads it (UPDATE_SOURCE).
+source_dir() {
+  local entries=("$REPOSITORY_DIR"/*/"$CORE_ENTRY")
+  if [ "${#entries[@]}" -ne 1 ] || [ ! -f "${entries[0]}" ]; then
+    printf 'Expected one folder in %s shipping %s.\n' "$REPOSITORY_DIR" "$CORE_ENTRY" >&2
+    return 1
+  fi
+  printf '%s\n' "${entries[0]%/"$CORE_ENTRY"}"
+}
+
+SOURCE_DIR=$(source_dir)
+SOURCE_NAME=$(basename -- "$SOURCE_DIR")
 
 sandbox::create() {
   SANDBOX=$(mktemp -d)
   SANDBOX=$(cd -P -- "$SANDBOX" && pwd)
   cp -a "$SOURCE_DIR" "$SANDBOX/$DOTHEY_DIRECTORY"
-  ln -s "$DOTHEY_DIRECTORY/.core/system/bin/hey" "$SANDBOX/hey"
+  ln -s "$DOTHEY_DIRECTORY/$CORE_ENTRY" "$SANDBOX/hey"
   DOTHEY="$SANDBOX/$DOTHEY_DIRECTORY"
   sandbox::settings
 }

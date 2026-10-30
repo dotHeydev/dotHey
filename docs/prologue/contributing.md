@@ -7,7 +7,7 @@ order: 4
 # Contributing
 
 - **Issues and ideas:** open an issue on [GitHub](https://github.com/dotHeydev/dotHey/issues), with what you did, what you expected, and what happened.
-- **Changes:** fork the repo, change what lives in `dist/` (it's what installs ship), and open a pull request with the reason for the change.
+- **Changes:** fork the repo, change what lives in `src/` (it's what installs ship), and open a pull request with the reason for the change.
 - **Docs:** follow the [docs style guide](docs-style-guide.md).
 
 ## Running the tests

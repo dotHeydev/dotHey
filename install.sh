@@ -2,7 +2,7 @@
 # install.sh — install dotHey into the current folder.
 #
 # Downloads dotHey from the repo's main branch into a temporary folder,
-# places its dist/ here as .hey/ (or --dir <path>), and links dotHey's entry
+# places its src/ here as .hey/ (or --dir <path>), and links dotHey's entry
 # point as ./hey. Then, at a terminal (or given setup flags), it hands over to
 # bash hey setup, which asks what to link and says when dotHey is ready; with
 # no one to ask, it links only AGENTS.md, so any agent finds dotHey, and says
@@ -22,7 +22,7 @@ ARCHIVE_URL="https://github.com/$REPO/archive/refs/heads/$BRANCH.tar.gz"
 # A download may take this long, so a stalled connection can't hang the install.
 CONNECT_SECONDS=30
 DOWNLOAD_SECONDS=300
-SOURCE_DIR="dist"
+SOURCE_DIR="src"
 MIGRATIONS_DIR=".core/system/migrations"
 SETTINGS_FILE="hey.json"
 JSON_HELPER=".core/framework/helpers/json.sh"

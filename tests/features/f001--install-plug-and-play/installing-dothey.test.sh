@@ -5,7 +5,7 @@
 installer() {
   if [ ! -f "$SANDBOX/dothey.tar.gz" ]; then
     mkdir -p "$SANDBOX/archive/dothey-main"
-    cp -R "$SOURCE_DIR" "$SANDBOX/archive/dothey-main/dist"
+    cp -R "$SOURCE_DIR" "$SANDBOX/archive/dothey-main/$SOURCE_NAME"
     tar -czf "$SANDBOX/dothey.tar.gz" -C "$SANDBOX/archive" dothey-main
   fi
   mkdir -p "$SANDBOX/project"

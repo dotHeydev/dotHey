@@ -26,7 +26,7 @@ Tokens live in your system's keychain (macOS) or keyring (libsecret), which ask 
 |---|---|
 | `release.destination` | The release repo's directory, from the project root |
 | `release.exclude` | Paths left out; `"!<path>"` ships a git-ignored one (a build) |
-| `release.versionFiles` | `{"<file>": "<JSON path>"}`: where the release writes its version into what it ships, e.g. `{"dist/hey.json": "state.version"}`; the source keeps whatever it holds |
+| `release.versionFiles` | `{"<file>": "<JSON path>"}`: where the release writes its version into what it ships, e.g. `{"src/hey.json": "state.version"}`; the source keeps whatever it holds |
 | `release.branch` | The release repo's branch |
 | `release.remotes` | `{"<name>": "<https url>"}`, each pushed with its own token |
 | `release.signingKey` | The private SSH key's file name in `~/.ssh/`, with its `.pub` next to it |

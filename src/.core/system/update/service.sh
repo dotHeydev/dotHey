@@ -4,7 +4,7 @@ hey::use framework.helpers.fs framework.helpers.text
 
 UPDATE_REPOSITORY_URL="https://github.com/dotHeydev/dotHey.git"
 UPDATE_BRANCH="main"
-UPDATE_SOURCE="dist"
+UPDATE_SOURCE="src"
 UPDATE_TREES=("$(basename -- "$CORE_DIR")")
 UPDATE_COMMIT_STATE="commit"
 UPDATE_RELEASE_STATE="version"

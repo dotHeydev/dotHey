@@ -146,19 +146,19 @@ test_release_commits_and_tags_as_its_author_whatever_the_environment_says() {
 
 test_release_writes_its_version_into_the_files_it_names() {
   local destination="$SANDBOX/export"
-  mkdir -p "$destination/dist"
-  printf '{\n  "state": {\n    "version": "",\n    "commit": ""\n  }\n}\n' > "$destination/dist/hey.json"
-  sandbox::settings '"release": {"versionFiles": {"dist/hey.json": "state.version"}}'
+  mkdir -p "$destination/$SOURCE_NAME"
+  printf '{\n  "state": {\n    "version": "",\n    "commit": ""\n  }\n}\n' > "$destination/$SOURCE_NAME/hey.json"
+  sandbox::settings '"release": {"versionFiles": {"'"$SOURCE_NAME"'/hey.json": "state.version"}}'
   core "hey::use core.modules.release.service; RELEASE_DESTINATION='$destination'; core.modules.release.service::stamp_version 1.2.0"
   assert_success
-  assert_equal "$(json_value "$(cat "$destination/dist/hey.json")" .state.version)" "1.2.0"
-  assert_equal "$(json_value "$(cat "$destination/dist/hey.json")" .state.commit)" ""
+  assert_equal "$(json_value "$(cat "$destination/$SOURCE_NAME/hey.json")" .state.version)" "1.2.0"
+  assert_equal "$(json_value "$(cat "$destination/$SOURCE_NAME/hey.json")" .state.commit)" ""
 }
 
 test_release_stops_when_a_version_file_isnt_in_the_release() {
   local destination="$SANDBOX/export"
   mkdir -p "$destination"
-  sandbox::settings '"release": {"versionFiles": {"dist/hey.json": "state.version"}}'
+  sandbox::settings '"release": {"versionFiles": {"'"$SOURCE_NAME"'/hey.json": "state.version"}}'
   core "hey::use core.modules.release.service; RELEASE_DESTINATION='$destination'; core.modules.release.service::stamp_version 1.2.0"
   assert_failure
   assert_equal "$STATUS" 1

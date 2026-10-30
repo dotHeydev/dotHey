@@ -426,7 +426,7 @@ core.modules.release.service::export() {
 core.modules.release.service::stamp_version() {
   local version="$1" files file path document stamped
   files=$(hey::setting "$RELEASE_VERSION_FILES_SETTING" "{}") || hey::abort "$RELEASE_VERSION_FILES_SETTING in $(hey::relative "$SETTINGS_FILE") can't be read, so nothing was committed."
-  [[ "$files" == "{"* ]] || hey::abort "$RELEASE_VERSION_FILES_SETTING must map files to JSON paths, like {\"dist/hey.json\": \"state.version\"}, so nothing was committed."
+  [[ "$files" == "{"* ]] || hey::abort "$RELEASE_VERSION_FILES_SETTING must map files to JSON paths, like {\"<file>\": \"<JSON path>\"}, so nothing was committed."
   while IFS= read -r file; do
     path=$(framework.helpers.json::values "$files" ".[$(framework.helpers.json::string "$file")]")
     guards::stays_inside "$file" && [[ "$file" != /* ]] && [ -f "$RELEASE_DESTINATION/$file" ] && [ ! -L "$RELEASE_DESTINATION/$file" ] \

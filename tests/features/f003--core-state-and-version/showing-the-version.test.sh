@@ -55,12 +55,12 @@ test_a_release_with_terminal_codes_is_not_shown() {
   assert_equal "$OUTPUT" "dotHey (unreleased)"
 }
 
-# An upstream repo whose one commit ships <hey.json> in dist/; prints it.
+# An upstream repo whose one commit ships <hey.json> in the source; prints it.
 upstream_with() {
   local upstream="$SANDBOX/upstream"
-  mkdir -p "$upstream/dist/.core"
+  mkdir -p "$upstream/$SOURCE_NAME/.core"
   git init -q "$upstream"
-  printf '%s\n' "$1" > "$upstream/dist/hey.json"
+  printf '%s\n' "$1" > "$upstream/$SOURCE_NAME/hey.json"
   git -C "$upstream" add -A
   git -C "$upstream" -c user.name=t -c user.email=t@t -c commit.gpgsign=false commit -qm release
   git -C "$upstream" rev-parse HEAD

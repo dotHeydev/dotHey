@@ -19,6 +19,12 @@ test_update_records_the_version() {
   assert_contains "$(cat "$DOTHEY/hey.json")" '"commit": "0123456789012345678901234567890123456789"'
 }
 
+test_update_downloads_the_folder_the_repository_ships_as_its_source() {
+  core 'hey::use core.system.update.service; printf "%s\n" "$UPDATE_SOURCE"'
+  assert_success
+  assert_equal "$OUTPUT" "$SOURCE_NAME"
+}
+
 commit_tree() {
   local repository="$1" message="$2"
   git -C "$repository" add -A
@@ -28,15 +34,15 @@ commit_tree() {
 
 test_update_replaces_adds_and_removes_only_what_upstream_removed() {
   local upstream="$SANDBOX/upstream" core_dir="$DOTHEY/.core" old new
-  mkdir -p "$upstream/dist/.core/demo"
+  mkdir -p "$upstream/$SOURCE_NAME/.core/demo"
   git init -q "$upstream"
-  printf 'old\n' > "$upstream/dist/.core/demo/kept.sh"
-  printf 'old\n' > "$upstream/dist/.core/demo/gone.sh"
-  printf 'old\n' > "$upstream/dist/.core/demo/edited.sh"
+  printf 'old\n' > "$upstream/$SOURCE_NAME/.core/demo/kept.sh"
+  printf 'old\n' > "$upstream/$SOURCE_NAME/.core/demo/gone.sh"
+  printf 'old\n' > "$upstream/$SOURCE_NAME/.core/demo/edited.sh"
   old=$(commit_tree "$upstream" old)
-  printf 'new\n' > "$upstream/dist/.core/demo/kept.sh"
-  printf 'new\n' > "$upstream/dist/.core/demo/added.sh"
-  rm "$upstream/dist/.core/demo/gone.sh" "$upstream/dist/.core/demo/edited.sh"
+  printf 'new\n' > "$upstream/$SOURCE_NAME/.core/demo/kept.sh"
+  printf 'new\n' > "$upstream/$SOURCE_NAME/.core/demo/added.sh"
+  rm "$upstream/$SOURCE_NAME/.core/demo/gone.sh" "$upstream/$SOURCE_NAME/.core/demo/edited.sh"
   new=$(commit_tree "$upstream" new)
   git -C "$upstream" update-ref refs/dothey/new "$new"
   git -C "$upstream" update-ref refs/dothey/old "$old"
@@ -47,11 +53,11 @@ test_update_replaces_adds_and_removes_only_what_upstream_removed() {
   core "hey::save_state commit '\"$old\"'"
   core "hey::use core.system.update.service
     UPDATE_REPOSITORY='$upstream'
-    core.system.update.service::extract $new dist '$SANDBOX/tree'
-    core.system.update.service::compare '$SANDBOX/tree/dist'
-    core.system.update.service::find_removed $old $new dist
-    core.system.update.service::find_unknown '$SANDBOX/tree/dist'
-    core.system.update.service::copy '$SANDBOX/tree/dist'
+    core.system.update.service::extract $new $SOURCE_NAME '$SANDBOX/tree'
+    core.system.update.service::compare '$SANDBOX/tree/$SOURCE_NAME'
+    core.system.update.service::find_removed $old $new $SOURCE_NAME
+    core.system.update.service::find_unknown '$SANDBOX/tree/$SOURCE_NAME'
+    core.system.update.service::copy '$SANDBOX/tree/$SOURCE_NAME'
     printf 'edited:%s\n' \"\${UPDATE_EDITED[*]}\"
     printf 'unknown:%s\n' \"\${UPDATE_UNKNOWN[*]}\""
   assert_success
