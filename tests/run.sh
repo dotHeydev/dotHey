@@ -3,7 +3,7 @@
 set -uo pipefail
 # Agent mode (AI_AGENT, CLAUDECODE) changes the output; tests ask for it
 # themselves.
-unset AI_AGENT CLAUDECODE CI DOT_NO_INPUT FORCE_COLOR CLICOLOR_FORCE
+unset AI_AGENT CLAUDECODE CI HEY_NO_INPUT FORCE_COLOR CLICOLOR_FORCE
 
 . "$(dirname -- "$0")/lib.sh"
 
@@ -16,10 +16,10 @@ USAGE="Usage: bash tests/run.sh [--file <name>] [--case <test>] [--jobs <n>] [--
   -v, -vv         a dot per test, or each test's name"
 GNU_ONLY_COMMANDS=(realpath)
 BASH4_ONLY_BUILTINS=(mapfile readarray)
-# Off for every file: SC1090 and SC1091, as dot::use loads modules by name,
+# Off for every file: SC1090 and SC1091, as hey::use loads modules by name,
 # not by a path shellcheck could follow; SC2034, as globals are set in one
 # module and read in another; SC2015 and SC2016, the A && B || C and
-# literal-'$' idioms dotdot writes on purpose. Everything else, notes
+# literal-'$' idioms dotHey writes on purpose. Everything else, notes
 # included, fails the suite.
 LINT_EXCLUSIONS="SC1090,SC1091,SC2034,SC2015,SC2016"
 
@@ -60,7 +60,7 @@ restrict_environment() {
 # Shellchecks the scripts whose content changed since they last passed (cksum
 # per file, cached outside the repo), so an unchanged tree lints in no time.
 lint() {
-  local cache="${XDG_CACHE_HOME:-$HOME/.cache}/dotdot-tests/lint" sums="$WORK_DIR/sums" changed="$WORK_DIR/changed"
+  local cache="${XDG_CACHE_HOME:-$HOME/.cache}/dothey-tests/lint" sums="$WORK_DIR/sums" changed="$WORK_DIR/changed"
   command -v shellcheck >/dev/null || { printf '%s✗%s shellcheck isn'"'"'t installed, so nothing was linted. Please install it, or run with --no-lint.\n' "$BOLD$RED" "$RESET" > "$WORK_DIR/lint"; return 1; }
   mkdir -p "$(dirname -- "$cache")" && touch "$cache"
   find "$SOURCE_DIR" "$REPOSITORY_DIR/install.sh" "$TESTS_DIR" -type f \( -name '*.sh' -o -path '*/bin/*' \) -print0 \

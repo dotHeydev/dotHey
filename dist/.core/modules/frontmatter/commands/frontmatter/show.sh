@@ -1,9 +1,9 @@
 # shellcheck shell=bash
 
-DESCRIPTION="Print just the frontmatter of dotdot's docs."
+DESCRIPTION="Print just the frontmatter of dotHey's docs."
 JSON=true
 
-dot::use framework.console.args framework.helpers.frontmatter framework.helpers.fs framework.console.output framework.helpers.json framework.ui.rule
+hey::use framework.console.args framework.helpers.frontmatter framework.helpers.fs framework.console.output framework.helpers.json framework.ui.rule
 
 SCAN_MISSING_FRONTMATTER="(no frontmatter)"
 
@@ -13,19 +13,19 @@ Prints each Markdown file's frontmatter, without its body, so a directory of
 docs can be surveyed cheaply before reading any of them in full.
 
 Usage:
-  bash dot frontmatter:show <path>
+  bash hey frontmatter:show <path>
 
 Arguments:
   <path>       A directory (every *.md directly in it) or one Markdown file,
-               inside $DOTDOT_NAME/; relative to $DOTDOT_NAME/ wherever you run it.
+               inside $DOTHEY_NAME/; relative to $DOTHEY_NAME/ wherever you run it.
 
 Options:
   --json       [{"file", "frontmatter": {<key>: <value>} or null}], one per file.
   -h, --help   Show this help.
 
 Examples:
-  bash dot frontmatter:show Features
-  bash dot frontmatter:show Decisions/d002--no-soft-deletes.md
+  bash hey frontmatter:show Features
+  bash hey frontmatter:show Decisions/d002--no-soft-deletes.md
 
 Notes:
   - A file without frontmatter shows as $SCAN_MISSING_FRONTMATTER.
@@ -53,7 +53,7 @@ frontmatter_json() {
 
 print_frontmatter() {
   local file="$1" label="$2"
-  if $DOT_JSON; then
+  if $HEY_JSON; then
     printf '{"file":%s,"frontmatter":%s}\n' "$(framework.helpers.json::string "$label")" "$(frontmatter_json "$file")"
     return
   fi
@@ -69,35 +69,35 @@ scan_directory() {
   local directory="$1" label="$2" file found=false
   for file in "$directory"/*.md; do
     [ -e "$file" ] || continue
-    if ! framework.helpers.fs::within "$file" "$DOTDOT_ROOT" >/dev/null; then
-      framework.console.output::warn "Skipped $label/$(basename -- "$file"): it leads outside $DOTDOT_NAME/."
+    if ! framework.helpers.fs::within "$file" "$DOTHEY_ROOT" >/dev/null; then
+      framework.console.output::warn "Skipped $label/$(basename -- "$file"): it leads outside $DOTHEY_NAME/."
       continue
     fi
-    $DOT_JSON || ! $found || framework.ui.rule::show
+    $HEY_JSON || ! $found || framework.ui.rule::show
     found=true
     print_frontmatter "$file" "$label/$(basename -- "$file")"
   done
-  $found || $DOT_JSON || framework.console.output::line "No Markdown files in $label."
+  $found || $HEY_JSON || framework.console.output::line "No Markdown files in $label."
 }
 
 handle() {
   local label target
-  [ $# -eq 1 ] || framework.console.args::invalid "Please give one directory or Markdown file in $DOTDOT_NAME/."
+  [ $# -eq 1 ] || framework.console.args::invalid "Please give one directory or Markdown file in $DOTHEY_NAME/."
   label="$1"
   while [ "${label%/}" != "$label" ] && [ "$label" != "/" ]; do
     label="${label%/}"
   done
-  target=$(framework.helpers.fs::within "$(paths::in_dotdot "$label")" "$DOTDOT_ROOT") \
-    || framework.console.output::fail "$label is outside $DOTDOT_NAME/."
+  target=$(framework.helpers.fs::within "$(paths::in_dothey "$label")" "$DOTHEY_ROOT") \
+    || framework.console.output::fail "$label is outside $DOTHEY_NAME/."
   if [ -d "$target" ]; then
-    if $DOT_JSON; then
+    if $HEY_JSON; then
       printf '[%s]\n' "$(scan_directory "$target" "$label" | paste -sd ',' -)"
     else
       scan_directory "$target" "$label"
     fi
   elif [ -f "$target" ]; then
     case "$label" in
-      *.md) if $DOT_JSON; then printf '[%s]\n' "$(print_frontmatter "$target" "$label")"; else print_frontmatter "$target" "$label"; fi ;;
+      *.md) if $HEY_JSON; then printf '[%s]\n' "$(print_frontmatter "$target" "$label")"; else print_frontmatter "$target" "$label"; fi ;;
       *) framework.console.output::fail_as "$EXIT_USAGE" "$label isn't a Markdown file." ;;
     esac
   else

@@ -2,13 +2,13 @@
 
 DESCRIPTION="Greet from the plugin."
 
-dot::use framework.console.args framework.console.output
+hey::use framework.console.args framework.console.output
 
 usage() {
-  framework.console.output::line "bash dot $DOT_COMMAND — greet from the plugin."
+  framework.console.output::line "bash hey $HEY_COMMAND — greet from the plugin."
   framework.console.output::newline
   framework.console.output::line "Usage:"
-  framework.console.output::line "  bash dot $DOT_COMMAND [name]"
+  framework.console.output::line "  bash hey $HEY_COMMAND [name]"
 }
 
 handle() {

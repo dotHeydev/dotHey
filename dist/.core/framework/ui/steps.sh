@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 
-dot::use framework.ui.screen framework.helpers.fs
+hey::use framework.ui.screen framework.helpers.fs
 
 UI_STEPS_SHOWN=-1
 

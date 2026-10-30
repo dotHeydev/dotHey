@@ -1,18 +1,18 @@
 # shellcheck shell=bash
 
 BIN_DIR="$SYSTEM_DIR/bin"
-DOT_BIN="$BIN_DIR/dot"
+HEY_BIN="$BIN_DIR/hey"
 SYSTEM_PARTS=(plugins link update migrations)
 MIGRATIONS_DIR="$SYSTEM_DIR/migrations"
 CORE_MODULES=(onboarding ready setup frontmatter housekeeping notes xrays features decisions tasks release tui)
 MODULE_COMMANDS_DIR="commands"
 KEEP_FILE=".gitkeep"
 
-# The project's settings (overrides, the links map, dotdot's state, and
-# "@env:<KEY>" references into .env), the defaults dotdot ships, and the host
+# The project's settings (overrides, the links map, dotHey's state, and
+# "@env:<KEY>" references into .env), the defaults dotHey ships, and the host
 # project's .env, which alone holds secrets.
-SETTINGS_FILE="$DOTDOT_ROOT/dot.json"
-SETTINGS_DEFAULTS="$CORE_DIR/dot.defaults.json"
+SETTINGS_FILE="$DOTHEY_ROOT/hey.json"
+SETTINGS_DEFAULTS="$CORE_DIR/hey.defaults.json"
 HOST_ENV_FILE="$BASE/.env"
 LINK_MAP_SEPARATOR="->"
 
@@ -21,36 +21,36 @@ PLUGIN_CONTEXT_DIR="context"
 PLUGIN_STUBS_DIR="stubs"
 PLUGIN_STUB_SUFFIX=".stub"
 
-# The project's record folders, shipped with dotdot (each with a .gitkeep), and
+# The project's record folders, shipped with dotHey (each with a .gitkeep), and
 # the prefix of their numbered files.
-FEATURES_DIR="$DOTDOT_ROOT/Features"
+FEATURES_DIR="$DOTHEY_ROOT/Features"
 FEATURE_PREFIX="f"
-DECISIONS_DIR="$DOTDOT_ROOT/Decisions"
+DECISIONS_DIR="$DOTHEY_ROOT/Decisions"
 DECISION_PREFIX="d"
-NOTES_DIR="$DOTDOT_ROOT/Notes"
+NOTES_DIR="$DOTHEY_ROOT/Notes"
 NOTE_PREFIX="n"
-XRAYS_DIR="$DOTDOT_ROOT/Xrays"
+XRAYS_DIR="$DOTHEY_ROOT/Xrays"
 XRAY_PREFIX="x"
-TASKS_DIR="$DOTDOT_ROOT/Tasks"
+TASKS_DIR="$DOTHEY_ROOT/Tasks"
 TASK_PREFIX="t"
-PLUGINS_DIR="$DOTDOT_ROOT/.plugins"
+PLUGINS_DIR="$DOTHEY_ROOT/.plugins"
 PLUGINS_LOCK="$PLUGINS_DIR/plugins-lock.json"
 
-USER_FILE="$DOTDOT_ROOT/USER.md"
-USER_EXAMPLE_FILE="$DOTDOT_ROOT/USER.example.md"
-ENTRY_LINK="$BASE/dot"
+USER_FILE="$DOTHEY_ROOT/USER.md"
+USER_EXAMPLE_FILE="$DOTHEY_ROOT/USER.example.md"
+ENTRY_LINK="$BASE/hey"
 
-paths::in_dotdot() {
+paths::in_dothey() {
   local path="$1"
   case "$path" in
     /*) printf '%s\n' "$path"; return ;;
-    "$DOTDOT_NAME") path="." ;;
-    "$DOTDOT_NAME"/*) path="${path#*/}" ;;
+    "$DOTHEY_NAME") path="." ;;
+    "$DOTHEY_NAME"/*) path="${path#*/}" ;;
   esac
-  printf '%s\n' "$DOTDOT_ROOT/$path"
+  printf '%s\n' "$DOTHEY_ROOT/$path"
 }
 
-# The modules a feature flag turns off: each one dotdot's defaults list under
+# The modules a feature flag turns off: each one dotHey's defaults list under
 # featureFlags, unless the project turns its flag on. Read once per run
 # (paths::read_flags), as every listing and lookup asks.
 PATHS_DISABLED=""
@@ -59,10 +59,10 @@ PATHS_FLAGS_READ=false
 paths::read_flags() {
   local module
   ! $PATHS_FLAGS_READ || return 0
-  dot::use framework.helpers.json
+  hey::use framework.helpers.json
   PATHS_DISABLED=""
   for module in $(framework.helpers.json::keys "$(cat -- "$SETTINGS_DEFAULTS")" .featureFlags); do
-    dot::feature "$module" || PATHS_DISABLED="$PATHS_DISABLED$module"$'\n'
+    hey::feature "$module" || PATHS_DISABLED="$PATHS_DISABLED$module"$'\n'
   done
   PATHS_FLAGS_READ=true
 }
@@ -78,7 +78,7 @@ paths::module_on() {
   [[ $'\n'"$PATHS_DISABLED" != *$'\n'"$1"$'\n'* ]]
 }
 
-# dotdot's modules, but those a feature flag turns off; with --all, every one.
+# dotHey's modules, but those a feature flag turns off; with --all, every one.
 paths::core_modules() {
   local part disabled=" "
   [ "${1-}" = --all ] || disabled=" $(paths::disabled_modules | tr '\n' ' ')"
@@ -103,9 +103,9 @@ paths::modules() {
 # order), so the first one added keeps whatever a later one would clash with.
 paths::plugins() {
   local directory plugin
-  dot::use framework.helpers.json
+  hey::use framework.helpers.json
   {
-    dot::plugin_keys | while read -r _ plugin; do
+    hey::plugin_keys | while read -r _ plugin; do
       ! guards::plugin_id "$plugin" || printf '%s\n' "$plugin"
     done
     for directory in "$PLUGINS_DIR"/*/*/; do
@@ -118,7 +118,7 @@ paths::plugins() {
   done
 }
 
-# The links map (the project settings' links, or dotdot's default while they
+# The links map (the project settings' links, or dotHey's default while they
 # have none) as rows "<group>\t<kind>\t<origin>\t<destination>", one per
 # destination: <group> is "." for the general ones (each "<origin>":
 # [destinations] at the top, and the "append" and "skip" sections), +<owner>/<name>
@@ -128,7 +128,7 @@ paths::plugins() {
 # links is not a JSON object.
 paths::links_rows() {
   local document="{}" links
-  dot::use framework.helpers.json
+  hey::use framework.helpers.json
   [ ! -f "$SETTINGS_FILE" ] || document=$(cat -- "$SETTINGS_FILE")
   case "$(framework.helpers.json::encoded "$document" .)" in
     "{"*) ;;

@@ -3,7 +3,7 @@
 DESCRIPTION="Update a plugin, after a review."
 DOCS="using-plugins"
 
-dot::use framework.console.args framework.console.output core.system.plugins.console core.system.plugins.manifest
+hey::use framework.console.args framework.console.output core.system.plugins.console core.system.plugins.manifest
 
 usage() {
   cat <<USAGE
@@ -12,8 +12,8 @@ asking. Its new links go under "inactive"; the active ones
 stay as they are.
 
 Usage:
-  bash dot plugins:update <owner>/<name> [-y, --yes]
-  bash dot plugins:update --all [-y, --yes]
+  bash hey plugins:update <owner>/<name> [-y, --yes]
+  bash hey plugins:update --all [-y, --yes]
 
 Arguments:
   <owner>/<name>   The plugin.
@@ -26,18 +26,18 @@ Options:
   -h, --help       Show this help.
 
 Examples:
-  bash dot plugins:update acme/widgets
-  bash dot plugins:update --all
-  bash dot plugins:update acme/widgets --preview
+  bash hey plugins:update acme/widgets
+  bash hey plugins:update --all
+  bash hey plugins:update acme/widgets --preview
 
 Notes:
-  - Take the new links: bash dot plugins:link <owner>/<name> --overwrite.
+  - Take the new links: bash hey plugins:link <owner>/<name> --overwrite.
 USAGE
 }
 
 update_plugin() {
   local plugin="$1" confirmed="$2" entry origin ref commit
-  entry=$(core.system.plugins.manifest::lock_entry "$plugin") || framework.console.output::fail_as "$EXIT_NOT_FOUND" "$plugin isn't installed." "See what is: bash dot plugins:list"
+  entry=$(core.system.plugins.manifest::lock_entry "$plugin") || framework.console.output::fail_as "$EXIT_NOT_FOUND" "$plugin isn't installed." "See what is: bash hey plugins:list"
   read -r origin ref commit _ <<< "$entry"
   case "$origin" in
     "$PLUGIN_PATH_SOURCE"*)
@@ -55,10 +55,10 @@ update_plugin() {
   core.system.plugins.console::header "$plugin" "${commit:0:7} $UI_ARROW ${PLUGIN_COMMIT:0:7}"
   core.system.plugins.console::preview "$plugin" "$PLUGIN_SOURCE"
   if $PLUGINS_PREVIEW; then
-    framework.console.output::next "To update it: bash dot plugins:update $plugin"
+    framework.console.output::next "To update it: bash hey plugins:update $plugin"
     return 0
   fi
-  core.system.plugins.console::confirm "Do you want to update $plugin?" "$confirmed" "bash dot plugins:update $plugin" || return 0
+  core.system.plugins.console::confirm "Do you want to update $plugin?" "$confirmed" "bash hey plugins:update $plugin" || return 0
   core.system.plugins.console::install "$plugin" "$PLUGIN_SOURCE"
   framework.console.output::success "Updated $plugin."
   PLUGINS_UPDATED=true
@@ -100,5 +100,5 @@ handle() {
   done
   $PLUGINS_UPDATED || return 0
   core.system.plugins.console::suggest "${PLUGINS_REFRESH[@]}"
-  framework.console.output::next "Take the new links: bash dot plugins:link <owner>/<name> --overwrite"
+  framework.console.output::next "Take the new links: bash hey plugins:link <owner>/<name> --overwrite"
 }

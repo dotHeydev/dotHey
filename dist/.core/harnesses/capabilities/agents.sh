@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 
-# Agents: dotdot's and the ones it owns (Agents/), in Claude's Markdown
+# Agents: dotHey's and the ones it owns (Agents/), in Claude's Markdown
 # format, ported to a harness's agents directory. Data: .agents {dir, file,
 # port}: port "link" (the default) links them as they are; with a file name
 # other than {name}.md, each is linked under that name; port "render" writes
@@ -9,7 +9,7 @@
 # <file>. Renaming and rendering are the transform's (harnesses/transform.sh):
 # rows only say what goes where.
 
-dot::use core.harnesses.harness
+hey::use core.harnesses.harness
 
 HARNESS_AGENTS_DEFAULT_FILE="{name}.md"
 
@@ -28,12 +28,12 @@ core.harnesses.capabilities.agents::port() {
   [ "$(core.harnesses.capabilities.agents::file "$1" x)" = "x.md" ] && printf 'link\n' || printf 'rename\n'
 }
 
-# The agent name a file of <id>'s agents directory holds, when dotdot can
+# The agent name a file of <id>'s agents directory holds, when dotHey can
 # own it: in its format, or in one the harness can import; fails for any
 # other.
 core.harnesses.capabilities.agents::name_of() {
   local id="$1" file="$2" pattern prefix suffix name
-  dot::use "core.harnesses.$id.harness"
+  hey::use "core.harnesses.$id.harness"
   [ "$(core.harnesses.capabilities.agents::port "$id")" != render ] \
     || declare -F "core.harnesses.$id.harness::agents_import" >/dev/null || return 1
   pattern=$(core.harnesses.capabilities.agents::file "$id" '{name}')
@@ -45,10 +45,10 @@ core.harnesses.capabilities.agents::name_of() {
   [ -n "$name" ] && printf '%s\n' "$name"
 }
 
-# import <id> <name> <file>: the agent at <file> in dotdot's format, as it is
+# import <id> <name> <file>: the agent at <file> in dotHey's format, as it is
 # or through the harness's agents_import.
 core.harnesses.capabilities.agents::import() {
-  dot::use "core.harnesses.$1.harness"
+  hey::use "core.harnesses.$1.harness"
   if [ "$(core.harnesses.capabilities.agents::port "$1")" = render ]; then
     "core.harnesses.$1.harness::agents_import" "$1" "$2" "$3"
   else
@@ -60,8 +60,8 @@ core.harnesses.capabilities.agents::rows() {
   local path
   path=$(core.harnesses.harness::dir "$1" agents)
   [ -n "$path" ] || return 0
-  printf 'link\t@dotdotAgents\t%s\n' "$path"
-  printf 'link\t@dot:Agents/*\t%s\n' "$path"
+  printf 'link\t@dotheyAgents\t%s\n' "$path"
+  printf 'link\t@hey:Agents/*\t%s\n' "$path"
 }
 
 core.harnesses.capabilities.agents::destinations() {

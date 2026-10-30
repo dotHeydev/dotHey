@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 
-dot::use framework.ui.screen
+hey::use framework.ui.screen
 
 # Any of <option>..., toggled with Space and confirmed with Enter, each printed
 # on its own line; --checked <n,n> checks those (1-based) first. An option's
@@ -67,7 +67,7 @@ framework.ui.checkbox::frame() {
 framework.ui.checkbox::typed() {
   local question="$1" checked="$2" reply number index valid defaults
   shift 2
-  dot::use framework.console.prompt
+  hey::use framework.console.prompt
   framework.console.prompt::can_ask || return 1
   framework.console.prompt::question "$question" >&2
   for ((index = 1; index <= $#; index++)); do
@@ -75,7 +75,7 @@ framework.ui.checkbox::typed() {
   done
   while :; do
     defaults=$(printf '%s' "${checked# }" | sed 's/ *$//; s/ /,/g')
-    # shellcheck disable=SC2059 # UI_HINT_CHOICES is dotdot's own format
+    # shellcheck disable=SC2059 # UI_HINT_CHOICES is dotHey's own format
     read -r -p "$(printf "$UI_HINT_CHOICES" "$#")${defaults:+[$defaults] }" reply || return 1
     [ -n "$reply" ] || reply="$checked"
     reply="${reply//,/ }"

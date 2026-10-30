@@ -4,17 +4,17 @@
 # Golden
 
 test_a_skipped_row_is_never_linked() {
-  links "link:@dot:RULES.md->rules.md" "skip:@dot:RULES.md->rules.md"
-  dot link -y
+  links "link:@hey:RULES.md->rules.md" "skip:@hey:RULES.md->rules.md"
+  hey link -y
   assert_success
   assert_no_file "$SANDBOX/rules.md"
 }
 
 test_skipping_a_linked_row_removes_its_link() {
-  links "link:@dot:RULES.md->rules.md"
-  dot link -y
-  links "link:@dot:RULES.md->rules.md" "skip:@dot:RULES.md->rules.md"
-  dot link -y
+  links "link:@hey:RULES.md->rules.md"
+  hey link -y
+  links "link:@hey:RULES.md->rules.md" "skip:@hey:RULES.md->rules.md"
+  hey link -y
   assert_success
   assert_no_file "$SANDBOX/rules.md"
 }
@@ -22,23 +22,23 @@ test_skipping_a_linked_row_removes_its_link() {
 # Edge
 
 test_setup_keeps_a_skip_on_a_row_a_chosen_harness_wants() {
-  links "link:@dot:AGENTS.md->AGENTS.md" "skip:@dotdotSkills->.claude/skills/"
-  dot setup --harness claude --yes
+  links "link:@hey:AGENTS.md->AGENTS.md" "skip:@dotheySkills->.claude/skills/"
+  hey setup --harness claude --yes
   assert_success
-  assert_equal "$(map_value '.skip["@dotdotSkills"][]')" ".claude/skills/"
-  assert_no_file "$SANDBOX/.claude/skills/dot-onboard"
+  assert_equal "$(map_value '.skip["@dotheySkills"][]')" ".claude/skills/"
+  assert_no_file "$SANDBOX/.claude/skills/hey-onboard"
 }
 
 test_unchoosing_a_harness_writes_no_skip() {
-  dot setup --harness claude,agents --yes
-  dot setup --harness agents --yes
+  hey setup --harness claude,agents --yes
+  hey setup --harness agents --yes
   assert_success
   assert_equal "$(map_value '.skip')" "{}"
-  assert_no_file "$SANDBOX/.claude/skills/dot-onboard"
+  assert_no_file "$SANDBOX/.claude/skills/hey-onboard"
 }
 
 test_a_plugin_s_skipped_suggestion_is_never_linked() {
-  mkdir -p "$SANDBOX/widgets/dotdot"
+  mkdir -p "$SANDBOX/widgets/dothey"
   manifest "$SANDBOX/widgets" "link:plugin.json->widgets.json"
   add_plugin acme/widgets "$SANDBOX/widgets"
   add_entry skip "@plugin:acme.widgets:plugin.json" "widgets.json"

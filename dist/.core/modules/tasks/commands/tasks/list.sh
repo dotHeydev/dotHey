@@ -4,14 +4,14 @@ DESCRIPTION="List the project's tasks."
 DOCS="tasks"
 JSON=true
 
-dot::use framework.console.args framework.helpers.fs framework.console.output core.modules.tasks.console core.modules.tasks.service framework.helpers.text framework.helpers.json
+hey::use framework.console.args framework.helpers.fs framework.console.output core.modules.tasks.console core.modules.tasks.service framework.helpers.text framework.helpers.json
 
 usage() {
   cat <<USAGE
 Lists the project's tasks, oldest first, $TASK_PAGE_SIZE to a page.
 
 Usage:
-  bash dot tasks:list [options]
+  bash hey tasks:list [options]
 
 Options:
   -s, --status <status>    Only these, comma-separated:
@@ -26,9 +26,9 @@ Options:
   -h, --help               Show this help.
 
 Examples:
-  bash dot tasks:list --status todo,doing,paused
-  bash dot tasks:list --sort updated --order desc -l 5
-  bash dot tasks:list --plain | cut -f1,5
+  bash hey tasks:list --status todo,doing,paused
+  bash hey tasks:list --sort updated --order desc -l 5
+  bash hey tasks:list --plain | cut -f1,5
 USAGE
 }
 
@@ -55,7 +55,7 @@ print_rows() {
 
 handle() {
   local work statuses="" sort=created order=asc limit page=1 status total size pages first last next="" format=table
-  ! $DOT_JSON || format=json
+  ! $HEY_JSON || format=json
   core.modules.tasks.console::ensure_service
   limit=$TASK_PAGE_SIZE
   while [ $# -gt 0 ]; do

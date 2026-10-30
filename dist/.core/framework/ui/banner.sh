@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 
-dot::use framework.ui.screen
+hey::use framework.ui.screen
 
 # <title>, and <subtitle> under it, in a box on stdout; in plain output, the
 # two lines.

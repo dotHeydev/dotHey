@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 
-dot::use framework.helpers.record framework.helpers.text
+hey::use framework.helpers.record framework.helpers.text
 
 # A note given no name gets a random <adjective>-<noun> one.
 core.modules.notes.service::random_name() {

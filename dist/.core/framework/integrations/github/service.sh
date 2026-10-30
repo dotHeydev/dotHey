@@ -1,10 +1,10 @@
 # shellcheck shell=bash
 
-# Everything dotdot does on GitHub, behind one service: each operation runs
-# through internal/route.sh (gh, then the API with DOT_GH_TOKEN), so callers
+# Everything dotHey does on GitHub, behind one service: each operation runs
+# through internal/route.sh (gh, then the API with HEY_GH_TOKEN), so callers
 # never choose a route. Releases are apart: they push with their own tokens.
 
-dot::use framework.integrations.github.internal.route framework.helpers.net
+hey::use framework.integrations.github.internal.route framework.helpers.net
 
 GITHUB_HOST_URL="https://github.com/"
 GITHUB_REPOSITORY_PATTERN='^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$'
@@ -24,7 +24,7 @@ framework.integrations.github.service::url() {
   printf '%s%s\n' "$GITHUB_HOST_URL" "$1"
 }
 
-# Whether GitHub can be reached as someone: gh logged in, or DOT_GH_TOKEN.
+# Whether GitHub can be reached as someone: gh logged in, or HEY_GH_TOKEN.
 framework.integrations.github.service::is_ready() {
   framework.integrations.github.internal.route::is_ready
 }

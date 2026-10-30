@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 
-dot::use framework.ui.screen
+hey::use framework.ui.screen
 
 # A line across the terminal, or <width> wide, on stdout: drawn at a terminal,
 # dashes anywhere else.

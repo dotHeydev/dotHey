@@ -4,7 +4,7 @@ DESCRIPTION="Create a new, numbered note."
 DOCS="notes"
 JSON=true
 
-dot::use framework.console.args core.modules.notes.service framework.console.output framework.helpers.text
+hey::use framework.console.args core.modules.notes.service framework.console.output framework.helpers.text
 
 usage() {
   cat <<EOF
@@ -12,7 +12,7 @@ Creates the next numbered, empty note in Notes/; write the note into it
 afterwards.
 
 Usage:
-  bash dot notes:create [<name>]
+  bash hey notes:create [<name>]
 
 Arguments:
   <name>       A short name for the file ("Cache idea" becomes cache-idea).
@@ -23,8 +23,8 @@ Options:
   -h, --help   Show this help.
 
 Examples:
-  bash dot notes:create "Cache idea"
-  bash dot notes:create
+  bash hey notes:create "Cache idea"
+  bash hey notes:create
 EOF
 }
 
@@ -38,5 +38,5 @@ handle() {
   slug=$(framework.helpers.text::slug "$name")
   [ -n "$slug" ] || framework.console.args::invalid "The name needs at least one letter or digit."
   path=$(core.modules.notes.service::create "$slug") || framework.console.output::fail "Couldn't create the note; please try again."
-  framework.console.output::created "Created note $(framework.helpers.record::number "$(basename -- "$path")")." "$(basename -- "$path" .md)" "$(dot::relative "$path")"
+  framework.console.output::created "Created note $(framework.helpers.record::number "$(basename -- "$path")")." "$(basename -- "$path" .md)" "$(hey::relative "$path")"
 }

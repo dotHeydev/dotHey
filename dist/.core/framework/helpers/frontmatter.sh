@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 
-dot::use framework.helpers.fs
+hey::use framework.helpers.fs
 
 FRONTMATTER_FENCE="---"
 

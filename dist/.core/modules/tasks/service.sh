@@ -1,8 +1,8 @@
 # shellcheck shell=bash
 
-dot::use framework.helpers.fs framework.helpers.json framework.helpers.template framework.helpers.text
+hey::use framework.helpers.fs framework.helpers.json framework.helpers.template framework.helpers.text
 
-TASK_TEMPLATE="$MODULES_DIR/tasks/skills/dot-create-task/task-template.md"
+TASK_TEMPLATE="$MODULES_DIR/tasks/skills/hey-create-task/task-template.md"
 TASK_DRIVERS_DIR="$MODULES_DIR/tasks/drivers"
 TASK_SETUP_SUFFIX="-setup"
 TASK_PAGE_SIZE=25
@@ -15,7 +15,7 @@ TASK_CREATED_COLUMN=3
 TASK_UPDATED_COLUMN=4
 
 core.modules.tasks.service::require_template() {
-  [ -f "$TASK_TEMPLATE" ] || dot::abort "The template $(dot::relative "$TASK_TEMPLATE") is missing." "bash dot upgrade restores it."
+  [ -f "$TASK_TEMPLATE" ] || hey::abort "The template $(hey::relative "$TASK_TEMPLATE") is missing." "bash hey upgrade restores it."
 }
 
 core.modules.tasks.service::statuses() {
@@ -51,19 +51,19 @@ core.modules.tasks.service::service_description() {
 
 core.modules.tasks.service::selected_service() {
   local service
-  service=$(dot::setting "$TASK_SERVICE_SETTING" "") && [ -n "$service" ] || return 1
+  service=$(hey::setting "$TASK_SERVICE_SETTING" "") && [ -n "$service" ] || return 1
   printf '%s\n' "$service"
 }
 
 core.modules.tasks.service::select_service() {
-  dot::save_setting "$TASK_SERVICE_SETTING" "$(framework.helpers.json::string "$1")"
+  hey::save_setting "$TASK_SERVICE_SETTING" "$(framework.helpers.json::string "$1")"
 }
 
 core.modules.tasks.service::load_service() {
   local service="$1"
-  [[ "$service" =~ $TASK_SERVICE_PATTERN ]] || dot::abort "tasks.service \"$service\" isn't a task service dotdot has."
-  [ -f "$TASK_DRIVERS_DIR/$service.sh" ] || dot::abort "tasks.service \"$service\" isn't a task service dotdot has."
-  dot::use "core.modules.tasks.drivers.$service"
+  [[ "$service" =~ $TASK_SERVICE_PATTERN ]] || hey::abort "tasks.service \"$service\" isn't a task service dotHey has."
+  [ -f "$TASK_DRIVERS_DIR/$service.sh" ] || hey::abort "tasks.service \"$service\" isn't a task service dotHey has."
+  hey::use "core.modules.tasks.drivers.$service"
   TASKS_SERVICE="$service"
 }
 
@@ -72,13 +72,13 @@ core.modules.tasks.service::driver() {
 }
 
 core.modules.tasks.service::check_title() {
-  [ -n "$1" ] || dot::abort "The task needs a title."
-  framework.helpers.text::is_one_line "$1" || dot::abort "The title must fit on one line."
+  [ -n "$1" ] || hey::abort "The task needs a title."
+  framework.helpers.text::is_one_line "$1" || hey::abort "The title must fit on one line."
 }
 
 core.modules.tasks.service::check_id() {
-  [ -n "${1-}" ] || dot::abort "Which task? Please give its id, e.g. t004." "See them all: bash dot tasks:list"
-  [[ "$1" =~ $TASK_ID_PATTERN ]] || dot::abort "\"$1\" isn't a task id (like t004)."
+  [ -n "${1-}" ] || hey::abort "Which task? Please give its id, e.g. t004." "See them all: bash hey tasks:list"
+  [[ "$1" =~ $TASK_ID_PATTERN ]] || hey::abort "\"$1\" isn't a task id (like t004)."
 }
 
 core.modules.tasks.service::set_section() {
@@ -100,8 +100,8 @@ core.modules.tasks.service::read_body_file() {
     cat > "$destination"
     return
   fi
-  path=$(framework.helpers.fs::within "$source" "$BASE") || dot::abort "--body-file must be a file in the project (got $source)."
-  [ -f "$path" ] || dot::abort "There's no file at $source."
+  path=$(framework.helpers.fs::within "$source" "$BASE") || hey::abort "--body-file must be a file in the project (got $source)."
+  [ -f "$path" ] || hey::abort "There's no file at $source."
   cat -- "$path" > "$destination"
 }
 

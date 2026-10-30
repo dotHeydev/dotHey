@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 
-dot::use framework.helpers.text
+hey::use framework.helpers.text
 
 EMOJI_RANGES=(
   "9728 10175"

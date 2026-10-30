@@ -1,11 +1,11 @@
 # shellcheck shell=bash
 
 # The shared, data-driven handler behind every harness's interface: what a
-# harness is, how it is found, and where it reads dotdot all come from its
+# harness is, how it is found, and where it reads dotHey all come from its
 # harness.json, so a change to the data needs no change to the code. Rows are
 # tab-separated.
 
-dot::use framework.helpers.fs framework.helpers.json
+hey::use framework.helpers.fs framework.helpers.json
 
 HARNESS_DIR="$CORE_DIR/harnesses"
 HARNESS_FILE="harness.json"
@@ -112,17 +112,17 @@ core.harnesses.harness::call() {
   local id="$1" function="$2"
   shift 2
   core.harnesses.harness::exists "$id" || return 1
-  dot::use "core.harnesses.$id.harness"
+  hey::use "core.harnesses.$id.harness"
   "core.harnesses.$id.harness::$function" "$id" "$@"
 }
 
 # A project path, as a harness names it, made absolute; fails for anything
-# outside the project, in .git/, .env, or dotdot.
+# outside the project, in .git/, .env, or dotHey.
 core.harnesses.harness::project_path() {
   local path="${1%/}"
   [ -n "$path" ] && [[ "$path" != /* ]] && guards::stays_inside "$path" || return 1
   case "/$path/" in
-    */.git/* | "/${HOST_ENV_FILE##*/}/" | "/$DOTDOT_NAME/"*) return 1 ;;
+    */.git/* | "/${HOST_ENV_FILE##*/}/" | "/$DOTHEY_NAME/"*) return 1 ;;
   esac
   printf '%s\n' "$BASE/$path"
 }
@@ -134,24 +134,24 @@ core.harnesses.harness::leaves_project() {
   ! framework.helpers.fs::is_inside "$physical" "$BASE"
 }
 
-# Whether <path> is dotdot's own: a link into dotdot, or a file link made
-# only to hold dotdot's section (its marker says new file).
-core.harnesses.harness::is_dotdots() {
+# Whether <path> is dotHey's own: a link into dotHey, or a file link made
+# only to hold dotHey's section (its marker says new file).
+core.harnesses.harness::is_dotheys() {
   local physical
   if [ -L "$1" ]; then
-    framework.helpers.fs::resolve_to physical "$1" && framework.helpers.fs::is_inside "$physical" "$DOTDOT_ROOT"
+    framework.helpers.fs::resolve_to physical "$1" && framework.helpers.fs::is_inside "$physical" "$DOTHEY_ROOT"
     return
   fi
-  [ -f "$1" ] && grep -qF -- '<!-- dotdot (new file) -->' "$1" 2>/dev/null
+  [ -f "$1" ] && grep -qF -- '<!-- dothey (new file) -->' "$1" 2>/dev/null
 }
 
-# Whether <path> is the project's own: a file that isn't dotdot's, an empty
+# Whether <path> is the project's own: a file that isn't dotHey's, an empty
 # folder, or a folder holding one of those within <depth> levels (deeper is
-# taken as the project's). Folders holding only dotdot's links, or dotdot
+# taken as the project's). Folders holding only dotHey's links, or dotHey
 # itself, are not.
 core.harnesses.harness::holds_own() {
   local path="$1" depth="${2:-3}" entry empty=true
-  ! core.harnesses.harness::is_dotdots "$path" && ! framework.helpers.fs::is_inside "$path" "$DOTDOT_ROOT" || return 1
+  ! core.harnesses.harness::is_dotheys "$path" && ! framework.helpers.fs::is_inside "$path" "$DOTHEY_ROOT" || return 1
   [ -d "$path" ] && [ ! -L "$path" ] && [ "$depth" -gt 0 ] || return 0
   for entry in "$path"/* "$path"/.[!.]*; do
     [ -e "$entry" ] || [ -L "$entry" ] || continue
@@ -183,13 +183,13 @@ core.harnesses.harness::size() {
 }
 
 # "<kind>\t<path>\t<size>" for <path> (a file) or each entry in it (a
-# directory, ending in /), the project's own only: never dotdot's links, nor
+# directory, ending in /), the project's own only: never dotHey's links, nor
 # anything a link leads outside the project.
 core.harnesses.harness::scan_path() {
   local kind="$1" path="$2" absolute entry
   absolute=$(core.harnesses.harness::project_path "$path") || return 0
   [ -e "$absolute" ] && ! core.harnesses.harness::leaves_project "$absolute" || return 0
-  core.harnesses.harness::is_dotdots "$absolute" && return 0
+  core.harnesses.harness::is_dotheys "$absolute" && return 0
   if [ "${path%/}" = "$path" ]; then
     [ -f "$absolute" ] && printf '%s\t%s\t%s\n' "$kind" "${path}" "$(core.harnesses.harness::size "$absolute")"
     return 0
@@ -197,7 +197,7 @@ core.harnesses.harness::scan_path() {
   [ -d "$absolute" ] || return 0
   for entry in "$absolute"/*; do
     [ -e "$entry" ] || [ -L "$entry" ] || continue
-    core.harnesses.harness::is_dotdots "$entry" && continue
+    core.harnesses.harness::is_dotheys "$entry" && continue
     if core.harnesses.harness::leaves_project "$entry"; then
       printf '%s\t%s\t0\n' "$kind" "${path%/}/${entry##*/}"
     else
@@ -219,7 +219,7 @@ core.harnesses.harness::capabilities() {
 core.harnesses.harness::each() {
   local id="$1" call="$2" capability
   while IFS= read -r capability; do
-    dot::use "core.harnesses.capabilities.$capability"
+    hey::use "core.harnesses.capabilities.$capability"
     ! declare -F "core.harnesses.capabilities.$capability::$call" >/dev/null \
       || "core.harnesses.capabilities.$capability::$call" "$id" || return 1
   done < <(core.harnesses.harness::capabilities "$id")

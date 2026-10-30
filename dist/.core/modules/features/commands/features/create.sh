@@ -4,7 +4,7 @@ DESCRIPTION="Document a new feature from the template."
 DOCS="features"
 JSON=true
 
-dot::use framework.console.args core.modules.features.service framework.helpers.fs framework.console.output framework.helpers.template framework.helpers.text framework.console.prompt
+hey::use framework.console.args core.modules.features.service framework.helpers.fs framework.console.output framework.helpers.template framework.helpers.text framework.console.prompt
 
 usage() {
   local heading key
@@ -14,7 +14,7 @@ one flag per template section, and sections left out read "None". To change
 it afterwards, edit its file.
 
 Usage:
-  bash dot features:create <title> --description <text> [--<section> <text>]...
+  bash hey features:create <title> --description <text> [--<section> <text>]...
 
 Arguments:
   <title>                        The feature's title; becomes its file name.
@@ -32,7 +32,7 @@ EOF
   -h, --help                     Show this help.
 
 Examples:
-  bash dot features:create "Password reset" \\
+  bash hey features:create "Password reset" \\
     --description "Lets a user reset a forgotten password by email." \\
     --specification "Given a registered user… When… Then…" \\
     --related-features 7
@@ -45,7 +45,7 @@ EOF
 
 handle() {
   local name="" has_name=false sections_dir key slug path
-  [ -f "$FEATURE_TEMPLATE" ] || framework.console.output::fail "The template $(dot::relative "$FEATURE_TEMPLATE") is missing." "bash dot upgrade restores it."
+  [ -f "$FEATURE_TEMPLATE" ] || framework.console.output::fail "The template $(hey::relative "$FEATURE_TEMPLATE") is missing." "bash hey upgrade restores it."
   framework.helpers.fs::make_temp_dir sections_dir || framework.console.output::fail "Couldn't create a temporary directory; please check free space and \$TMPDIR."
   while [ $# -gt 0 ]; do
     case "$1" in
@@ -71,9 +71,9 @@ handle() {
   name=$(framework.console.prompt::require "$name" "The feature's title" "A feature needs a title.")
   description=$(framework.console.prompt::require "$description" "A one-line summary" "A feature needs --$FEATURE_DESCRIPTION_KEY.")
   printf '%s' "$description" > "$sections_dir/$FEATURE_DESCRIPTION_KEY"
-  ! $asked || framework.console.prompt::hint "bash dot features:create \"$name\" --$FEATURE_DESCRIPTION_KEY \"$description\""
+  ! $asked || framework.console.prompt::hint "bash hey features:create \"$name\" --$FEATURE_DESCRIPTION_KEY \"$description\""
   slug=$(framework.helpers.text::slug "$name")
   [ -n "$slug" ] || framework.console.args::invalid "The name needs at least one letter or digit."
   path=$(core.modules.features.service::create "$slug" "$sections_dir") || framework.console.output::fail "Couldn't create the feature; please try again."
-  framework.console.output::created "Documented feature $(framework.helpers.record::number "$(basename -- "$path")")." "$(basename -- "$path" .md)" "$(dot::relative "$path")"
+  framework.console.output::created "Documented feature $(framework.helpers.record::number "$(basename -- "$path")")." "$(basename -- "$path" .md)" "$(hey::relative "$path")"
 }

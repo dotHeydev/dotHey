@@ -5,13 +5,13 @@
 NET_MAX_SECONDS=300
 NET_MAX_BYTES=209715200
 
-# Whether <url> is https://, said why when it isn't: dotdot never sends or
+# Whether <url> is https://, said why when it isn't: dotHey never sends or
 # fetches anything over plain http, nor any other scheme.
 framework.helpers.net::is_https() {
   case "$1" in
     https://*) return 0 ;;
-    http://*) dot::raise "dotdot only connects over https, so it refused ${1%%\?*}." "Please use its https:// address instead." ;;
-    *) dot::raise "dotdot only connects to https:// addresses, so it refused ${1%%\?*}." ;;
+    http://*) hey::raise "dotHey only connects over https, so it refused ${1%%\?*}." "Please use its https:// address instead." ;;
+    *) hey::raise "dotHey only connects to https:// addresses, so it refused ${1%%\?*}." ;;
   esac
   return 1
 }

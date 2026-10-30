@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 
-dot::use framework.console.args framework.console.output framework.console.prompt framework.helpers.json framework.helpers.text core.system.link.service
+hey::use framework.console.args framework.console.output framework.console.prompt framework.helpers.json framework.helpers.text core.system.link.service
 
 LINK_VERBOSE=false
 
@@ -13,9 +13,9 @@ core.system.link.console::unchanged_entry() {
 core.system.link.console::link_entry() {
   local origin="$1" label="$2"
   case "$3" in
-    link) framework.console.output::entry blue "$UI_MARK_LINKED" "$(dot::relative "$origin") $UI_ARROW $label" ;;
+    link) framework.console.output::entry blue "$UI_MARK_LINKED" "$(hey::relative "$origin") $UI_ARROW $label" ;;
     ok) core.system.link.console::unchanged_entry "$label" "already linked" ;;
-    move) framework.console.output::entry blue "$UI_MARK_LINKED" "$(dot::relative "$origin") $UI_ARROW $label" "moved; relink" ;;
+    move) framework.console.output::entry blue "$UI_MARK_LINKED" "$(hey::relative "$origin") $UI_ARROW $label" "moved; relink" ;;
     prune) framework.console.output::entry red "$UI_MARK_REMOVED" "$label" "broken; remove" ;;
     unlink) framework.console.output::entry red "$UI_MARK_REMOVED" "$label" "no longer listed; unlink" ;;
     skip) framework.console.output::entry yellow "$UI_MARK_TAKEN" "$label" "exists; skip" ;;
@@ -28,19 +28,19 @@ core.system.link.console::link_entry() {
 core.system.link.console::append_entry() {
   local origin="$1" label="$2" owner="$3"
   case "$4" in
-    append) framework.console.output::entry blue "$UI_MARK_APPENDED" "$(dot::relative "$origin") $UI_ARROW $label" "section of $owner" ;;
+    append) framework.console.output::entry blue "$UI_MARK_APPENDED" "$(hey::relative "$origin") $UI_ARROW $label" "section of $owner" ;;
     appended) core.system.link.console::unchanged_entry "$label" "section of $owner already appended" ;;
     unappend) framework.console.output::entry red "$UI_MARK_REMOVED" "$label" "take back the section of $owner" ;;
-    create) framework.console.output::entry green "$UI_MARK_ADDED" "$label" "from $(dot::relative "$origin")" ;;
+    create) framework.console.output::entry green "$UI_MARK_ADDED" "$label" "from $(hey::relative "$origin")" ;;
     exists) core.system.link.console::unchanged_entry "$label" "exists; keep" ;;
   esac
 }
 
-# An edit of the links in dot.json.
+# An edit of the links in hey.json.
 core.system.link.console::map_entry() {
   case "$1" in
-    remove*) framework.console.output::entry red "$UI_MARK_REMOVED" "$(dot::relative "$SETTINGS_FILE")" "$1" ;;
-    *) framework.console.output::entry green "$UI_MARK_ADDED" "$(dot::relative "$SETTINGS_FILE")" "$1" ;;
+    remove*) framework.console.output::entry red "$UI_MARK_REMOVED" "$(hey::relative "$SETTINGS_FILE")" "$1" ;;
+    *) framework.console.output::entry green "$UI_MARK_ADDED" "$(hey::relative "$SETTINGS_FILE")" "$1" ;;
   esac
 }
 
@@ -50,8 +50,8 @@ core.system.link.console::print_seeds() {
     core.system.link.console::map_entry "$note"
   done
   case "$(core.system.link.service::user_state)" in
-    create) framework.console.output::entry green "$UI_MARK_ADDED" "$DOTDOT_NAME/USER.md" "from USER.example.md" ;;
-    existing) core.system.link.console::unchanged_entry "$DOTDOT_NAME/USER.md" "exists; keep" ;;
+    create) framework.console.output::entry green "$UI_MARK_ADDED" "$DOTHEY_NAME/USER.md" "from USER.example.md" ;;
+    existing) core.system.link.console::unchanged_entry "$DOTHEY_NAME/USER.md" "exists; keep" ;;
   esac
 }
 
@@ -73,7 +73,7 @@ core.system.link.console::print_notices() {
     framework.console.output::warn "${LINK_NOTICES[$index]}"
   done
   [ "$LINK_OVERRIDABLE" -eq 0 ] \
-    || framework.console.output::next "To replace the $LINK_OVERRIDABLE taken destination(s) above, run ${LINK_OVERWRITE_COMMAND:-bash dot link} --overwrite (files are backed up first)."
+    || framework.console.output::next "To replace the $LINK_OVERRIDABLE taken destination(s) above, run ${LINK_OVERWRITE_COMMAND:-bash hey link} --overwrite (files are backed up first)."
 }
 
 core.system.link.console::print_errors() {
@@ -92,14 +92,14 @@ core.system.link.console::print_errors() {
 # something or is skipped, and how many destinations are taken.
 core.system.link.console::print_json_plan() {
   local index changes=""
-  ! $LINK_SEED_USER || changes=$(core.system.link.console::json_change create "$(dot::relative "$USER_EXAMPLE_FILE")" "$DOTDOT_NAME/USER.md")
+  ! $LINK_SEED_USER || changes=$(core.system.link.console::json_change create "$(hey::relative "$USER_EXAMPLE_FILE")" "$DOTHEY_NAME/USER.md")
   for index in ${LINK_ACTIONS[@]+"${!LINK_ACTIONS[@]}"}; do
     core.system.link.service::is_change "${LINK_ACTIONS[$index]}" || [ "${LINK_ACTIONS[$index]}" = skip ] || continue
-    changes="$changes${changes:+,}$(core.system.link.console::json_change "${LINK_ACTIONS[$index]}" "$(dot::relative "${LINK_ORIGINS[$index]}")" "${LINK_LABELS[$index]}")"
+    changes="$changes${changes:+,}$(core.system.link.console::json_change "${LINK_ACTIONS[$index]}" "$(hey::relative "${LINK_ORIGINS[$index]}")" "${LINK_LABELS[$index]}")"
   done
   for index in ${LINK_APPEND_ACTIONS[@]+"${!LINK_APPEND_ACTIONS[@]}"}; do
     core.system.link.service::is_change "${LINK_APPEND_ACTIONS[$index]}" || continue
-    changes="$changes${changes:+,}$(core.system.link.console::json_change "${LINK_APPEND_ACTIONS[$index]}" "$(dot::relative "${LINK_APPEND_ORIGINS[$index]}")" "${LINK_APPEND_LABELS[$index]}")"
+    changes="$changes${changes:+,}$(core.system.link.console::json_change "${LINK_APPEND_ACTIONS[$index]}" "$(hey::relative "${LINK_APPEND_ORIGINS[$index]}")" "${LINK_APPEND_LABELS[$index]}")"
   done
   printf '{"changes":[%s],"taken":%s}\n' "$changes" "$LINK_OVERRIDABLE"
 }
@@ -179,30 +179,30 @@ core.system.link.console::plugin_links() {
   [ -n "$plugin" ] || framework.console.args::invalid "Which plugin? Please give it as <owner>/<name>."
   guards::plugin_name "$plugin" || framework.console.args::invalid "\"$plugin\" isn't a plugin name; please use <owner>/<name>."
   ! $confirmed || guards::skip_confirmation \
-    || framework.console.output::fail_as "$EXIT_PRECONDITION" "-y only works in a terminal, so nothing changed unseen." "$OUTPUT_MANUAL_RUN bash dot plugins:$mode $plugin"
+    || framework.console.output::fail_as "$EXIT_PRECONDITION" "-y only works in a terminal, so nothing changed unseen." "$OUTPUT_MANUAL_RUN bash hey plugins:$mode $plugin"
   core.system.link.service::has_map \
-    || framework.console.output::fail_as "$EXIT_PRECONDITION" "$(dot::relative "$SETTINGS_FILE") has no links yet." "Please run bash dot link first."
+    || framework.console.output::fail_as "$EXIT_PRECONDITION" "$(hey::relative "$SETTINGS_FILE") has no links yet." "Please run bash hey link first."
   state=$(core.system.link.service::group_state "$plugin")
   if [ "$mode" = link ]; then
     to=active
-    [ "$state" != active ] || framework.console.output::fail_as "$EXIT_PRECONDITION" "$plugin's links are already linked, with none waiting." "To link them again: bash dot link"
+    [ "$state" != active ] || framework.console.output::fail_as "$EXIT_PRECONDITION" "$plugin's links are already linked, with none waiting." "To link them again: bash hey link"
     [ "$state" != both ] || $overwrite \
-      || framework.console.output::fail_as "$EXIT_PRECONDITION" "$plugin's links are already linked; new ones wait under \"inactive\"." "To take the new ones: bash dot plugins:link $plugin --overwrite"
+      || framework.console.output::fail_as "$EXIT_PRECONDITION" "$plugin's links are already linked; new ones wait under \"inactive\"." "To take the new ones: bash hey plugins:link $plugin --overwrite"
   else
     to=inactive
-    [ "$state" != inactive ] || framework.console.output::fail_as "$EXIT_PRECONDITION" "$plugin's links aren't linked." "To link them: bash dot plugins:link $plugin"
+    [ "$state" != inactive ] || framework.console.output::fail_as "$EXIT_PRECONDITION" "$plugin's links aren't linked." "To link them: bash hey plugins:link $plugin"
     [ "$state" != both ] || $overwrite \
-      || framework.console.output::fail_as "$EXIT_PRECONDITION" "$plugin also has links waiting under \"inactive\"." "To replace them: bash dot plugins:unlink $plugin --overwrite"
+      || framework.console.output::fail_as "$EXIT_PRECONDITION" "$plugin also has links waiting under \"inactive\"." "To replace them: bash hey plugins:unlink $plugin --overwrite"
   fi
-  [ "$state" != none ] || framework.console.output::fail_as "$EXIT_NOT_FOUND" "$plugin has no links in $(dot::relative "$SETTINGS_FILE")." "See the plugins: bash dot plugins:list"
+  [ "$state" != none ] || framework.console.output::fail_as "$EXIT_NOT_FOUND" "$plugin has no links in $(hey::relative "$SETTINGS_FILE")." "See the plugins: bash hey plugins:list"
   LINK_ONLY_GROUP="$plugin"
   LINK_ONLY_MODE="$mode"
-  LINK_OVERWRITE_COMMAND="bash dot plugins:$mode $plugin"
+  LINK_OVERWRITE_COMMAND="bash hey plugins:$mode $plugin"
   core.system.link.service::plan "$overwrite" ""
   core.system.link.service::count_changes
   core.system.link.console::print_errors
   [ "$LINK_FAILURES" -eq 0 ] || exit "$EXIT_FAILURE"
-  command="bash dot plugins:$mode $plugin$(! $overwrite || printf ' --overwrite')"
+  command="bash hey plugins:$mode $plugin$(! $overwrite || printf ' --overwrite')"
   if [ "$LINK_CHANGES" -gt 0 ]; then
     core.system.link.console::confirm_changes "$confirmed" "$preview" "$command"
     core.system.link.service::apply

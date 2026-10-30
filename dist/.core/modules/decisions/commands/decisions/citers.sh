@@ -3,7 +3,7 @@
 DESCRIPTION="List the decisions that point at a decision."
 DOCS="decisions"
 
-dot::use framework.console.args core.modules.decisions.service framework.helpers.frontmatter framework.console.output
+hey::use framework.console.args core.modules.decisions.service framework.helpers.frontmatter framework.console.output
 
 usage() {
   cat <<EOF
@@ -11,7 +11,7 @@ Lists the decisions that cite a decision or name it in "superseded by", with
 why each points at it, so you know what relies on it before it changes.
 
 Usage:
-  bash dot decisions:citers <decision>[,...]
+  bash hey decisions:citers <decision>[,...]
 
 Arguments:
   <decision>   Decisions, as 2, 002, or their file name; comma-separated or
@@ -21,11 +21,11 @@ Options:
   -h, --help   Show this help.
 
 Examples:
-  bash dot decisions:citers 004
-  bash dot decisions:citers 002,005
+  bash hey decisions:citers 004
+  bash hey decisions:citers 002,005
 
 Notes:
-  - bash dot decisions:impact lists the features citing a decision instead.
+  - bash hey decisions:impact lists the features citing a decision instead.
 EOF
 }
 
@@ -38,7 +38,7 @@ print_field() {
 report_citers() {
   local reference="$1" target file reasons path found=false
   target=$(core.modules.decisions.service::find "$reference") \
-    || framework.console.output::fail_as "$EXIT_NOT_FOUND" "No decision matches \"$reference\"." "See them all: bash dot frontmatter:show Decisions"
+    || framework.console.output::fail_as "$EXIT_NOT_FOUND" "No decision matches \"$reference\"." "See them all: bash hey frontmatter:show Decisions"
   framework.console.output::line "Decisions pointing at $target:"
   while IFS=$'\t' read -r file reasons; do
     found=true

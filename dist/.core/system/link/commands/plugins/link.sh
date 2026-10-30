@@ -3,16 +3,16 @@
 DESCRIPTION="Link a plugin's waiting links, and make them active."
 DOCS="using-plugins"
 
-dot::use core.system.link.console
+hey::use core.system.link.console
 
 usage() {
   cat <<EOF
-Applies a plugin's links waiting under "inactive" in $(dot::relative "$SETTINGS_FILE") — only
+Applies a plugin's links waiting under "inactive" in $(hey::relative "$SETTINGS_FILE") — only
 those — after previewing them and asking, then moves them to active.
 With no one at a terminal to ask, it only previews.
 
 Usage:
-  bash dot plugins:link <owner>/<name> [--overwrite] [--preview] [-y, --yes]
+  bash hey plugins:link <owner>/<name> [--overwrite] [--preview] [-y, --yes]
 
 Arguments:
   <owner>/<name>       The plugin.
@@ -26,8 +26,8 @@ Options:
   -h, --help           Show this help.
 
 Examples:
-  bash dot plugins:link acme/widgets
-  bash dot plugins:link acme/widgets --overwrite
+  bash hey plugins:link acme/widgets
+  bash hey plugins:link acme/widgets --overwrite
 EOF
 }
 

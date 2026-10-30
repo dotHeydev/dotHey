@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 
-dot::use framework.helpers.text
+hey::use framework.helpers.text
 
 TEMPLATE_HEADING_PREFIX="## "
 TEMPLATE_EMPTY_SECTION="None"

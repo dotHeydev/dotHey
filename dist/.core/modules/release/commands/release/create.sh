@@ -3,7 +3,7 @@
 DESCRIPTION="Make a signed release commit in the release repo."
 DOCS="releases"
 
-dot::use framework.console.args core.modules.release.console core.modules.release.service framework.console.output framework.console.prompt
+hey::use framework.console.args core.modules.release.console core.modules.release.service framework.console.output framework.console.prompt
 
 usage() {
   cat <<EOF
@@ -12,7 +12,7 @@ repo as one signed commit tagged v<version>, and pushes it only where --push
 says. It runs no build or tests: do those first.
 
 Usage:
-  bash dot release:create <version> [--push [<remote>,...]] [options]
+  bash hey release:create <version> [--push [<remote>,...]] [options]
 
 Arguments:
   <version>                 A semantic version, like 1.2.0 or 1.2.0-rc.1.
@@ -30,12 +30,12 @@ Options:
   -h, --help                Show this help.
 
 Examples:
-  bash dot release:create 1.2.0
-  bash dot release:create 1.2.0 --push github
-  bash dot release:create 1.2.0 --push --keep-tokens 15
+  bash hey release:create 1.2.0
+  bash hey release:create 1.2.0 --push github
+  bash hey release:create 1.2.0 --push --keep-tokens 15
 
 Settings:
-  In $(dot::relative "$SETTINGS_FILE"); any of them may be "@env:<KEY>".
+  In $(hey::relative "$SETTINGS_FILE"); any of them may be "@env:<KEY>".
 
   release.destination   The release repo's directory, from the project root.
   release.exclude       Paths left out; "!<path>" ships a git-ignored one.
@@ -51,7 +51,7 @@ Settings:
 Notes:
   - It stops on uncommitted changes in what it ships, a key that doesn't match,
     anything that looks like a secret, or a --push remote with no token.
-  - The project's .env never ships. Save tokens with bash dot release:token.
+  - The project's .env never ships. Save tokens with bash hey release:token.
 EOF
 }
 
@@ -81,11 +81,11 @@ handle() {
   tag="v$version"
   cd "$RELEASE_PROJECT" || framework.console.output::fail "Can't open the project at $RELEASE_PROJECT."
   git rev-parse --is-inside-work-tree >/dev/null 2>&1 || framework.console.output::fail "$RELEASE_PROJECT isn't a git repository."
-  RELEASE_DESTINATION=$(dot::setting release.destination)
-  branch=$(dot::setting release.branch)
-  RELEASE_SIGNING_NAME=$(dot::setting release.signingKey)
-  RELEASE_AUTHOR_NAME=$(dot::setting release.authorName)
-  RELEASE_AUTHOR_EMAIL=$(dot::setting release.authorEmail)
+  RELEASE_DESTINATION=$(hey::setting release.destination)
+  branch=$(hey::setting release.branch)
+  RELEASE_SIGNING_NAME=$(hey::setting release.signingKey)
+  RELEASE_AUTHOR_NAME=$(hey::setting release.authorName)
+  RELEASE_AUTHOR_EMAIL=$(hey::setting release.authorEmail)
   git check-ref-format --branch "$branch" >/dev/null 2>&1 || framework.console.output::fail "release.branch \"$branch\" isn't a valid branch name."
   core.modules.release.service::check_signing_identity
   core.modules.release.service::load_remotes
@@ -106,9 +106,9 @@ handle() {
   core.modules.release.service::stop_agent
   framework.console.output::newline
   framework.console.output::success "Release $tag committed and signed."
-  framework.console.output::detail "$(dot::relative "$RELEASE_DESTINATION")"
+  framework.console.output::detail "$(hey::relative "$RELEASE_DESTINATION")"
   if ! $RELEASE_PUSH_ALL && [ ${#RELEASE_PUSH_TO[@]} -eq 0 ]; then
-    framework.console.output::next "Push it with: bash dot release:push [<remote>...]$(! $RELEASE_FORCE || printf ' --force')"
+    framework.console.output::next "Push it with: bash hey release:push [<remote>...]$(! $RELEASE_FORCE || printf ' --force')"
     return 0
   fi
   core.modules.release.console::push "$branch" "$tag"

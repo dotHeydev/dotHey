@@ -4,19 +4,19 @@ DESCRIPTION="Scan the project for harnesses and what they already hold."
 DOCS="setting-up"
 JSON=true
 
-dot::use framework.console.args framework.console.output framework.helpers.json core.modules.setup.service core.modules.setup.console
+hey::use framework.console.args framework.console.output framework.helpers.json core.modules.setup.service core.modules.setup.console
 
 usage() {
   cat <<EOF
-Lists each harness dotdot supports, the ones the project uses, and what their
-places already hold (instructions, skills, agents, rules), with dotdot's
+Lists each harness dotHey supports, the ones the project uses, and what their
+places already hold (instructions, skills, agents, rules), with dotHey's
 setup. Other top-level Markdown docs are listed as unsure: context the
-project may want dotdot to take in. It reads paths and sizes only, never
+project may want dotHey to take in. It reads paths and sizes only, never
 .env, .git/, or anything a link leads outside the project, and changes
 nothing.
 
 Usage:
-  bash dot adopt --scan [--json]
+  bash hey adopt --scan [--json]
 
 Options:
   --scan       Scan the project.
@@ -24,8 +24,8 @@ Options:
   -h, --help   Show this help.
 
 Examples:
-  bash dot adopt --scan
-  bash dot adopt --scan --json
+  bash hey adopt --scan
+  bash hey adopt --scan --json
 EOF
 }
 
@@ -45,7 +45,7 @@ print_json() {
   for id in ${SETUP_INVALID[@]+"${SETUP_INVALID[@]}"}; do
     invalid="$invalid${invalid:+,}$(framework.helpers.json::string "$id")"
   done
-  setup="{\"harnesses\":$(core.modules.setup.service::state "$SETUP_HARNESSES_SETTING" "[]"),\"type\":$(dot::json_value "$SETTINGS_FILE" ".state.$SETUP_TYPE_SETTING" 2>/dev/null || printf null),\"location\":$(framework.helpers.json::string "$DOTDOT_NAME"),\"pending\":$(core.modules.setup.service::state "$SETUP_PENDING_SETTING" "[]")}"
+  setup="{\"harnesses\":$(core.modules.setup.service::state "$SETUP_HARNESSES_SETTING" "[]"),\"type\":$(hey::json_value "$SETTINGS_FILE" ".state.$SETUP_TYPE_SETTING" 2>/dev/null || printf null),\"location\":$(framework.helpers.json::string "$DOTHEY_NAME"),\"pending\":$(core.modules.setup.service::state "$SETUP_PENDING_SETTING" "[]")}"
   printf '{"harnesses":[%s],"detected":[%s],"items":[%s],"setup":%s,"invalid":[%s]}\n' "$harnesses" "$found" "$items" "$setup" "$invalid"
 }
 
@@ -67,7 +67,7 @@ handle() {
   # shellcheck disable=SC2086
   rows=$(core.modules.setup.service::scan $ids)
   rows=$(printf '%s\n%s' "$rows" "$(core.modules.setup.service::unsure "$rows")" | grep -v '^$' || true)
-  if $DOT_JSON; then
+  if $HEY_JSON; then
     print_json "$ids" "$detected" "$rows"
     return
   fi

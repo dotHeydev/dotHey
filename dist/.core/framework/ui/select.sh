@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 
-dot::use framework.ui.screen
+hey::use framework.ui.screen
 
 # One of <option>..., picked with ↑/↓ (or its number) and Enter, printed.
 # Without keys to read, a numbered list to type from; with no one to answer,
@@ -9,7 +9,7 @@ framework.ui.select::ask() {
   local question="$1" current=1 index
   shift
   if ! framework.ui.screen::reads_keys; then
-    dot::use framework.console.prompt
+    hey::use framework.console.prompt
     index=$(framework.console.prompt::choice "$question" "$@") || return 1
     printf '%s\n' "${!index}"
     return

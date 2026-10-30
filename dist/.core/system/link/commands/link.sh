@@ -1,19 +1,19 @@
 # shellcheck shell=bash
 
-DESCRIPTION="Link dotdot and its plugins where your agents read them."
+DESCRIPTION="Link dotHey and its plugins where your agents read them."
 DOCS="linking"
 JSON=true
 
-dot::use framework.console.args framework.console.output framework.console.prompt framework.helpers.fs framework.helpers.json framework.helpers.text core.system.link.service core.system.link.console
+hey::use framework.console.args framework.console.output framework.console.prompt framework.helpers.fs framework.helpers.json framework.helpers.text core.system.link.service core.system.link.console
 
 usage() {
   cat <<EOF
-Seeds $DOTDOT_NAME/USER.md, then links and appends what the "links" in
-$(dot::relative "$SETTINGS_FILE") list. It previews every change and asks before applying any;
+Seeds $DOTHEY_NAME/USER.md, then links and appends what the "links" in
+$(hey::relative "$SETTINGS_FILE") list. It previews every change and asks before applying any;
 with no one at a terminal to ask, it only previews.
 
 Usage:
-  bash dot link [--overwrite] [--preview] [-v, --verbose] [-y, --yes] [--json]
+  bash hey link [--overwrite] [--preview] [-v, --verbose] [-y, --yes] [--json]
 
 Options:
   --overwrite          Replace destinations that already exist: a symlink is
@@ -21,7 +21,7 @@ Options:
                        A real directory is always skipped. Also --force.
   --preview            Show the changes, and stop. Also --dry-run.
   -v, --verbose        List the entries that stay as they are, too.
-  -y, --yes            Apply without asking. Only at a terminal, or when dotdot
+  -y, --yes            Apply without asking. Only at a terminal, or when dotHey
                        itself runs it.
   --json               Print the changes as {"changes": [{"action", "origin",
                        "destination"}], "taken"}, and stop; with -y, apply them
@@ -30,32 +30,32 @@ Options:
   -h, --help           Show this help.
 
 Examples:
-  bash dot link
-  bash dot link --preview
-  bash dot link --overwrite -v
+  bash hey link
+  bash hey link --preview
+  bash hey link --overwrite -v
 
 Links:
   "<origin>": ["<destination>", ...]   symlink each destination to the origin
   "append": {"<origin>": [...]}        append the file to each destination,
                                        between markers naming its owner
-  "skip": {"<origin>": [...]}          never link or append these; what dotdot
+  "skip": {"<origin>": [...]}          never link or append these; what dotHey
                                        linked or appended there is taken back
   "<owner>/<name>": {...}              a plugin's active links, same shape
   "inactive": {"<owner>/<name>": ...}  a plugin's links, never applied until
                                        they are activated
 
-  Origins: @dot:<path>, @module:<name>:<path>, @plugin:<owner>.<name>:<path>,
-  @dotdotSkills, @dotdotAgents, @pluginsSkills, @pluginsAgents; a /* ending
-  links each entry inside. Destinations are project paths outside $DOTDOT_NAME/
-  and .git/, never .env; appends may also go to @dot:<Doc>.md. When two entries
+  Origins: @hey:<path>, @module:<name>:<path>, @plugin:<owner>.<name>:<path>,
+  @dotheySkills, @dotheyAgents, @pluginsSkills, @pluginsAgents; a /* ending
+  links each entry inside. Destinations are project paths outside $DOTHEY_NAME/
+  and .git/, never .env; appends may also go to @hey:<Doc>.md. When two entries
   claim one destination, your own links win, then the first declared.
 
 Notes:
-  - Link a plugin's own links with bash dot plugins:link.
-  - Run it after installing dotdot, creating a git worktree, or adding,
+  - Link a plugin's own links with bash hey plugins:link.
+  - Run it after installing dotHey, creating a git worktree, or adding,
     renaming or removing anything the links cover. Re-running is safe.
   - Links are relative, so they survive a clone, a move or a rebuild.
-  - bash dot link -v lists every current link.
+  - bash hey link -v lists every current link.
 EOF
 }
 
@@ -74,10 +74,10 @@ offer_merge() {
     framework.console.output::line "These can't be merged automatically; please merge them by hand."
     return 0
   fi
-  framework.console.prompt::confirm "Do you want to merge them in $(dot::relative "$SETTINGS_FILE"), keeping every destination?" y || return 0
+  framework.console.prompt::confirm "Do you want to merge them in $(hey::relative "$SETTINGS_FILE"), keeping every destination?" y || return 0
   printf '%s\n' "$merged" | framework.helpers.fs::write "$SETTINGS_FILE" \
-    || framework.console.output::fail "Couldn't write $(dot::relative "$SETTINGS_FILE"); please check that it's writable."
-  framework.console.output::success "Merged them in $(dot::relative "$SETTINGS_FILE")."
+    || framework.console.output::fail "Couldn't write $(hey::relative "$SETTINGS_FILE"); please check that it's writable."
+  framework.console.output::success "Merged them in $(hey::relative "$SETTINGS_FILE")."
 }
 
 map_only() {
@@ -93,9 +93,9 @@ map_only() {
     core.system.link.console::map_entry "$note"
   done
   if $confirmed; then
-    framework.console.output::line "Writing $(dot::relative "$SETTINGS_FILE") (-y)…"
+    framework.console.output::line "Writing $(hey::relative "$SETTINGS_FILE") (-y)…"
   else
-    framework.console.prompt::confirm_or_exit "Do you want to write $(dot::relative "$SETTINGS_FILE")?" y "bash dot link --settings-only"
+    framework.console.prompt::confirm_or_exit "Do you want to write $(hey::relative "$SETTINGS_FILE")?" y "bash hey link --settings-only"
   fi
   core.system.link.service::save_map
   core.system.link.console::print_errors
@@ -112,7 +112,7 @@ handle() {
       --remove-uninstalled) sweep=true ;;
       --relink-from)
         framework.console.args::require_value "$@"
-        core.system.link.service::relink_from "$2" || framework.console.args::invalid "--relink-from needs dotdot's former place in the project (got $2)."
+        core.system.link.service::relink_from "$2" || framework.console.args::invalid "--relink-from needs dotHey's former place in the project (got $2)."
         shift
         ;;
       -v | --verbose) LINK_VERBOSE=true ;;
@@ -128,7 +128,7 @@ handle() {
     shift
   done
   ! $confirmed || guards::skip_confirmation \
-    || framework.console.output::fail_as "$EXIT_PRECONDITION" "-y only works in a terminal, so nothing changed unseen." "$OUTPUT_MANUAL_RUN bash dot link"
+    || framework.console.output::fail_as "$EXIT_PRECONDITION" "-y only works in a terminal, so nothing changed unseen." "$OUTPUT_MANUAL_RUN bash hey link"
   if $only_map; then
     map_only "$confirmed" "$refresh"
     return
@@ -136,7 +136,7 @@ handle() {
   if $sweep; then
     core.system.link.service::plan_sweep
   else
-    $confirmed || $DOT_JSON || offer_merge
+    $confirmed || $HEY_JSON || offer_merge
     LINK_PREVIEW=$preview
     core.system.link.service::plan "$override" "$refresh"
   fi
@@ -149,7 +149,7 @@ handle() {
     [ "$LINK_FAILURES" -eq 0 ]
     return
   fi
-  if $DOT_JSON; then
+  if $HEY_JSON; then
     if $preview || ! $confirmed; then
       core.system.link.console::print_json_plan
       return 0
@@ -167,7 +167,7 @@ handle() {
     [ "$LINK_FAILURES" -eq 0 ]
     return
   fi
-  core.system.link.console::confirm_changes "$confirmed" "$preview" "bash dot link$(! $override || printf ' --overwrite')"
+  core.system.link.console::confirm_changes "$confirmed" "$preview" "bash hey link$(! $override || printf ' --overwrite')"
   core.system.link.service::apply
   core.system.link.console::print_result
   [ "$LINK_FAILURES" -eq 0 ]

@@ -1,22 +1,22 @@
 #!/usr/bin/env bash
-# install.sh — install dotdot into the current folder.
+# install.sh — install dotHey into the current folder.
 #
-# Downloads dotdot from the repo's main branch into a temporary folder,
-# places its dist/ here as .dot/ (or --dir <path>), and links dotdot's entry
-# point as ./dot. Then, at a terminal (or given setup flags), it hands over to
-# bash dot setup, which asks what to link and says when dotdot is ready; with
-# no one to ask, it links only AGENTS.md, so any agent finds dotdot, and says
+# Downloads dotHey from the repo's main branch into a temporary folder,
+# places its dist/ here as .hey/ (or --dir <path>), and links dotHey's entry
+# point as ./hey. Then, at a terminal (or given setup flags), it hands over to
+# bash hey setup, which asks what to link and says when dotHey is ready; with
+# no one to ask, it links only AGENTS.md, so any agent finds dotHey, and says
 # how to set it up. Nothing that already exists is overwritten: an existing
-# dotdot is offered an update or a setup instead. Plugins are never installed
-# here: add the ones you trust afterwards with bash dot plugins:add
+# dotHey is offered an update or a setup instead. Plugins are never installed
+# here: add the ones you trust afterwards with bash hey plugins:add
 # <owner>/<name>. Output stays quiet; a failing step shows its output.
 #
-#   curl -fsSL https://raw.githubusercontent.com/dotdot-sh/dotdot/main/install.sh | bash
-#   curl … | bash -s -- --dir .agents/.dot --harness claude,cursor --type parallel --yes
+#   curl -fsSL https://raw.githubusercontent.com/dotHeydev/dotHey/main/install.sh | bash
+#   curl … | bash -s -- --dir .agents/.hey --harness claude,cursor --type parallel --yes
 
 set -euo pipefail
 
-REPO="dotdot-sh/dotdot"
+REPO="dotHeydev/dotHey"
 BRANCH="main"
 ARCHIVE_URL="https://github.com/$REPO/archive/refs/heads/$BRANCH.tar.gz"
 # A download may take this long, so a stalled connection can't hang the install.
@@ -24,17 +24,17 @@ CONNECT_SECONDS=30
 DOWNLOAD_SECONDS=300
 SOURCE_DIR="dist"
 MIGRATIONS_DIR=".core/system/migrations"
-SETTINGS_FILE="dot.json"
+SETTINGS_FILE="hey.json"
 JSON_HELPER=".core/framework/helpers/json.sh"
-DEFAULT_DIR=".dot"
-ENTRY_LINK="dot"
-BIN_PATH=".core/system/bin/dot"
+DEFAULT_DIR=".hey"
+ENTRY_LINK="hey"
+BIN_PATH=".core/system/bin/hey"
 BOOT_FILE=".core/system/boot.sh"
 SELECT_FILE=".core/framework/ui/select.sh"
-TEMP_PREFIX=".dot-install."
+TEMP_PREFIX=".hey-install."
 REQUIRED_COMMANDS=(curl tar gzip mktemp ln mv)
-# The look of dotdot's theme (.core/framework/ui/theme.sh), which can't load
-# before dotdot is here: its spinner, one frame every SPINNER_INTERVAL
+# The look of dotHey's theme (.core/framework/ui/theme.sh), which can't load
+# before dotHey is here: its spinner, one frame every SPINNER_INTERVAL
 # seconds, and its colors, icons alone colored.
 SPINNER_FRAMES=(' ·●' ' •⏺' ' ⏺•' ' ●·' ' ⏺•' ' •⏺' ' ·●')
 SPINNER_INTERVAL=0.07
@@ -45,11 +45,11 @@ main() {
   if [ -t 1 ] && [ -z "${NO_COLOR-}" ]; then
     GREEN=$'\033[32m' RED=$'\033[31m' YELLOW=$'\033[33m' MAGENTA=$'\033[35m' BOLD=$'\033[1m' RESET=$'\033[0m'
   fi
-  local name="${BOLD}dotdot${RESET}"
-  DOTDOT_DIR="$DEFAULT_DIR"
+  local name="${BOLD}dotHey${RESET}"
+  DOTHEY_DIR="$DEFAULT_DIR"
   SETUP_FLAGS=()
   parse_arguments "$@"
-  ENTRY_POINT="$DOTDOT_DIR/$BIN_PATH"
+  ENTRY_POINT="$DOTHEY_DIR/$BIN_PATH"
   base="$PWD"
   check_requirements
   check_place
@@ -63,39 +63,39 @@ main() {
   log="$temp/log"
   spin "Downloading $name…" download_and_unpack
   local source
-  source=$(find_source "$temp/tree") || fail "Couldn't find dotdot in the download ($SOURCE_DIR/$BOOT_FILE is missing); nothing was installed."
+  source=$(find_source "$temp/tree") || fail "Couldn't find dotHey in the download ($SOURCE_DIR/$BOOT_FILE is missing); nothing was installed."
 
   check_existing
   rename_paths "$source/$SOURCE_DIR"
-  mkdir -p -- "$(dirname -- "$base/$DOTDOT_DIR")"
-  mv -- "$source/$SOURCE_DIR" "$base/$DOTDOT_DIR" || fail "Couldn't place dotdot at $base/$DOTDOT_DIR."
-  record_version "$temp/dotdot.tar.gz"
+  mkdir -p -- "$(dirname -- "$base/$DOTHEY_DIR")"
+  mv -- "$source/$SOURCE_DIR" "$base/$DOTHEY_DIR" || fail "Couldn't place dotHey at $base/$DOTHEY_DIR."
+  record_version "$temp/dothey.tar.gz"
   record_migrations
   ln -s -- "$ENTRY_POINT" "$base/$ENTRY_LINK" || fail "Couldn't link $base/$ENTRY_LINK."
   quietly "Checking bash $ENTRY_LINK" bash "$base/$ENTRY_LINK"
-  [ ${#SETUP_FLAGS[@]} -gt 0 ] || can_prompt || quietly "Linking AGENTS.md" env DOT_INTERNAL_CALL=1 bash "$base/$ENTRY_LINK" link -y
+  [ ${#SETUP_FLAGS[@]} -gt 0 ] || can_prompt || quietly "Linking AGENTS.md" env HEY_INTERNAL_CALL=1 bash "$base/$ENTRY_LINK" link -y
   rm -rf -- "$temp"
 
   # Setup says how it went: what it asked, its steps, and the send-off.
   if [ ${#SETUP_FLAGS[@]} -gt 0 ]; then
-    DOT_INTERNAL_CALL=1 bash "$base/$ENTRY_LINK" setup "${SETUP_FLAGS[@]}"
+    HEY_INTERNAL_CALL=1 bash "$base/$ENTRY_LINK" setup "${SETUP_FLAGS[@]}"
   elif can_prompt; then
     printf '\n'
     bash "$base/$ENTRY_LINK" setup < /dev/tty
   else
-    printf '%s%s✓%s %s is installed in %s/.\n' "$BOLD" "$GREEN" "$RESET" "$name" "$DOTDOT_DIR"
+    printf '%s%s✓%s %s is installed in %s/.\n' "$BOLD" "$GREEN" "$RESET" "$name" "$DOTHEY_DIR"
     next_steps
   fi
 }
 
 # Reads the flags: --dir for the installer, the setup flags handed to bash
-# dot setup.
+# hey setup.
 parse_arguments() {
   while [ $# -gt 0 ]; do
     case "$1" in
       --dir)
         [ $# -ge 2 ] || fail "--dir needs a value. $USAGE"
-        DOTDOT_DIR="${2%/}"
+        DOTHEY_DIR="${2%/}"
         shift
         ;;
       --harness | --type)
@@ -114,19 +114,19 @@ parse_arguments() {
 # Whether a person can answer: a terminal to read from, and no agent, CI, or
 # --no-input asking for none.
 can_prompt() {
-  [ -z "${AI_AGENT-}" ] && [ "${CLAUDECODE-}" != 1 ] && [ "${DOT_NO_INPUT-}" != 1 ] && [ -z "${CI-}" ] \
+  [ -z "${AI_AGENT-}" ] && [ "${CLAUDECODE-}" != 1 ] && [ "${HEY_NO_INPUT-}" != 1 ] && [ -z "${CI-}" ] \
     && { : < /dev/tty; } 2>/dev/null
 }
 
 # A choice read from the terminal, even when stdin is the script: the
-# installed dotdot's select when it has one, else a numbered list; prints the
+# installed dotHey's select when it has one, else a numbered list; prints the
 # number picked.
 choose() {
   local question="$1" reply index=1 option picked
   shift
-  if [ -f "$base/$DOTDOT_DIR/$SELECT_FILE" ]; then
-    picked=$(cd "$base" && bash -c '. "$1"; shift; dot::use framework.ui.select; framework.ui.select::ask "$@"' _ \
-      "$base/$DOTDOT_DIR/$BOOT_FILE" "$question" "$@" < /dev/tty) || exit 130
+  if [ -f "$base/$DOTHEY_DIR/$SELECT_FILE" ]; then
+    picked=$(cd "$base" && bash -c '. "$1"; shift; hey::use framework.ui.select; framework.ui.select::ask "$@"' _ \
+      "$base/$DOTHEY_DIR/$BOOT_FILE" "$question" "$@" < /dev/tty) || exit 130
     for option in "$@"; do
       [ "$option" != "$picked" ] || { printf '%s\n' "$index"; return; }
       index=$((index + 1))
@@ -146,7 +146,7 @@ choose() {
 
 next_steps() {
   printf '   %s%s→%s Set it up for your harnesses: %sbash %s setup%s\n' "$BOLD" "$MAGENTA" "$RESET" "$BOLD" "$ENTRY_LINK" "$RESET"
-  printf "   %s%s→%s Or tell your coding agent \"set up dotdot\"; it takes it from there.\n" "$BOLD" "$MAGENTA" "$RESET"
+  printf "   %s%s→%s Or tell your coding agent \"set up dotHey\"; it takes it from there.\n" "$BOLD" "$MAGENTA" "$RESET"
 }
 
 fail() {
@@ -171,7 +171,7 @@ check_requirements() {
   for command in "${REQUIRED_COMMANDS[@]}"; do
     command -v "$command" >/dev/null || missing+=("$command")
   done
-  [ ${#missing[@]} -eq 0 ] || fail "dotdot needs ${missing[*]}, which isn't installed here."
+  [ ${#missing[@]} -eq 0 ] || fail "dotHey needs ${missing[*]}, which isn't installed here."
 }
 
 # Refuses a --dir outside the project, in .git/, or onto .env or the entry.
@@ -180,49 +180,49 @@ check_place() {
     fail "Please run this from your project's directory, not $base."
   fi
   [ -w "$base" ] || fail "Can't write to $base; please check its permissions."
-  case "/$DOTDOT_DIR/" in
-    //* | */../* | */./* | */.git/* | "/$ENTRY_LINK/" | /.env/) fail "dotdot can't live in $DOTDOT_DIR: it must be a place in the project, outside .git/." ;;
+  case "/$DOTHEY_DIR/" in
+    //* | */../* | */./* | */.git/* | "/$ENTRY_LINK/" | /.env/) fail "dotHey can't live in $DOTHEY_DIR: it must be a place in the project, outside .git/." ;;
   esac
 }
 
-# An existing dotdot (the dot entry, or the place taken) is never installed
+# An existing dotHey (the hey entry, or the place taken) is never installed
 # over: at a terminal, it is offered an update or a setup instead.
 check_existing() {
   local name
-  for name in "$DOTDOT_DIR" "$ENTRY_LINK"; do
+  for name in "$DOTHEY_DIR" "$ENTRY_LINK"; do
     [ -e "$base/$name" ] || [ -L "$base/$name" ] || continue
     if [ -f "$base/$ENTRY_LINK" ] && can_prompt; then
-      case "$(choose "dotdot is already installed here." "Update it (bash $ENTRY_LINK upgrade)" "Run its setup again (bash $ENTRY_LINK setup)" "Cancel")" in
+      case "$(choose "dotHey is already installed here." "Update it (bash $ENTRY_LINK upgrade)" "Run its setup again (bash $ENTRY_LINK setup)" "Cancel")" in
         1) exec bash "$base/$ENTRY_LINK" upgrade < /dev/tty ;;
         2) exec bash "$base/$ENTRY_LINK" setup < /dev/tty ;;
       esac
       exit 0
     fi
-    fail "$base/$name already exists, so nothing was installed. To update dotdot, run: bash $ENTRY_LINK upgrade; to set it up again: bash $ENTRY_LINK setup"
+    fail "$base/$name already exists, so nothing was installed. To update dotHey, run: bash $ENTRY_LINK upgrade; to set it up again: bash $ENTRY_LINK setup"
   done
 }
 
-# Writes dotdot's own paths for a --dir other than .dot/, as bash dot upgrade
+# Writes dotHey's own paths for a --dir other than .hey/, as bash hey upgrade
 # does for the files it brings.
 rename_paths() {
   local source="$1" file replacement
-  [ "$DOTDOT_DIR" != "$DEFAULT_DIR" ] || return 0
-  replacement=$(printf '%s' "$DOTDOT_DIR/" | sed 's/[|&\\]/\\&/g')
+  [ "$DOTHEY_DIR" != "$DEFAULT_DIR" ] || return 0
+  replacement=$(printf '%s' "$DOTHEY_DIR/" | sed 's/[|&\\]/\\&/g')
   grep -rl --null --binary-files=without-match -F "$DEFAULT_DIR/" "$source" | while IFS= read -r -d '' file; do
     sed "s|\\$DEFAULT_DIR/|$replacement|g" "$file" > "$file.renamed" && cat -- "$file.renamed" > "$file" && rm -f -- "$file.renamed"
   done
 }
 
-# DOT_INSTALL_ARCHIVE, a local archive, replaces the download (for tests).
+# HEY_INSTALL_ARCHIVE, a local archive, replaces the download (for tests).
 download_and_unpack() {
   mkdir -p -- "$temp/tree"
-  if [ -n "${DOT_INSTALL_ARCHIVE-}" ]; then
-    [ -f "$DOT_INSTALL_ARCHIVE" ] && cp -- "$DOT_INSTALL_ARCHIVE" "$temp/dotdot.tar.gz"
+  if [ -n "${HEY_INSTALL_ARCHIVE-}" ]; then
+    [ -f "$HEY_INSTALL_ARCHIVE" ] && cp -- "$HEY_INSTALL_ARCHIVE" "$temp/dothey.tar.gz"
   else
     curl --proto '=https' --proto-redir '=https' --tlsv1.2 -fsSL --connect-timeout "$CONNECT_SECONDS" --max-time "$DOWNLOAD_SECONDS" \
-      -o "$temp/dotdot.tar.gz" "$ARCHIVE_URL"
+      -o "$temp/dothey.tar.gz" "$ARCHIVE_URL"
   fi
-  tar -xzf "$temp/dotdot.tar.gz" -C "$temp/tree"
+  tar -xzf "$temp/dothey.tar.gz" -C "$temp/tree"
 }
 
 # Prints label $1, with a spinner after it on a terminal while "$@" runs in
@@ -249,7 +249,7 @@ spin() {
 }
 
 # Prints the unpacked archive's single top-level folder, named after the repo
-# and branch, which holds dotdot's source.
+# and branch, which holds dotHey's source.
 find_source() {
   local top
   for top in "$1"/*/; do
@@ -261,12 +261,12 @@ find_source() {
   return 1
 }
 
-# Sets <path> to <json> in the state of .dot/dot.json with dotdot's
+# Sets <path> to <json> in the state of .hey/hey.json with dotHey's
 # own JSON helper, the rest of the file left as shipped.
 set_state() {
-  local settings="$base/$DOTDOT_DIR/$SETTINGS_FILE" document
+  local settings="$base/$DOTHEY_DIR/$SETTINGS_FILE" document
   # shellcheck source=/dev/null
-  document=$(. "$base/$DOTDOT_DIR/$JSON_HELPER" && framework.helpers.json::set "$(cat -- "$settings")" ".state.$1" "$2" --keep-format) \
+  document=$(. "$base/$DOTHEY_DIR/$JSON_HELPER" && framework.helpers.json::set "$(cat -- "$settings")" ".state.$1" "$2" --keep-format) \
     && printf '%s\n' "$document" > "$settings" \
     || printf "%s%s! Couldn't record state.%s in %s.%s\n" "$BOLD" "$YELLOW" "$1" "$SETTINGS_FILE" "$RESET"
 }
@@ -274,7 +274,7 @@ set_state() {
 # A fresh install has nothing to migrate: every migration it ships is applied.
 record_migrations() {
   local file list=""
-  for file in "$base/$DOTDOT_DIR/$MIGRATIONS_DIR"/*.sh; do
+  for file in "$base/$DOTHEY_DIR/$MIGRATIONS_DIR"/*.sh; do
     [ -f "$file" ] || continue
     file="${file##*/}"
     list="$list${list:+, }\"${file%.sh}\""
@@ -282,7 +282,7 @@ record_migrations() {
   set_state migrations "[$list]"
 }
 
-# GitHub archives carry their commit in a pax header; dot upgrade diffs
+# GitHub archives carry their commit in a pax header; hey upgrade diffs
 # against it to know what it may remove. Without it, the first update just
 # removes nothing.
 record_version() {
@@ -291,7 +291,7 @@ record_version() {
   if [ -n "$commit" ]; then
     set_state commit "\"$commit\""
   else
-    printf "%s%s! Couldn't read the installed version; the first bash dot upgrade won't clean up stale files.%s\n" "$BOLD" "$YELLOW" "$RESET"
+    printf "%s%s! Couldn't read the installed version; the first bash hey upgrade won't clean up stale files.%s\n" "$BOLD" "$YELLOW" "$RESET"
   fi
 }
 

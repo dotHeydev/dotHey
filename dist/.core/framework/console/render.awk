@@ -1,4 +1,4 @@
-# Renders dotdot's style markup, the one place styles become escape codes:
+# Renders dotHey's style markup, the one place styles become escape codes:
 # \001<name>\002 opens a style and \003 closes the last one opened. With
 # styled=1 each style becomes its escape code; closing one resets and puts
 # back every style still open, so styles nest, and a style still open at the

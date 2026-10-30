@@ -3,12 +3,12 @@
 DESCRIPTION="Move a task to paused."
 DOCS="tasks"
 
-dot::use core.modules.tasks.console core.modules.tasks.service
+hey::use core.modules.tasks.console core.modules.tasks.service
 
 usage() {
-  core.modules.tasks.console::status_usage "${DOT_COMMAND#tasks:}"
+  core.modules.tasks.console::status_usage "${HEY_COMMAND#tasks:}"
 }
 
 handle() {
-  core.modules.tasks.console::move "${DOT_COMMAND#tasks:}" "$@"
+  core.modules.tasks.console::move "${HEY_COMMAND#tasks:}" "$@"
 }

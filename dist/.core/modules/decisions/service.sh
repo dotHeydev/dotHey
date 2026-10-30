@@ -1,8 +1,8 @@
 # shellcheck shell=bash
 
-dot::use framework.helpers.date framework.helpers.frontmatter framework.helpers.fs framework.helpers.record framework.helpers.template framework.helpers.text
+hey::use framework.helpers.date framework.helpers.frontmatter framework.helpers.fs framework.helpers.record framework.helpers.template framework.helpers.text
 
-DECISION_TEMPLATE="$MODULES_DIR/decisions/skills/dot-document-decision/decision-template.md"
+DECISION_TEMPLATE="$MODULES_DIR/decisions/skills/hey-document-decision/decision-template.md"
 FEATURE_DECISIONS_HEADING="Related Project Decisions"
 DECISION_DEFAULT_STATUS="draft"
 DECISION_SUPERSEDED="superseded by "
@@ -209,7 +209,7 @@ core.modules.decisions.service::term_matches() {
         total=$((total + count))
         hits="${hits:+$hits, }$term"
       done
-      [ "$matched" -eq 0 ] || printf '%d\t%d\t%s\t%s\n' "$matched" "$total" "$(dot::relative "$file")" "$hits"
+      [ "$matched" -eq 0 ] || printf '%d\t%d\t%s\t%s\n' "$matched" "$total" "$(hey::relative "$file")" "$hits"
     done
   done < <(core.modules.decisions.service::search_directories "$scope")
 }

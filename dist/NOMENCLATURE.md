@@ -6,7 +6,7 @@ ignore: true
 
 # Nomenclature
 
-One concept, one term, everywhere: in the docs, the UI, dotdot, the code, and our conversations. When choosing a name, weigh in this order: clarity, shortness, simplicity, fluent readability, the stack's conventions, then industry conventions.
+One concept, one term, everywhere: in the docs, the UI, dotHey, the code, and our conversations. When choosing a name, weigh in this order: clarity, shortness, simplicity, fluent readability, the stack's conventions, then industry conventions.
 
 ## Registers
 

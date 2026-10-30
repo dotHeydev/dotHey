@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 
-dot::use framework.console.args
+hey::use framework.console.args
 
 core.modules.decisions.console::choose_status() {
   local current="$1" requested="$2"

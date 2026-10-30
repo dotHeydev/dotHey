@@ -1,19 +1,19 @@
 # shellcheck shell=bash
 
-# GitHub through its REST and GraphQL APIs as DOT_GH_TOKEN's owner, for when
+# GitHub through its REST and GraphQL APIs as HEY_GH_TOKEN's owner, for when
 # gh is missing or fails; the same operations as internal/cli.sh, printing
 # the same, an "HTTP <status>: <message>" error on stderr.
 
-dot::use framework.helpers.fs framework.helpers.json framework.helpers.net
+hey::use framework.helpers.fs framework.helpers.json framework.helpers.net
 
 GITHUB_API_URL="https://api.github.com"
 GITHUB_API_PAGE=100
 
-# A request as DOT_GH_TOKEN's owner: <method> <path> [<json>]; the reply on
+# A request as HEY_GH_TOKEN's owner: <method> <path> [<json>]; the reply on
 # stdout when it succeeds, else its status and message on stderr.
 framework.integrations.github.internal.api::request() {
   local method="$1" path="$2" json="${3-}" token work status reply
-  token=$(dot::secret DOT_GH_TOKEN 2>/dev/null) || { printf 'no DOT_GH_TOKEN\n' >&2; return 1; }
+  token=$(hey::secret HEY_GH_TOKEN 2>/dev/null) || { printf 'no HEY_GH_TOKEN\n' >&2; return 1; }
   framework.helpers.fs::make_temp_dir work || return 1
   [ -z "$json" ] || printf '%s' "$json" > "$work/data"
   status=$(framework.helpers.net::request "$method" "$GITHUB_API_URL/$path" "${json:+$work/data}" "$work/reply" \
@@ -48,7 +48,7 @@ framework.integrations.github.internal.api::rows() {
 
 framework.integrations.github.internal.api::tarball() {
   local token
-  token=$(dot::secret DOT_GH_TOKEN 2>/dev/null) || { printf 'no DOT_GH_TOKEN\n' >&2; return 1; }
+  token=$(hey::secret HEY_GH_TOKEN 2>/dev/null) || { printf 'no HEY_GH_TOKEN\n' >&2; return 1; }
   framework.helpers.net::download "$GITHUB_API_URL/repos/$1/tarball/$2" "$3" "Authorization: Bearer $token" \
     || { printf 'HTTP error or no reply downloading %s@%s\n' "$1" "$2" >&2; return 1; }
 }

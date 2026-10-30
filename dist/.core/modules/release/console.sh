@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 
-dot::use framework.console.args core.modules.release.service framework.console.output framework.console.prompt framework.helpers.text
+hey::use framework.console.args core.modules.release.service framework.console.output framework.console.prompt framework.helpers.text
 
 # One push option of release:create and release:push, its arguments counted
 # into RELEASE_TAKEN; fails for anything else.
@@ -9,7 +9,7 @@ core.modules.release.console::parse_push_option() {
   case "$1" in
     --force)
       framework.console.prompt::can_ask \
-        || framework.console.output::fail_as "$EXIT_PRECONDITION" "Force-pushing is only confirmed at a terminal, so nothing changed." "$OUTPUT_MANUAL_RUN bash dot $DOT_COMMAND ... --force"
+        || framework.console.output::fail_as "$EXIT_PRECONDITION" "Force-pushing is only confirmed at a terminal, so nothing changed." "$OUTPUT_MANUAL_RUN bash hey $HEY_COMMAND ... --force"
       RELEASE_FORCE=true
       ;;
     --keep-tokens)
@@ -65,7 +65,7 @@ core.modules.release.console::push() {
     name="${RELEASE_REMOTES[$index]}"
     if ! core.modules.release.console::wants_push "$name" "$tag"; then
       framework.console.output::line "Skipped $name."
-      framework.console.output::next "Push later with: bash dot release:push $name${force:+ --force}"
+      framework.console.output::next "Push later with: bash hey release:push $name${force:+ --force}"
       continue
     fi
     tried=$((tried + 1))
@@ -73,12 +73,12 @@ core.modules.release.console::push() {
     if core.modules.release.service::push_with_token "$RELEASE_DESTINATION" "$name" "${RELEASE_REMOTE_URLS[$index]}" -q --atomic ${force:+"$force"} "refs/heads/$branch" --tags; then
       framework.console.output::success "Pushed to $name."
     else
-      if [ -s "$DOT_ERROR_FILE" ]; then
-        dot::flush_errors
+      if [ -s "$HEY_ERROR_FILE" ]; then
+        hey::flush_errors
       else
         framework.console.output::error "Couldn't push to $name."
       fi
-      framework.console.output::next "Retry with: bash dot release:push $name${force:+ --force}" >&2
+      framework.console.output::next "Retry with: bash hey release:push $name${force:+ --force}" >&2
       failures=$((failures + 1))
     fi
   done

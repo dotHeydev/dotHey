@@ -1,15 +1,15 @@
 # shellcheck shell=bash
 
-dot::use framework.helpers.fs framework.helpers.json framework.helpers.secrets framework.helpers.text
+hey::use framework.helpers.fs framework.helpers.json framework.helpers.secrets framework.helpers.text
 
 RELEASE_PROJECT="$BASE"
 RELEASE_REMOTES_SETTING="release.remotes"
-# Marks an example remote, as dotdot's defaults ship one: never used.
+# Marks an example remote, as dotHey's defaults ship one: never used.
 RELEASE_PLACEHOLDER_PATTERN='_USER_|_REPO_'
 RELEASE_EXCLUDE_SETTING="release.exclude"
 RELEASE_VERSION_FILES_SETTING="release.versionFiles"
-RELEASE_TOKEN_CACHE="$HOME/.cache/dotdot-release/socket"
-RELEASE_TOKEN_PREFIX="DOT_RELEASE_TOKEN_"
+RELEASE_TOKEN_CACHE="$HOME/.cache/dothey-release/socket"
+RELEASE_TOKEN_PREFIX="HEY_RELEASE_TOKEN_"
 RELEASE_REMOTE_NAME_PATTERN='^[a-z0-9][a-z0-9_-]*$'
 RELEASE_REMOTE_URL_PATTERN='^https://[A-Za-z0-9.-]+(:[0-9]+)?/[^[:space:]@]+$'
 RELEASE_RESERVED_REMOTES=" help all push-all "
@@ -20,10 +20,10 @@ RELEASE_AUTHOR_EMAIL_PATTERN='^[^[:space:]<>@]+@[^[:space:]<>@]+$'
 RELEASE_TOKEN_PATTERN='^[A-Za-z0-9_-]{20,255}$'
 RELEASE_CIPHER_PATTERN='^[A-Za-z0-9+/]+=*$'
 RELEASE_CACHE_MINUTES_PATTERN='^[0-9]{1,4}$'
-RELEASE_TOKEN_SERVICE="dotdot-release"
+RELEASE_TOKEN_SERVICE="dothey-release"
 RELEASE_KEY_LIFETIME=600
 # A line holding this is a known false positive, left out of the scan.
-RELEASE_SECRET_ALLOW="dotdot:not-a-secret"
+RELEASE_SECRET_ALLOW="dothey:not-a-secret"
 # How long a push's own credential cache keeps the token, at most.
 RELEASE_PUSH_CACHE_SECONDS=120
 
@@ -43,22 +43,22 @@ core.modules.release.service::load_remotes() {
   local remotes name url
   RELEASE_REMOTES=()
   RELEASE_REMOTE_URLS=()
-  remotes=$(dot::setting "$RELEASE_REMOTES_SETTING" "{}") || dot::abort "$RELEASE_REMOTES_SETTING in $(dot::relative "$SETTINGS_FILE") can't be read."
+  remotes=$(hey::setting "$RELEASE_REMOTES_SETTING" "{}") || hey::abort "$RELEASE_REMOTES_SETTING in $(hey::relative "$SETTINGS_FILE") can't be read."
   case "$remotes" in
     "{"*) ;;
-    *) dot::abort "$RELEASE_REMOTES_SETTING must be an object, like {\"github\": \"https://github.com/<owner>/<repo>.git\"}." ;;
+    *) hey::abort "$RELEASE_REMOTES_SETTING must be an object, like {\"github\": \"https://github.com/<owner>/<repo>.git\"}." ;;
   esac
   while IFS="$(printf '\t')" read -r name url; do
     [[ ! "$url" =~ $RELEASE_PLACEHOLDER_PATTERN ]] || continue
     [[ "$name" =~ $RELEASE_REMOTE_NAME_PATTERN ]] && [[ "$RELEASE_RESERVED_REMOTES" != *" $name "* ]] \
-      || dot::abort "\"$name\" can't be a remote name; please use letters, digits, _ and - (not help, all or push-all)."
+      || hey::abort "\"$name\" can't be a remote name; please use letters, digits, _ and - (not help, all or push-all)."
     [[ "$url" =~ $RELEASE_REMOTE_URL_PATTERN ]] \
-      || dot::abort "$RELEASE_REMOTES_SETTING.$name must be an https:// url with no credentials in it; pushes use a token."
+      || hey::abort "$RELEASE_REMOTES_SETTING.$name must be an https:// url with no credentials in it; pushes use a token."
     RELEASE_REMOTES+=("$name")
     RELEASE_REMOTE_URLS+=("$url")
   done < <(framework.helpers.json::leaves "$remotes")
   [ ${#RELEASE_REMOTES[@]} -gt 0 ] \
-    || dot::abort "$RELEASE_REMOTES_SETTING in $(dot::relative "$SETTINGS_FILE") needs at least one real remote (the _USER_/_REPO_ example doesn't count)."
+    || hey::abort "$RELEASE_REMOTES_SETTING in $(hey::relative "$SETTINGS_FILE") needs at least one real remote (the _USER_/_REPO_ example doesn't count)."
 }
 
 core.modules.release.service::remote_url() {
@@ -69,7 +69,7 @@ core.modules.release.service::remote_url() {
       return 0
     fi
   done
-  dot::abort_as "$EXIT_NOT_FOUND" "There's no remote $1 in $RELEASE_REMOTES_SETTING of $(dot::relative "$SETTINGS_FILE")."
+  hey::abort_as "$EXIT_NOT_FOUND" "There's no remote $1 in $RELEASE_REMOTES_SETTING of $(hey::relative "$SETTINGS_FILE")."
 }
 
 core.modules.release.service::check_push_targets() {
@@ -92,7 +92,7 @@ core.modules.release.service::token_store() {
   elif command -v gpg >/dev/null; then
     printf 'gpg\n'
   else
-    dot::abort "There's no safe place to keep tokens here." "Please install gpg or secret-tool (libsecret)."
+    hey::abort "There's no safe place to keep tokens here." "Please install gpg or secret-tool (libsecret)."
   fi
 }
 
@@ -130,24 +130,24 @@ core.modules.release.service::save_token() {
   store=$(core.modules.release.service::token_store)
   case "$store" in
     keychain)
-      security add-generic-password -U -s "$RELEASE_TOKEN_SERVICE" -a "$identifier" -l "dotdot release token for $url" -w </dev/tty >/dev/null || return 1
+      security add-generic-password -U -s "$RELEASE_TOKEN_SERVICE" -a "$identifier" -l "dotHey release token for $url" -w </dev/tty >/dev/null || return 1
       ;;
     libsecret)
-      secret-tool store --label="dotdot release token for $url" service "$RELEASE_TOKEN_SERVICE" id "$identifier" </dev/tty || return 1
+      secret-tool store --label="dotHey release token for $url" service "$RELEASE_TOKEN_SERVICE" id "$identifier" </dev/tty || return 1
       ;;
     gpg)
-      [[ "$token" =~ $RELEASE_TOKEN_PATTERN ]] || dot::abort "That doesn't look like a token (letters, digits, _ and -)."
+      [[ "$token" =~ $RELEASE_TOKEN_PATTERN ]] || hey::abort "That doesn't look like a token (letters, digits, _ and -)."
       key=$(core.modules.release.service::token_key "$url") || return 1
       cipher=$(printf '%s\n%s' "$url" "$token" | gpg --quiet --pinentry-mode loopback --no-symkey-cache \
         --symmetric --cipher-algo AES256 --s2k-mode 3 --s2k-digest-algo SHA512 --s2k-count 65011712 \
         --output - | base64 | tr -d '\n') || return 1
       [[ "$cipher" =~ $RELEASE_CIPHER_PATTERN ]] || return 1
-      dot::save_secret "$key" "$cipher" || return 1
+      hey::save_secret "$key" "$cipher" || return 1
       ;;
   esac
   if [ "$store" != gpg ] && ! core.modules.release.service::read_token "$url" >/dev/null; then
     core.modules.release.service::remove_token "$url" || true
-    dot::abort "That doesn't look like a token (letters, digits, _ and -), so it wasn't kept."
+    hey::abort "That doesn't look like a token (letters, digits, _ and -), so it wasn't kept."
   fi
   core.modules.release.service::cache_token erase "$url" </dev/null || true
   core.modules.release.service::has_token "$url"
@@ -155,7 +155,7 @@ core.modules.release.service::save_token() {
 
 core.modules.release.service::decrypt_token() {
   local url="$1" key cipher plain status name
-  key=$(core.modules.release.service::token_key "$url") && cipher=$(dot::secret "$key") || return 1
+  key=$(core.modules.release.service::token_key "$url") && cipher=$(hey::secret "$key") || return 1
   [[ "$cipher" =~ $RELEASE_CIPHER_PATTERN ]] || return 1
   name=$(core.modules.release.service::remote_name "$url")
   framework.helpers.fs::make_temp_file status || return 1
@@ -163,9 +163,9 @@ core.modules.release.service::decrypt_token() {
   if ! plain=$(printf '%s' "$cipher" | base64 --decode | gpg --quiet --pinentry-mode loopback --no-symkey-cache \
     --status-file "$status" --decrypt 2>/dev/null); then
     if grep -q '^\[GNUPG:\] DECRYPTION_FAILED' "$status"; then
-      dot::raise "The $name token's passphrase is wrong, so nothing was pushed."
+      hey::raise "The $name token's passphrase is wrong, so nothing was pushed."
     else
-      dot::raise "Couldn't read the $name token, so nothing was pushed." "If it keeps failing, save it again: bash dot release:token $name"
+      hey::raise "Couldn't read the $name token, so nothing was pushed." "If it keeps failing, save it again: bash hey release:token $name"
     fi
     rm -f -- "$status"
     return 1
@@ -173,12 +173,12 @@ core.modules.release.service::decrypt_token() {
   if ! grep -q '^\[GNUPG:\] NEED_PASSPHRASE_SYM ' "$status" || ! grep -q '^\[GNUPG:\] DECRYPTION_OKAY' "$status" \
     || grep -q '^\[GNUPG:\] ENC_TO ' "$status"; then
     rm -f -- "$status"
-    dot::raise "$key in $(dot::relative "$HOST_ENV_FILE") can't be read as a token." "Please save it again: bash dot release:token $name"
+    hey::raise "$key in $(hey::relative "$HOST_ENV_FILE") can't be read as a token." "Please save it again: bash hey release:token $name"
     return 1
   fi
   rm -f -- "$status"
   if [ "${plain%%$'\n'*}" != "$url" ]; then
-    dot::raise "$key in $(dot::relative "$HOST_ENV_FILE") was saved for another url." "Please save it again: bash dot release:token $name"
+    hey::raise "$key in $(hey::relative "$HOST_ENV_FILE") was saved for another url." "Please save it again: bash hey release:token $name"
     return 1
   fi
   printf '%s' "${plain#*$'\n'}"
@@ -223,7 +223,7 @@ core.modules.release.service::has_token() {
   case "$(core.modules.release.service::token_store)" in
     keychain) security find-generic-password -s "$RELEASE_TOKEN_SERVICE" -a "$(core.modules.release.service::token_id "$url")" >/dev/null 2>&1 ;;
     libsecret) core.modules.release.service::read_token "$url" >/dev/null ;;
-    gpg) key=$(core.modules.release.service::token_key "$url") && dot::secret "$key" >/dev/null ;;
+    gpg) key=$(core.modules.release.service::token_key "$url") && hey::secret "$key" >/dev/null ;;
   esac
 }
 
@@ -234,7 +234,7 @@ core.modules.release.service::remove_token() {
   case "$(core.modules.release.service::token_store)" in
     keychain) security delete-generic-password -s "$RELEASE_TOKEN_SERVICE" -a "$identifier" >/dev/null 2>&1 ;;
     libsecret) secret-tool clear service "$RELEASE_TOKEN_SERVICE" id "$identifier" 2>/dev/null ;;
-    gpg) core.modules.release.service::has_token "$url" && dot::remove_secret "$(core.modules.release.service::token_key "$url")" ;;
+    gpg) core.modules.release.service::has_token "$url" && hey::remove_secret "$(core.modules.release.service::token_key "$url")" ;;
   esac
 }
 
@@ -245,7 +245,7 @@ core.modules.release.service::push_with_token() {
   local repository="$1" name="$2" url="$3" token rest host path socket status=0
   shift 3
   core.modules.release.service::has_token "$url" \
-    || { dot::raise "There's no token saved for $name, so nothing was pushed." "Please save one: bash dot release:token $name"; return 1; }
+    || { hey::raise "There's no token saved for $name, so nothing was pushed." "Please save one: bash hey release:token $name"; return 1; }
   token=$(core.modules.release.service::load_token "$url") && [ -n "$token" ] || return 1
   rest="${url#https://}"
   host="${rest%%/*}"
@@ -282,21 +282,21 @@ core.modules.release.service::point_remotes() {
 
 core.modules.release.service::open_repository() {
   local branch="$1"
-  [ -d "$RELEASE_DESTINATION/.git" ] || dot::abort "There's no release to push yet." "Please create one first: bash dot release:create <version>"
-  [ "$(core.modules.release.service::repo symbolic-ref --short HEAD)" = "$branch" ] || dot::abort "The release repo isn't on branch $branch."
+  [ -d "$RELEASE_DESTINATION/.git" ] || hey::abort "There's no release to push yet." "Please create one first: bash hey release:create <version>"
+  [ "$(core.modules.release.service::repo symbolic-ref --short HEAD)" = "$branch" ] || hey::abort "The release repo isn't on branch $branch."
 }
 
 core.modules.release.service::check_signing_identity() {
   [[ "$RELEASE_SIGNING_NAME" =~ $RELEASE_SIGNING_NAME_PATTERN ]] \
-    || dot::abort "release.signingKey must be a file name in $HOME/.ssh/, not a path (got $RELEASE_SIGNING_NAME)."
+    || hey::abort "release.signingKey must be a file name in $HOME/.ssh/, not a path (got $RELEASE_SIGNING_NAME)."
   [[ "$RELEASE_SIGNING_NAME" != *.pub ]] \
-    || dot::abort "release.signingKey should name the private key (${RELEASE_SIGNING_NAME%.pub}), not its .pub."
-  [[ "$RELEASE_AUTHOR_NAME" =~ $RELEASE_AUTHOR_NAME_PATTERN ]] || dot::abort "release.authorName can't contain control characters or < >."
-  [[ "$RELEASE_AUTHOR_EMAIL" =~ $RELEASE_AUTHOR_EMAIL_PATTERN ]] || dot::abort "release.authorEmail must be one email address."
+    || hey::abort "release.signingKey should name the private key (${RELEASE_SIGNING_NAME%.pub}), not its .pub."
+  [[ "$RELEASE_AUTHOR_NAME" =~ $RELEASE_AUTHOR_NAME_PATTERN ]] || hey::abort "release.authorName can't contain control characters or < >."
+  [[ "$RELEASE_AUTHOR_EMAIL" =~ $RELEASE_AUTHOR_EMAIL_PATTERN ]] || hey::abort "release.authorEmail must be one email address."
   RELEASE_SIGNING_KEY="$HOME/.ssh/$RELEASE_SIGNING_NAME"
   RELEASE_PUBLIC_KEY="$RELEASE_SIGNING_KEY.pub"
-  [ -f "$RELEASE_SIGNING_KEY" ] || dot::abort "There's no signing key at $RELEASE_SIGNING_KEY."
-  [ -f "$RELEASE_PUBLIC_KEY" ] || dot::abort "There's no public key at $RELEASE_PUBLIC_KEY; it's needed to check the signature."
+  [ -f "$RELEASE_SIGNING_KEY" ] || hey::abort "There's no signing key at $RELEASE_SIGNING_KEY."
+  [ -f "$RELEASE_PUBLIC_KEY" ] || hey::abort "There's no public key at $RELEASE_PUBLIC_KEY; it's needed to check the signature."
 }
 
 core.modules.release.service::check_tokens() {
@@ -304,7 +304,7 @@ core.modules.release.service::check_tokens() {
   for index in "${!RELEASE_REMOTES[@]}"; do
     core.modules.release.service::is_targeted "${RELEASE_REMOTES[$index]}" || continue
     core.modules.release.service::has_token "${RELEASE_REMOTE_URLS[$index]}" \
-      || dot::abort "No token saved for ${RELEASE_REMOTES[$index]}." "Please save one: bash dot release:token ${RELEASE_REMOTES[$index]}"
+      || hey::abort "No token saved for ${RELEASE_REMOTES[$index]}." "Please save one: bash hey release:token ${RELEASE_REMOTES[$index]}"
   done
 }
 
@@ -312,10 +312,10 @@ core.modules.release.service::check_tokens() {
 # git-ignored one to copy from disk instead.
 core.modules.release.service::read_exclusions() {
   local line resolved include list
-  list=$(dot::setting "$RELEASE_EXCLUDE_SETTING" "[]") || dot::abort "$RELEASE_EXCLUDE_SETTING in $(dot::relative "$SETTINGS_FILE") can't be read, so nothing was released."
+  list=$(hey::setting "$RELEASE_EXCLUDE_SETTING" "[]") || hey::abort "$RELEASE_EXCLUDE_SETTING in $(hey::relative "$SETTINGS_FILE") can't be read, so nothing was released."
   case "$list" in
     "["*) list=$(framework.helpers.json::values "$list" '.[]') ;;
-    *) dot::abort "$RELEASE_EXCLUDE_SETTING must be a list, like [\".dot/\", \"dot\"], so nothing was released." ;;
+    *) hey::abort "$RELEASE_EXCLUDE_SETTING must be a list, like [\".hey/\", \"hey\"], so nothing was released." ;;
   esac
   RELEASE_EXCLUDED=()
   RELEASE_COPIED=()
@@ -328,26 +328,26 @@ core.modules.release.service::read_exclusions() {
       line="${line#!}"
     fi
     case "$(framework.helpers.fs::pattern_kind "$line")" in
-      start) dot::abort "$RELEASE_EXCLUDE_SETTING takes paths, directories (x/) and directory contents (x/*), not a start (x*): $line" ;;
+      start) hey::abort "$RELEASE_EXCLUDE_SETTING takes paths, directories (x/) and directory contents (x/*), not a start (x*): $line" ;;
     esac
     line=$(framework.helpers.fs::pattern_path "$line")
-    resolved=$(framework.helpers.fs::within "$line" "$RELEASE_PROJECT") && [ "$resolved" != "$RELEASE_PROJECT" ] || dot::abort "$RELEASE_EXCLUDE_SETTING lists $line, which is outside the project."
+    resolved=$(framework.helpers.fs::within "$line" "$RELEASE_PROJECT") && [ "$resolved" != "$RELEASE_PROJECT" ] || hey::abort "$RELEASE_EXCLUDE_SETTING lists $line, which is outside the project."
     if ! $include; then
       git cat-file -e "HEAD:$line" 2>/dev/null || git check-ignore -q -- "$line" \
         || RELEASE_WARNINGS+=("$RELEASE_EXCLUDE_SETTING lists $line, which is neither committed nor git-ignored; nothing to leave out.")
       RELEASE_EXCLUDED+=("$line")
       continue
     fi
-    [ -e "$line" ] && git check-ignore -q "$line" || dot::abort "$RELEASE_EXCLUDE_SETTING: !$line must be a git-ignored path on disk."
-    ! framework.helpers.fs::is_inside "$HOST_ENV_FILE" "$resolved" || dot::abort "$RELEASE_EXCLUDE_SETTING: !$line holds the project's .env."
-    [ -z "$(find "$line" -type l -print -quit)" ] || dot::abort "$RELEASE_EXCLUDE_SETTING: !$line holds symlinks."
+    [ -e "$line" ] && git check-ignore -q "$line" || hey::abort "$RELEASE_EXCLUDE_SETTING: !$line must be a git-ignored path on disk."
+    ! framework.helpers.fs::is_inside "$HOST_ENV_FILE" "$resolved" || hey::abort "$RELEASE_EXCLUDE_SETTING: !$line holds the project's .env."
+    [ -z "$(find "$line" -type l -print -quit)" ] || hey::abort "$RELEASE_EXCLUDE_SETTING: !$line holds symlinks."
     RELEASE_COPIED+=("$line")
   done <<< "$list"
   RELEASE_PATHSPEC=(.)
   for line in ${RELEASE_EXCLUDED[@]+"${RELEASE_EXCLUDED[@]}"}; do
     RELEASE_PATHSPEC+=(":(exclude,literal)$line")
   done
-  [ -n "$(git ls-files -- "${RELEASE_PATHSPEC[@]}")" ] || dot::abort "$RELEASE_EXCLUDE_SETTING leaves nothing to release."
+  [ -n "$(git ls-files -- "${RELEASE_PATHSPEC[@]}")" ] || hey::abort "$RELEASE_EXCLUDE_SETTING leaves nothing to release."
 }
 
 # Whether what the export takes (RELEASE_PATHSPEC, from read_exclusions) has
@@ -360,21 +360,21 @@ core.modules.release.service::prepare_repository() {
   local branch="$1" tag="$2"
   mkdir -p "$RELEASE_DESTINATION"
   RELEASE_DESTINATION=$(cd "$RELEASE_DESTINATION" && pwd -P)
-  ! framework.helpers.fs::is_inside "$RELEASE_PROJECT" "$RELEASE_DESTINATION" || dot::abort "The release directory $RELEASE_DESTINATION can't contain this project."
+  ! framework.helpers.fs::is_inside "$RELEASE_PROJECT" "$RELEASE_DESTINATION" || hey::abort "The release directory $RELEASE_DESTINATION can't contain this project."
   if [ ! -d "$RELEASE_DESTINATION/.git" ]; then
-    [ -z "$(ls -A "$RELEASE_DESTINATION")" ] || dot::abort "The release directory $RELEASE_DESTINATION isn't empty and isn't a git repo."
+    [ -z "$(ls -A "$RELEASE_DESTINATION")" ] || hey::abort "The release directory $RELEASE_DESTINATION isn't empty and isn't a git repo."
     git init -q -b "$branch" "$RELEASE_DESTINATION"
   fi
   core.modules.release.service::open_repository "$branch"
   [ -z "$(core.modules.release.service::repo status --porcelain)" ] || [ -z "$(core.modules.release.service::repo rev-parse -q --verify HEAD)" ] \
-    || dot::abort "The release repo $RELEASE_DESTINATION has uncommitted changes."
-  ! core.modules.release.service::repo rev-parse -q --verify "refs/tags/$tag" >/dev/null || dot::abort "$tag already exists in the release repo."
+    || hey::abort "The release repo $RELEASE_DESTINATION has uncommitted changes."
+  ! core.modules.release.service::repo rev-parse -q --verify "refs/tags/$tag" >/dev/null || hey::abort "$tag already exists in the release repo."
 }
 
 core.modules.release.service::configure_signing() {
   local tool signers="$RELEASE_DESTINATION/.git/allowed_signers"
   for tool in ssh-keygen ssh-agent ssh-add; do
-    command -v "$tool" >/dev/null || dot::abort "Signing needs $tool, which isn't installed here."
+    command -v "$tool" >/dev/null || hey::abort "Signing needs $tool, which isn't installed here."
   done
   core.modules.release.service::repo config user.name "$RELEASE_AUTHOR_NAME"
   core.modules.release.service::repo config user.email "$RELEASE_AUTHOR_EMAIL"
@@ -396,18 +396,18 @@ core.modules.release.service::stop_agent() {
 
 core.modules.release.service::start_agent() {
   local probe agent
-  framework.helpers.fs::make_temp_dir probe || dot::abort "Couldn't create a temporary directory; please check free space and \$TMPDIR."
-  dot::on_exit core.modules.release.service::stop_agent
-  agent=$(ssh-agent -s -a "$probe/agent") || dot::abort "Couldn't start ssh-agent to sign."
+  framework.helpers.fs::make_temp_dir probe || hey::abort "Couldn't create a temporary directory; please check free space and \$TMPDIR."
+  hey::on_exit core.modules.release.service::stop_agent
+  agent=$(ssh-agent -s -a "$probe/agent") || hey::abort "Couldn't start ssh-agent to sign."
   RELEASE_AGENT_PID=$(sed -n 's/^SSH_AGENT_PID=\([0-9][0-9]*\);.*/\1/p' <<< "$agent")
-  [ -n "$RELEASE_AGENT_PID" ] || dot::abort "Couldn't start ssh-agent to sign."
+  [ -n "$RELEASE_AGENT_PID" ] || hey::abort "Couldn't start ssh-agent to sign."
   export SSH_AUTH_SOCK="$probe/agent" SSH_AGENT_PID="$RELEASE_AGENT_PID"
   ssh-add -q -t "$RELEASE_KEY_LIFETIME" -- "$RELEASE_SIGNING_KEY" \
-    || dot::abort "Couldn't unlock $RELEASE_SIGNING_KEY: wrong passphrase, or the file is readable by others." "If it's the latter: chmod 600 $RELEASE_SIGNING_KEY"
+    || hey::abort "Couldn't unlock $RELEASE_SIGNING_KEY: wrong passphrase, or the file is readable by others." "If it's the latter: chmod 600 $RELEASE_SIGNING_KEY"
   printf 'release signing probe\n' > "$probe/payload"
-  ssh-keygen -Y sign -q -f "$RELEASE_PUBLIC_KEY" -n git "$probe/payload" || dot::abort "Couldn't sign with $RELEASE_SIGNING_KEY."
+  ssh-keygen -Y sign -q -f "$RELEASE_PUBLIC_KEY" -n git "$probe/payload" || hey::abort "Couldn't sign with $RELEASE_SIGNING_KEY."
   ssh-keygen -Y verify -q -f "$RELEASE_SIGNERS" -I "$RELEASE_AUTHOR_EMAIL" -n git -s "$probe/payload.sig" < "$probe/payload" >/dev/null \
-    || dot::abort "$RELEASE_PUBLIC_KEY doesn't match $RELEASE_SIGNING_KEY."
+    || hey::abort "$RELEASE_PUBLIC_KEY doesn't match $RELEASE_SIGNING_KEY."
 }
 
 core.modules.release.service::export() {
@@ -425,17 +425,17 @@ core.modules.release.service::export() {
 # missing from the release, or that isn't JSON, stops it.
 core.modules.release.service::stamp_version() {
   local version="$1" files file path document stamped
-  files=$(dot::setting "$RELEASE_VERSION_FILES_SETTING" "{}") || dot::abort "$RELEASE_VERSION_FILES_SETTING in $(dot::relative "$SETTINGS_FILE") can't be read, so nothing was committed."
-  [[ "$files" == "{"* ]] || dot::abort "$RELEASE_VERSION_FILES_SETTING must map files to JSON paths, like {\"dist/dot.json\": \"state.version\"}, so nothing was committed."
+  files=$(hey::setting "$RELEASE_VERSION_FILES_SETTING" "{}") || hey::abort "$RELEASE_VERSION_FILES_SETTING in $(hey::relative "$SETTINGS_FILE") can't be read, so nothing was committed."
+  [[ "$files" == "{"* ]] || hey::abort "$RELEASE_VERSION_FILES_SETTING must map files to JSON paths, like {\"dist/hey.json\": \"state.version\"}, so nothing was committed."
   while IFS= read -r file; do
     path=$(framework.helpers.json::values "$files" ".[$(framework.helpers.json::string "$file")]")
     guards::stays_inside "$file" && [[ "$file" != /* ]] && [ -f "$RELEASE_DESTINATION/$file" ] && [ ! -L "$RELEASE_DESTINATION/$file" ] \
-      || dot::abort "$RELEASE_VERSION_FILES_SETTING names $file, which isn't a file in the release, so nothing was committed."
-    guards::setting "$path" || dot::abort "$RELEASE_VERSION_FILES_SETTING gives $file the path \"$path\", which isn't one like state.version, so nothing was committed."
+      || hey::abort "$RELEASE_VERSION_FILES_SETTING names $file, which isn't a file in the release, so nothing was committed."
+    guards::setting "$path" || hey::abort "$RELEASE_VERSION_FILES_SETTING gives $file the path \"$path\", which isn't one like state.version, so nothing was committed."
     document=$(cat -- "$RELEASE_DESTINATION/$file")
     stamped=$(framework.helpers.json::set "$document" ".$path" "$(framework.helpers.json::string "$version")" --keep-format) && [ -n "$stamped" ] \
-      || dot::abort "$file isn't valid JSON, so the release number couldn't be written into it, and nothing was committed."
-    printf '%s\n' "$stamped" > "$RELEASE_DESTINATION/$file" || dot::abort "Couldn't write the release number into $file, so nothing was committed."
+      || hey::abort "$file isn't valid JSON, so the release number couldn't be written into it, and nothing was committed."
+    printf '%s\n' "$stamped" > "$RELEASE_DESTINATION/$file" || hey::abort "Couldn't write the release number into $file, so nothing was committed."
   done < <(framework.helpers.json::keys "$files" .)
 }
 
@@ -443,15 +443,15 @@ core.modules.release.service::stamp_version() {
 # setting with a literal value; reports path:line only, never what matched.
 core.modules.release.service::scan_secrets() {
   local hits
-  [ ! -e "$RELEASE_DESTINATION/$(dot::relative "$HOST_ENV_FILE")" ] \
-    || dot::abort "$(dot::relative "$HOST_ENV_FILE") would be part of the release, so nothing was committed." "Please untrack it, or add it to $RELEASE_EXCLUDE_SETTING."
+  [ ! -e "$RELEASE_DESTINATION/$(hey::relative "$HOST_ENV_FILE")" ] \
+    || hey::abort "$(hey::relative "$HOST_ENV_FILE") would be part of the release, so nothing was committed." "Please untrack it, or add it to $RELEASE_EXCLUDE_SETTING."
   hits=$(
     {
       grep -rInE --exclude-dir=.git -e "$SECRETS_TOKEN_PATTERN" -- "$RELEASE_DESTINATION" || true
       grep -rIniE --exclude-dir=.git -e "$SECRETS_ASSIGNMENT_PATTERN" -- "$RELEASE_DESTINATION" || true
     } | { grep -vF -- "$RELEASE_SECRET_ALLOW" || true; } | cut -d: -f1,2 | sed "s|^$RELEASE_DESTINATION/||" | sort -u
   )
-  [ -z "$hits" ] || dot::abort "Found what look like secrets, so nothing was committed:" "$(sed 's/^/   /' <<< "$hits")" "If one is a false positive, add $RELEASE_SECRET_ALLOW to its line."
+  [ -z "$hits" ] || hey::abort "Found what look like secrets, so nothing was committed:" "$(sed 's/^/   /' <<< "$hits")" "If one is a false positive, add $RELEASE_SECRET_ALLOW to its line."
 }
 
 # git in the release repo as the release author, author and committer alike:
@@ -468,11 +468,11 @@ core.modules.release.service::commit() {
   local tag="$1"
   core.modules.release.service::repo add -A
   [ ${#RELEASE_COPIED[@]} -eq 0 ] || core.modules.release.service::repo add -f -- "${RELEASE_COPIED[@]}"
-  ! core.modules.release.service::repo diff --cached --quiet || dot::abort "Nothing changed since the last release, so no commit was made."
+  ! core.modules.release.service::repo diff --cached --quiet || hey::abort "Nothing changed since the last release, so no commit was made."
   core.modules.release.service::repo_as_author commit -q -S -m "Release $tag" -m "Source: $(git rev-parse --short HEAD)"
-  core.modules.release.service::repo verify-commit HEAD >/dev/null 2>&1 || dot::abort "The release commit isn't signed by $RELEASE_PUBLIC_KEY, so it wasn't tagged."
+  core.modules.release.service::repo verify-commit HEAD >/dev/null 2>&1 || hey::abort "The release commit isn't signed by $RELEASE_PUBLIC_KEY, so it wasn't tagged."
   [ "$(core.modules.release.service::repo log -1 --format='%ae %ce')" = "$RELEASE_AUTHOR_EMAIL $RELEASE_AUTHOR_EMAIL" ] \
-    || dot::abort "The release commit isn't authored and committed as $RELEASE_AUTHOR_EMAIL, so it wasn't tagged."
+    || hey::abort "The release commit isn't authored and committed as $RELEASE_AUTHOR_EMAIL, so it wasn't tagged."
   core.modules.release.service::repo_as_author tag -s "$tag" -m "Release $tag"
-  core.modules.release.service::repo verify-tag "$tag" >/dev/null 2>&1 || dot::abort "Tag $tag isn't signed by $RELEASE_PUBLIC_KEY."
+  core.modules.release.service::repo verify-tag "$tag" >/dev/null 2>&1 || hey::abort "Tag $tag isn't signed by $RELEASE_PUBLIC_KEY."
 }

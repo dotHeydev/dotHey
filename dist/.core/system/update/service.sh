@@ -1,17 +1,17 @@
 # shellcheck shell=bash
 
-dot::use framework.helpers.fs framework.helpers.text
+hey::use framework.helpers.fs framework.helpers.text
 
-UPDATE_REPOSITORY_URL="https://github.com/dotdot-sh/dotdot.git"
+UPDATE_REPOSITORY_URL="https://github.com/dotHeydev/dotHey.git"
 UPDATE_BRANCH="main"
 UPDATE_SOURCE="dist"
 UPDATE_TREES=("$(basename -- "$CORE_DIR")")
 UPDATE_COMMIT_STATE="commit"
 UPDATE_RELEASE_STATE="version"
 UPDATE_COMMIT_PATTERN='^[0-9a-f]{40}([0-9a-f]{24})?$'
-UPDATE_NEW_REF="refs/dotdot/new"
-UPDATE_OLD_REF="refs/dotdot/old"
-UPDATE_DEFAULT_NAME=".dot"
+UPDATE_NEW_REF="refs/dothey/new"
+UPDATE_OLD_REF="refs/dothey/old"
+UPDATE_DEFAULT_NAME=".hey"
 
 UPDATE_ADDED=()
 UPDATE_UPDATED=()
@@ -28,8 +28,8 @@ core.system.update.service::git() {
 
 core.system.update.service::installed_commit() {
   local commit
-  commit=$(dot::state "$UPDATE_COMMIT_STATE" "") && [ -n "$commit" ] || return 0
-  [[ "$commit" =~ $UPDATE_COMMIT_PATTERN ]] || dot::abort "state.$UPDATE_COMMIT_STATE in $(dot::relative "$SETTINGS_FILE") isn't a commit hash." "Please set it to the installed commit, or remove it."
+  commit=$(hey::state "$UPDATE_COMMIT_STATE" "") && [ -n "$commit" ] || return 0
+  [[ "$commit" =~ $UPDATE_COMMIT_PATTERN ]] || hey::abort "state.$UPDATE_COMMIT_STATE in $(hey::relative "$SETTINGS_FILE") isn't a commit hash." "Please set it to the installed commit, or remove it."
   printf '%s\n' "$commit"
 }
 
@@ -56,10 +56,10 @@ core.system.update.service::pathspecs() {
 }
 
 core.system.update.service::renamed() {
-  if [ "$DOTDOT_NAME" = "$UPDATE_DEFAULT_NAME" ]; then
+  if [ "$DOTHEY_NAME" = "$UPDATE_DEFAULT_NAME" ]; then
     cat
   else
-    sed "s|\\$UPDATE_DEFAULT_NAME/|$(framework.helpers.text::escape_replacement "$DOTDOT_NAME/")|g"
+    sed "s|\\$UPDATE_DEFAULT_NAME/|$(framework.helpers.text::escape_replacement "$DOTHEY_NAME/")|g"
   fi
 }
 
@@ -70,7 +70,7 @@ core.system.update.service::extract() {
   done < <(core.system.update.service::pathspecs "$source")
   mkdir -p -- "$destination"
   core.system.update.service::git archive --format=tar "$commit" -- "${pathspecs[@]}" | tar -x -C "$destination" || return 1
-  [ "$DOTDOT_NAME" != "$UPDATE_DEFAULT_NAME" ] || return 0
+  [ "$DOTHEY_NAME" != "$UPDATE_DEFAULT_NAME" ] || return 0
   grep -rl --null --binary-files=without-match -F "$UPDATE_DEFAULT_NAME/" "$destination" \
     | while IFS= read -r -d '' file; do
         core.system.update.service::renamed < "$file" > "$file.renamed" && cat "$file.renamed" > "$file" && rm -f -- "$file.renamed"
@@ -88,9 +88,9 @@ core.system.update.service::tree_files() {
 core.system.update.service::compare() {
   local tree="$1" relative
   while IFS= read -r -d '' relative; do
-    if [ ! -e "$DOTDOT_ROOT/$relative" ] && [ ! -L "$DOTDOT_ROOT/$relative" ]; then
+    if [ ! -e "$DOTHEY_ROOT/$relative" ] && [ ! -L "$DOTHEY_ROOT/$relative" ]; then
       UPDATE_ADDED+=("$relative")
-    elif [ -L "$tree/$relative" ] || [ -L "$DOTDOT_ROOT/$relative" ] || ! cmp -s -- "$tree/$relative" "$DOTDOT_ROOT/$relative"; then
+    elif [ -L "$tree/$relative" ] || [ -L "$DOTHEY_ROOT/$relative" ] || ! cmp -s -- "$tree/$relative" "$DOTHEY_ROOT/$relative"; then
       UPDATE_UPDATED+=("$relative")
     else
       UPDATE_UNCHANGED=$((UPDATE_UNCHANGED + 1))
@@ -106,7 +106,7 @@ core.system.update.service::find_removed() {
   while IFS= read -r -d '' path; do
     relative="${path#"$source"/}"
     [ "$relative" != "$path" ] || continue
-    destination=$(framework.helpers.fs::within "$relative" "$DOTDOT_ROOT") || continue
+    destination=$(framework.helpers.fs::within "$relative" "$DOTHEY_ROOT") || continue
     [ -e "$destination" ] || [ -L "$destination" ] || continue
     if [ ! -L "$destination" ] && core.system.update.service::git show "$old:$path" | core.system.update.service::renamed | cmp -s - "$destination"; then
       UPDATE_REMOVED+=("$relative")
@@ -120,14 +120,14 @@ core.system.update.service::find_unknown() {
   local tree="$1" relative
   while IFS= read -r -d '' relative; do
     [ -e "$tree/$relative" ] || [ -L "$tree/$relative" ] || UPDATE_UNKNOWN+=("$relative")
-  done < <(core.system.update.service::tree_files "$DOTDOT_ROOT")
+  done < <(core.system.update.service::tree_files "$DOTHEY_ROOT")
 }
 
 core.system.update.service::copy() {
   local tree="$1" relative destination partial
   for relative in ${UPDATE_ADDED[@]+"${UPDATE_ADDED[@]}"} ${UPDATE_UPDATED[@]+"${UPDATE_UPDATED[@]}"}; do
-    destination="$DOTDOT_ROOT/$relative"
-    partial="$destination.dot-update-$$"
+    destination="$DOTHEY_ROOT/$relative"
+    partial="$destination.hey-update-$$"
     if [ ! -d "$destination" ] || [ -L "$destination" ]; then
       if mkdir -p -- "$(dirname -- "$destination")" && cp -P -p -- "$tree/$relative" "$partial" && mv -f -- "$partial" "$destination"; then
         continue
@@ -137,8 +137,8 @@ core.system.update.service::copy() {
     UPDATE_FAILURES+=("Couldn't copy $relative.")
   done
   for relative in ${UPDATE_REMOVED[@]+"${UPDATE_REMOVED[@]}"}; do
-    if rm -f -- "$DOTDOT_ROOT/$relative"; then
-      framework.helpers.fs::prune_empty_parents "$DOTDOT_ROOT/$relative" "$DOTDOT_ROOT"
+    if rm -f -- "$DOTHEY_ROOT/$relative"; then
+      framework.helpers.fs::prune_empty_parents "$DOTHEY_ROOT/$relative" "$DOTHEY_ROOT"
     else
       UPDATE_FAILURES+=("Couldn't remove $relative.")
     fi
@@ -146,12 +146,12 @@ core.system.update.service::copy() {
   [ ${#UPDATE_FAILURES[@]} -eq 0 ]
 }
 
-# The release <commit> ships, from its dot.json in <source>: N.N.N, or
+# The release <commit> ships, from its hey.json in <source>: N.N.N, or
 # nothing.
 core.system.update.service::release_of() {
   local release
-  dot::use framework.helpers.json
-  release=$(framework.helpers.json::values "$(core.system.update.service::git show "$1:$2/dot.json" 2>/dev/null)" .state.version 2>/dev/null) || return 0
+  hey::use framework.helpers.json
+  release=$(framework.helpers.json::values "$(core.system.update.service::git show "$1:$2/hey.json" 2>/dev/null)" .state.version 2>/dev/null) || return 0
   [[ "$release" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] && printf '%s\n' "$release"
   return 0
 }
@@ -161,7 +161,7 @@ core.system.update.service::release_of() {
 core.system.update.service::record_version() {
   local release
   release=$(core.system.update.service::release_of "$1" "${2:-$UPDATE_SOURCE}")
-  dot::use framework.helpers.json
-  dot::save_state "$UPDATE_COMMIT_STATE" "\"$1\"" \
-    && dot::save_state "$UPDATE_RELEASE_STATE" "$(framework.helpers.json::string "$release")"
+  hey::use framework.helpers.json
+  hey::save_state "$UPDATE_COMMIT_STATE" "\"$1\"" \
+    && hey::save_state "$UPDATE_RELEASE_STATE" "$(framework.helpers.json::string "$release")"
 }

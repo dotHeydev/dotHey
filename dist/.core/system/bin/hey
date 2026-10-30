@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+
+if [ -z "${BASH_VERSION-}" ]; then
+  icon="✗"
+  [ ! -t 2 ] || [ -n "${NO_COLOR-}" ] || [ "${TERM-}" = dumb ] || icon=$(printf '\033[1;31m✗\033[0m')
+  echo "$icon dotHey runs on bash: bash hey $*" >&2
+  exit 1
+fi
+
+set -euo pipefail
+
+hey_self="$0"
+hey_hops=0
+while [ -L "$hey_self" ] && [ "$hey_hops" -lt 40 ]; do
+  hey_hops=$((hey_hops + 1))
+  hey_link=$(readlink "$hey_self")
+  case "$hey_link" in
+    /*) hey_self="$hey_link" ;;
+    *) hey_self="$(dirname -- "$hey_self")/$hey_link" ;;
+  esac
+done
+
+# --agent, anywhere, says an AI agent runs this (as AI_AGENT does); --no-input,
+# or CI set, that no person is there to answer (HEY_NO_INPUT=1).
+case "${CI-}" in '' | 0 | false) ;; *) export HEY_NO_INPUT=1 ;; esac
+hey_arguments=()
+for hey_argument in "$@"; do
+  case "$hey_argument" in
+    --agent) export AI_AGENT="${AI_AGENT:-dothey}" ;;
+    --no-input) export HEY_NO_INPUT=1 ;;
+    *) hey_arguments+=("$hey_argument") ;;
+  esac
+done
+set -- ${hey_arguments[@]+"${hey_arguments[@]}"}
+
+. "$(dirname -- "$hey_self")/../boot.sh"
+unset hey_self hey_hops hey_link hey_arguments hey_argument
+
+kernel::handle "$@"; exit

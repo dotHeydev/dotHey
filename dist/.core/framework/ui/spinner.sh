@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 
-dot::use framework.ui.screen framework.helpers.fs
+hey::use framework.ui.screen framework.helpers.fs
 
 # <command> run under <label> with a spinner turning beside it, its errors
 # printed once it's done; the label alone in plain output. With

@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 
-dot::use core.system.plugins.manifest framework.helpers.fs framework.helpers.kv framework.integrations.github.service
+hey::use core.system.plugins.manifest framework.helpers.fs framework.helpers.kv framework.integrations.github.service
 
 PLUGIN_STUB_DIR="$SYSTEM_DIR/plugins/stubs/plugin"
 PLUGIN_STUB_OWNER="__OWNER__"
@@ -13,7 +13,7 @@ PLUGIN_LOCAL_REF="-"
 PLUGINS_WORKSPACE=""
 
 core.system.plugins.service::prepare_workspace() {
-  [ -n "${PLUGINS_WORKSPACE-}" ] || framework.helpers.fs::make_temp_dir PLUGINS_WORKSPACE || dot::abort "Couldn't create a temporary directory; please check free space and \$TMPDIR."
+  [ -n "${PLUGINS_WORKSPACE-}" ] || framework.helpers.fs::make_temp_dir PLUGINS_WORKSPACE || hey::abort "Couldn't create a temporary directory; please check free space and \$TMPDIR."
   rm -rf -- "${PLUGINS_WORKSPACE:?}"/*
 }
 
@@ -24,19 +24,19 @@ core.system.plugins.service::download() {
 
 core.system.plugins.service::plugin_root() {
   local repository_root="$1" plugin="$2"
-  [ -d "$repository_root/$PLUGIN_ROOT" ] || { dot::raise "$plugin isn't a dotdot plugin: it has no $PLUGIN_ROOT/ directory."; return 1; }
+  [ -d "$repository_root/$PLUGIN_ROOT" ] || { hey::raise "$plugin isn't a dotHey plugin: it has no $PLUGIN_ROOT/ directory."; return 1; }
   printf '%s\n' "$repository_root/$PLUGIN_ROOT"
 }
 
 core.system.plugins.service::fetch_github() {
   local plugin="$1" ref="$2" repository="${3:-$1}" top
-  framework.integrations.github.service::is_ref "$ref" || { dot::raise "\"$ref\" isn't a valid branch, tag or commit."; return 1; }
+  framework.integrations.github.service::is_ref "$ref" || { hey::raise "\"$ref\" isn't a valid branch, tag or commit."; return 1; }
   core.system.plugins.service::download "$repository" "$ref" "$PLUGINS_WORKSPACE/plugin.tar.gz" || return 1
   mkdir -p -- "$PLUGINS_WORKSPACE/tree"
-  guards::archive "$PLUGINS_WORKSPACE/plugin.tar.gz" || { dot::raise "$plugin@$ref contains paths outside its own directory, so it wasn't installed."; return 1; }
-  tar -xzf "$PLUGINS_WORKSPACE/plugin.tar.gz" -C "$PLUGINS_WORKSPACE/tree" || { dot::raise "Couldn't unpack $plugin@$ref."; return 1; }
+  guards::archive "$PLUGINS_WORKSPACE/plugin.tar.gz" || { hey::raise "$plugin@$ref contains paths outside its own directory, so it wasn't installed."; return 1; }
+  tar -xzf "$PLUGINS_WORKSPACE/plugin.tar.gz" -C "$PLUGINS_WORKSPACE/tree" || { hey::raise "Couldn't unpack $plugin@$ref."; return 1; }
   top=$(find "$PLUGINS_WORKSPACE/tree" -mindepth 1 -maxdepth 1 -type d | head -n 1)
-  [ -n "$top" ] || { dot::raise "$plugin@$ref is empty."; return 1; }
+  [ -n "$top" ] || { hey::raise "$plugin@$ref is empty."; return 1; }
   PLUGIN_SOURCE=$(core.system.plugins.service::plugin_root "$top" "$plugin") || return 1
   PLUGIN_COMMIT=$(framework.integrations.github.service::tarball_commit "$PLUGINS_WORKSPACE/plugin.tar.gz")
   PLUGIN_ORIGIN="$PLUGIN_GITHUB_SOURCE$repository"
@@ -50,27 +50,27 @@ core.system.plugins.service::is_repository() {
   top=$(git -C "$1" rev-parse --show-toplevel 2>/dev/null) && [ "$(cd -- "$top" && pwd -P)" = "$(cd -- "$1" && pwd -P)" ]
 }
 
-# A local plugin: a repo of its own is taken as GitHub's is, its dotdot/
+# A local plugin: a repo of its own is taken as GitHub's is, its dothey/
 # folder at <ref> (its current branch by default) as committed, with the
 # commit recorded; any other folder as it is on disk, with no ref or commit.
 core.system.plugins.service::fetch_path() {
   local plugin="$1" path="$2" ref="$3" root
-  root=$(framework.helpers.fs::within "$path" "$BASE") || { dot::raise "--from must be a directory inside the project (got $path)."; return 1; }
-  [ -d "$root" ] || { dot::raise "--from must be a directory inside the project (got $path)."; return 1; }
-  PLUGIN_ORIGIN="$PLUGIN_PATH_SOURCE$(dot::relative "$root")"
+  root=$(framework.helpers.fs::within "$path" "$BASE") || { hey::raise "--from must be a directory inside the project (got $path)."; return 1; }
+  [ -d "$root" ] || { hey::raise "--from must be a directory inside the project (got $path)."; return 1; }
+  PLUGIN_ORIGIN="$PLUGIN_PATH_SOURCE$(hey::relative "$root")"
   if ! core.system.plugins.service::is_repository "$root"; then
-    [ -z "$ref" ] || { dot::raise "$path isn't a git repo of its own, so @$ref can't apply."; return 1; }
+    [ -z "$ref" ] || { hey::raise "$path isn't a git repo of its own, so @$ref can't apply."; return 1; }
     PLUGIN_SOURCE=$(core.system.plugins.service::plugin_root "$root" "$plugin") || return 1
     PLUGIN_COMMIT="$PLUGIN_LOCAL_REF"
     PLUGIN_REF="$PLUGIN_LOCAL_REF"
     return 0
   fi
   [ -n "$ref" ] || ref=$(git -C "$root" symbolic-ref -q --short HEAD) || ref=$(git -C "$root" rev-parse HEAD) || return 1
-  framework.integrations.github.service::is_ref "$ref" || { dot::raise "\"$ref\" isn't a valid branch, tag or commit."; return 1; }
-  PLUGIN_COMMIT=$(git -C "$root" rev-parse -q --verify "$ref^{commit}") || { dot::raise "$path has no $ref."; return 1; }
+  framework.integrations.github.service::is_ref "$ref" || { hey::raise "\"$ref\" isn't a valid branch, tag or commit."; return 1; }
+  PLUGIN_COMMIT=$(git -C "$root" rev-parse -q --verify "$ref^{commit}") || { hey::raise "$path has no $ref."; return 1; }
   mkdir -p -- "$PLUGINS_WORKSPACE/tree"
   git -C "$root" archive --format=tar "$PLUGIN_COMMIT" -- "$PLUGIN_ROOT" 2>/dev/null | tar -x -C "$PLUGINS_WORKSPACE/tree" \
-    || { dot::raise "$plugin isn't a dotdot plugin: it has no $PLUGIN_ROOT/ directory at $ref."; return 1; }
+    || { hey::raise "$plugin isn't a dotHey plugin: it has no $PLUGIN_ROOT/ directory at $ref."; return 1; }
   PLUGIN_SOURCE=$(core.system.plugins.service::plugin_root "$PLUGINS_WORKSPACE/tree" "$plugin") || return 1
   PLUGIN_REF="$ref"
 }
@@ -121,10 +121,10 @@ core.system.plugins.service::install() {
   rm -rf -- "$destination"
   mkdir -p -- "$destination"
   (cd -- "$source" && tar -cf - .) | (cd -- "$destination" && tar -xf -) \
-    || { dot::raise "Couldn't copy $plugin into $(dot::relative "$destination")."; return 1; }
+    || { hey::raise "Couldn't copy $plugin into $(hey::relative "$destination")."; return 1; }
 }
 
-# Writes a plugin's plugin.json settings into dot.json under
+# Writes a plugin's plugin.json settings into hey.json under
 # plugins.<owner>/<name>, each key it lacks with its default; a key already
 # there, set by the user, stays as it is. Prints the keys added.
 core.system.plugins.service::register_settings() {
@@ -140,25 +140,25 @@ core.system.plugins.service::register_settings() {
     path=".plugins[$(framework.helpers.json::string "$plugin")][$(framework.helpers.json::string "$key")]"
     [ "$(framework.helpers.json::encoded "$document" "$path")" = null ] || continue
     document=$(framework.helpers.json::set "$document" "$path" "$(framework.helpers.json::encoded "$defaults" ".[$(framework.helpers.json::string "$key")]")" --keep-format) \
-      || { dot::raise "Couldn't add $plugin's settings to $(dot::relative "$SETTINGS_FILE")."; return 1; }
+      || { hey::raise "Couldn't add $plugin's settings to $(hey::relative "$SETTINGS_FILE")."; return 1; }
     printf '%s\n' "$key"
   done < <(framework.helpers.json::keys "$defaults" .)
   printf '%s\n' "$document" | framework.helpers.fs::write "$SETTINGS_FILE"
 }
 
-# Removes <plugin>'s folder and its settings in dot.json; its secrets in .env
+# Removes <plugin>'s folder and its settings in hey.json; its secrets in .env
 # are listed as left for the user, never removed.
 core.system.plugins.service::uninstall() {
   local plugin="$1" directory document path prefix
   directory=$(core.system.plugins.manifest::directory "$plugin")
-  prefix=$(dot::env_prefix "$(dot::plugin_key "$plugin")")
+  prefix=$(hey::env_prefix "$(hey::plugin_key "$plugin")")
   ! framework.helpers.kv::keys "$HOST_ENV_FILE" | grep "^$prefix" >/dev/null \
-    || printf 'left\t%s\t%s\n' "$(dot::relative "$HOST_ENV_FILE")" "$prefix* secrets"
+    || printf 'left\t%s\t%s\n' "$(hey::relative "$HOST_ENV_FILE")" "$prefix* secrets"
   path=".plugins[$(framework.helpers.json::string "$plugin")]"
   if [ -f "$SETTINGS_FILE" ] && [ "$(framework.helpers.json::encoded "$(cat -- "$SETTINGS_FILE")" "$path")" != null ]; then
     document=$(framework.helpers.json::delete "$(cat -- "$SETTINGS_FILE")" "$path" --keep-format) \
       && printf '%s\n' "$document" | framework.helpers.fs::write "$SETTINGS_FILE" \
-      || printf 'left\t%s\t%s\n' "$(dot::relative "$SETTINGS_FILE")" "plugins[\"$plugin\"] settings"
+      || printf 'left\t%s\t%s\n' "$(hey::relative "$SETTINGS_FILE")" "plugins[\"$plugin\"] settings"
   fi
   rm -rf -- "${directory:?}"
   rmdir -- "$(dirname -- "$directory")" 2>/dev/null || true

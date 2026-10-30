@@ -3,7 +3,7 @@
 DESCRIPTION="Choose where the project keeps its tasks."
 DOCS="tasks"
 
-dot::use framework.console.args framework.console.output framework.console.prompt core.modules.tasks.service
+hey::use framework.console.args framework.console.output framework.console.prompt core.modules.tasks.service
 
 usage() {
   local service
@@ -13,7 +13,7 @@ terminal, the one you choose. Running it again switches services; existing
 tasks stay where they are.
 
 Usage:
-  bash dot tasks:initialize [--service <service>] [--repo <owner>/<name>]
+  bash hey tasks:initialize [--service <service>] [--repo <owner>/<name>]
 
 Options:
   --service <service>      The service (below); asked for at a terminal.
@@ -22,8 +22,8 @@ Options:
   -h, --help               Show this help.
 
 Examples:
-  bash dot tasks:initialize --service files
-  bash dot tasks:initialize --service github --repo acme/app
+  bash hey tasks:initialize --service files
+  bash hey tasks:initialize --service github --repo acme/app
 
 Services:
 USAGE
@@ -34,8 +34,8 @@ USAGE
 
 Notes:
   - The first task command runs it for you.
-  - The choice is saved as $TASK_SERVICE_SETTING in $(dot::relative "$SETTINGS_FILE"), shared by the
-    project; set it to "@env:<KEY>" to let each person choose in $(dot::relative "$HOST_ENV_FILE").
+  - The choice is saved as $TASK_SERVICE_SETTING in $(hey::relative "$SETTINGS_FILE"), shared by the
+    project; set it to "@env:<KEY>" to let each person choose in $(hey::relative "$HOST_ENV_FILE").
 USAGE
 }
 
@@ -53,7 +53,7 @@ handle() {
     services+=("$current")
     labels+=("$current — $(core.modules.tasks.service::service_description "$current")")
   done < <(core.modules.tasks.service::services)
-  [ ${#services[@]} -gt 0 ] || framework.console.output::fail "No task services found in $(dot::relative "$TASK_DRIVERS_DIR")/."
+  [ ${#services[@]} -gt 0 ] || framework.console.output::fail "No task services found in $(hey::relative "$TASK_DRIVERS_DIR")/."
   if [ -n "$service" ]; then
     [[ " ${services[*]} " == *" $service "* ]] || framework.console.args::invalid "\"$service\" isn't a task service: $(printf '%s ' "${services[@]}")"
   else
@@ -66,7 +66,7 @@ handle() {
     service="${services[$((choice - 1))]}"
   fi
   core.modules.tasks.service::load_service "$service"
-  dot::use "core.modules.tasks.drivers.$service-setup"
+  hey::use "core.modules.tasks.drivers.$service-setup"
   "core.modules.tasks.drivers.${service}-setup::setup" "$repository" || framework.console.output::fail "Couldn't set up $service, so nothing changed."
   core.modules.tasks.service::select_service "$service"
   framework.console.output::success "Tasks will be kept in $service."

@@ -1,17 +1,17 @@
 # shellcheck shell=bash
 
 # The one way every GitHub operation runs: through gh first, as
-# DOT_GH_TOKEN's owner when it is set (it always takes precedence) or else
-# the logged-in user; then, with DOT_GH_TOKEN set, through the API as the
+# HEY_GH_TOKEN's owner when it is set (it always takes precedence) or else
+# the logged-in user; then, with HEY_GH_TOKEN set, through the API as the
 # same owner, never falling back to the gh login. When every route fails, one
 # error names each attempt, its reason, and what to do.
 
-dot::use framework.integrations.github.internal.cli framework.integrations.github.internal.api framework.helpers.fs
+hey::use framework.integrations.github.internal.cli framework.integrations.github.internal.api framework.helpers.fs
 
-GITHUB_TOKEN_KEY="DOT_GH_TOKEN"
+GITHUB_TOKEN_KEY="HEY_GH_TOKEN"
 
 framework.integrations.github.internal.route::has_token() {
-  dot::secret "$GITHUB_TOKEN_KEY" >/dev/null 2>&1
+  hey::secret "$GITHUB_TOKEN_KEY" >/dev/null 2>&1
 }
 
 # Whether some route can run as someone: gh with a token or a login, or the
@@ -60,7 +60,7 @@ framework.integrations.github.internal.route::advice() {
 framework.integrations.github.internal.route::run() {
   local what="$1" operation="$2" token installed=false logged_in=false who errors output attempts="" reason=""
   shift 2
-  token=$(dot::secret "$GITHUB_TOKEN_KEY" 2>/dev/null) || token=""
+  token=$(hey::secret "$GITHUB_TOKEN_KEY" 2>/dev/null) || token=""
   framework.helpers.fs::make_temp_file errors || return 1
   who="as your gh login"
   [ -z "$token" ] || who="as $GITHUB_TOKEN_KEY's owner"
@@ -93,5 +93,5 @@ framework.integrations.github.internal.route::run() {
     attempts="$attempts; API: no $GITHUB_TOKEN_KEY set"
   fi
   rm -f -- "$errors"
-  dot::raise "Couldn't $what." "   Tried ${attempts//; /$'\n'   Tried }" "$(framework.integrations.github.internal.route::advice "$reason" "$token" "$installed" "$logged_in")"
+  hey::raise "Couldn't $what." "   Tried ${attempts//; /$'\n'   Tried }" "$(framework.integrations.github.internal.route::advice "$reason" "$token" "$installed" "$logged_in")"
 }

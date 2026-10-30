@@ -3,7 +3,7 @@
 # What every UI component draws with: how this run can draw (detect), and
 # the frame a component redraws in place as the person answers.
 
-dot::use framework.ui.theme framework.console.output
+hey::use framework.ui.theme framework.console.output
 
 UI_FRAME_LINES=0
 UI_BOX_ACTIVE=false
@@ -21,12 +21,12 @@ UI_TRAPS=""
 #   UI_KEYS    whether answers come as keys (arrows, Space, Enter).
 #   UI_GLYPHS  unicode, or ascii where the terminal can't draw it, which
 #              swaps in each UI_GLYPH_*_ASCII and UI_HINT_*_ASCII.
-# DOT_UI=plain or DOT_UI=rich overrides the guess.
+# HEY_UI=plain or HEY_UI=rich overrides the guess.
 framework.ui.screen::detect() {
   local name locale="${LC_ALL:-${LC_CTYPE:-${LANG-}}}"
   UI_MODE=plain
   UI_KEYS=false
-  case "${DOT_UI-}" in
+  case "${HEY_UI-}" in
     rich) UI_MODE=rich UI_KEYS=true ;;
     plain) ;;
     *)
@@ -56,7 +56,7 @@ framework.ui.screen::detect() {
 
 # Whether what goes to <descriptor> (stderr by default) is drawn for a person.
 framework.ui.screen::is_rich() {
-  [ "$UI_MODE" = rich ] && [ "${DOT_JSON-}" != true ] && { [ "${DOT_UI-}" = rich ] || [ -t "${1:-2}" ]; }
+  [ "$UI_MODE" = rich ] && [ "${HEY_JSON-}" != true ] && { [ "${HEY_UI-}" = rich ] || [ -t "${1:-2}" ]; }
 }
 
 # Whether the person answers with keys.

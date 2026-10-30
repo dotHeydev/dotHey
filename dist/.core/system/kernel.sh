@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 
-dot::use framework.console.output
+hey::use framework.console.output
 
 KERNEL_COLUMN_WIDTH=20
 # What the version reads as for a core no release stamped (a source checkout).
@@ -12,7 +12,7 @@ KERNEL_UNPREFIXED=""
 KERNEL_UNPREFIXED_READ=false
 # Old names that still run a command, never listed: "<old>=<new>".
 KERNEL_ALIASES=("scan:frontmatter=frontmatter:show")
-# The commands that set dotdot up, or run before it is: no reminder to.
+# The commands that set dotHey up, or run before it is: no reminder to.
 KERNEL_SETUP_COMMANDS=" setup setup:done adopt relocate migrate upgrade "
 
 # Each command in <directory> as "<prefix><name>|<file>|<fallback><name>":
@@ -24,12 +24,12 @@ kernel::commands_in() {
     name="${file#"$directory"/}"
     name="${name%.sh}"
     name="${name//\//:}"
-    [[ "$prefix$name" =~ $DOT_COMMAND_PATTERN ]] || continue
+    [[ "$prefix$name" =~ $HEY_COMMAND_PATTERN ]] || continue
     printf '%s|%s|%s\n' "$prefix$name" "$file" "${fallback:+$fallback$name}"
-  done < <(find "$directory" -mindepth 1 -maxdepth "$DOT_COMMAND_MAX_DEPTH" -type f -name '*.sh' | sort)
+  done < <(find "$directory" -mindepth 1 -maxdepth "$HEY_COMMAND_MAX_DEPTH" -type f -name '*.sh' | sort)
 }
 
-# dotdot's own commands, found with a single find over every module on (with
+# dotHey's own commands, found with a single find over every module on (with
 # --all, every module).
 kernel::core_commands() {
   local module directories=() file name
@@ -40,8 +40,8 @@ kernel::core_commands() {
     name="${file#"$CORE_DIR"/*/*/"$MODULE_COMMANDS_DIR"/}"
     name="${name%.sh}"
     name="${name//\//:}"
-    [[ "$name" =~ $DOT_COMMAND_PATTERN ]] && printf '%s|%s\n' "$name" "$file"
-  done < <(find "${directories[@]}" -mindepth 1 -maxdepth "$DOT_CORE_COMMAND_MAX_DEPTH" -type f -name '*.sh' | sort)
+    [[ "$name" =~ $HEY_COMMAND_PATTERN ]] && printf '%s|%s\n' "$name" "$file"
+  done < <(find "${directories[@]}" -mindepth 1 -maxdepth "$HEY_CORE_COMMAND_MAX_DEPTH" -type f -name '*.sh' | sort)
 }
 
 # The plugin owners the plugins.unprefixedCommandOwners setting lists, into
@@ -51,8 +51,8 @@ kernel::load_unprefixed() {
   ! $KERNEL_UNPREFIXED_READ || return 0
   KERNEL_UNPREFIXED_READ=true
   KERNEL_UNPREFIXED=" "
-  dot::use framework.helpers.json
-  owners=$(dot::setting "$KERNEL_UNPREFIXED_SETTING" "[]" 2>/dev/null) || owners="[]"
+  hey::use framework.helpers.json
+  owners=$(hey::setting "$KERNEL_UNPREFIXED_SETTING" "[]" 2>/dev/null) || owners="[]"
   for owner in $(framework.helpers.json::values "$owners" '.[]'); do
     [[ "$owner" =~ ^[a-z0-9][a-z0-9-]*$ ]] && KERNEL_UNPREFIXED="$KERNEL_UNPREFIXED$owner "
   done
@@ -64,9 +64,9 @@ kernel::is_unprefixed() {
   [[ "$KERNEL_UNPREFIXED" == *" $1 "* ]]
 }
 
-# Every command as "<name>|<file>": dotdot's own first, then each plugin's
+# Every command as "<name>|<file>": dotHey's own first, then each plugin's
 # under its owner (or none); a name already taken keeps its first owner, and
-# an unprefixed command whose name is taken (by dotdot or an earlier plugin)
+# an unprefixed command whose name is taken (by dotHey or an earlier plugin)
 # keeps its "<owner>:" prefix.
 kernel::commands() {
   local plugin owner
@@ -87,16 +87,16 @@ kernel::commands() {
   '
 }
 
-# The first parts of dotdot's own command names, those a feature flag turns
-# off included, and the names bash dot itself answers to: no plugin owner may
+# The first parts of dotHey's own command names, those a feature flag turns
+# off included, and the names bash hey itself answers to: no plugin owner may
 # take one.
 kernel::reserved_names() {
   kernel::core_commands --all | cut -d'|' -f1 | cut -d: -f1 | sort -u
-  printf '%s\n' "${DOT_RESERVED_COMMANDS[@]}"
+  printf '%s\n' "${HEY_RESERVED_COMMANDS[@]}"
 }
 
-# The file a command runs, into KERNEL_FILE: dotdot's own first, looked up
-# directly; then, when some owners run unprefixed, whatever bash dot lists
+# The file a command runs, into KERNEL_FILE: dotHey's own first, looked up
+# directly; then, when some owners run unprefixed, whatever bash hey lists
 # under that name; then each plugin's under its owner, directly.
 kernel::find() {
   local name="$1" path part owner plugin
@@ -124,11 +124,12 @@ kernel::find() {
 }
 
 # Every migration not yet applied, in order: each file under migrations/
-# whose name state.migrations does not list.
+# whose name state.migrations does not list; none while the state can't be
+# read, so the command run says why.
 kernel::pending_migrations() {
   local file applied
-  dot::use framework.helpers.json
-  applied=$(dot::state migrations "[]" 2>/dev/null) || applied="[]"
+  hey::use framework.helpers.json
+  applied=$(hey::state migrations "[]" 2>/dev/null) || return 0
   applied=" $(framework.helpers.json::values "$applied" '.[]' | tr '\n' ' ') "
   for file in "$MIGRATIONS_DIR"/*.sh; do
     [ -f "$file" ] || continue
@@ -148,7 +149,7 @@ kernel::is_hidden() {
 
 # The installed commit (state.commit), or nothing when unknown.
 kernel::commit() {
-  dot::state commit "" 2>/dev/null || true
+  hey::state commit "" 2>/dev/null || true
 }
 
 # <value> as a JSON string, or null when empty.
@@ -158,19 +159,19 @@ kernel::json_or_null() {
 
 kernel::print_version() {
   local version
-  dot::use framework.helpers.json
-  version=$(dot::version)
-  if $DOT_JSON; then
+  hey::use framework.helpers.json
+  version=$(hey::version)
+  if $HEY_JSON; then
     printf '{"version":%s,"commit":%s}\n' "$(kernel::json_or_null "$version")" "$(kernel::json_or_null "$(kernel::commit)")"
   else
-    printf 'dotdot %s\n' "${version:-$KERNEL_UNRELEASED}"
+    printf 'dotHey %s\n' "${version:-$KERNEL_UNRELEASED}"
   fi
 }
 
 # The docs at <anchor>, on the main branch: the docs aren't versioned.
 kernel::docs_link() {
   # shellcheck disable=SC2059
-  printf "$DOT_DOCS_URL#%s\n" main "${1:-$DOT_DOCS_DEFAULT}"
+  printf "$HEY_DOCS_URL#%s\n" main "${1:-$HEY_DOCS_DEFAULT}"
 }
 
 # The docs a core command's help ends with: its DOCS anchor (a full URL for a
@@ -201,7 +202,7 @@ kernel::disabled_module_of() {
 # other, as {"title", "text"}).
 kernel::help_fields() {
   local kind entry text usage="" arguments="" options="" notes="" examples="" sections="" about=""
-  dot::use framework.helpers.json
+  hey::use framework.helpers.json
   # A tab is whitespace to read, so an empty field collapses: about and note
   # rows carry their text in the second field.
   while IFS=$'\t' read -r kind entry text; do
@@ -233,22 +234,22 @@ kernel::help_fields() {
 # description, and docs.
 kernel::help_json() {
   local name="$1" file="$2"
-  dot::use framework.helpers.json
+  hey::use framework.helpers.json
   printf '{"name":%s,"description":%s,%s,"docs":%s}\n' \
     "$(framework.helpers.json::string "$name")" "$(framework.helpers.json::string "$(kernel::description "$file")")" \
     "$(usage | kernel::help_fields)" "$(framework.helpers.json::string "$(kernel::docs "$file")")"
 }
 
 # Every command with its description, grouped by namespace.
-# The listing's page around its commands: what dotdot is and how to run it,
+# The listing's page around its commands: what dotHey is and how to run it,
 # then (with "end") the options and exit statuses every command shares.
 kernel::list_page() {
-  local release name="dotdot" version
+  local release name="dotHey" version
   if [ "${1-}" != end ]; then
-    release=$(dot::version)
+    release=$(hey::version)
     version=$([ -n "$release" ] && printf '(v%s)' "$release" || printf '%s' "$KERNEL_UNRELEASED")
     # The name in bold and the version in blue on the page; plain under --json.
-    if ! $DOT_JSON; then
+    if ! $HEY_JSON; then
       name=$(framework.console.output::bold "$name")
       version=$(framework.console.output::blue "$version")
     fi
@@ -257,8 +258,8 @@ $name $version
 The context, rules, and tools your coding agents work by.
 
 Usage:
-  bash dot <command> [arguments]
-  bash dot <command> --help
+  bash hey <command> [arguments]
+  bash hey <command> --help
 PAGE
     return
   fi
@@ -269,8 +270,8 @@ Options:
   --no-input      Never prompt; what needs an answer fails instead (automatic
                   under CI).
   --json          JSON on stdout, errors as JSON on stderr, where a command
-                  supports it; bash dot help <command> --json describes one.
-  -v, --version   Show dotdot's version.
+                  supports it; bash hey help <command> --json describes one.
+  -v, --version   Show dotHey's version.
   -h, --help      Show this help.
 
 Exit statuses:
@@ -279,7 +280,7 @@ Exit statuses:
 PAGE
 }
 
-# Every command listed, as "<name>|<file>": hidden ones left out, dotdot's
+# Every command listed, as "<name>|<file>": hidden ones left out, dotHey's
 # top-level ones first, then by name.
 kernel::listed_commands() {
   local name file
@@ -290,12 +291,12 @@ kernel::listed_commands() {
 
 kernel::list() {
   local name file namespace previous="" commands="" version
-  if $DOT_JSON; then
-    dot::use framework.helpers.json
+  if $HEY_JSON; then
+    hey::use framework.helpers.json
     while IFS='|' read -r name file; do
       commands="$commands${commands:+,}{\"name\":$(framework.helpers.json::string "$name"),\"description\":$(framework.helpers.json::string "$(kernel::description "$file")")}"
     done < <(kernel::listed_commands)
-    version=$(dot::version)
+    version=$(hey::version)
     printf '{"version":%s,%s,"commands":[%s]}\n' "$(kernel::json_or_null "$version")" \
       "$({ kernel::list_page; printf '\n'; kernel::list_page end; } | kernel::help_fields)" "$commands"
     return
@@ -341,14 +342,14 @@ kernel::run() {
   for alias in "${KERNEL_ALIASES[@]}"; do
     [ "$name" != "${alias%%=*}" ] || name="${alias#*=}"
   done
-  if ! { [[ "$name" =~ $DOT_COMMAND_PATTERN ]] && kernel::find "$name"; }; then
+  if ! { [[ "$name" =~ $HEY_COMMAND_PATTERN ]] && kernel::find "$name"; }; then
     local closest module
     ! module=$(kernel::disabled_module_of "$name") \
       || framework.console.output::fail_as "$EXIT_PRECONDITION" "The $name feature is turned off by a feature flag." \
-        "Turn it on in $(dot::relative "$SETTINGS_FILE"): \"featureFlags\": {\"$module\": true}" "To know more about feature flags visit: $(kernel::docs_link "$KERNEL_FEATURE_FLAGS_DOCS")"
+        "Turn it on in $(hey::relative "$SETTINGS_FILE"): \"featureFlags\": {\"$module\": true}" "To know more about feature flags visit: $(kernel::docs_link "$KERNEL_FEATURE_FLAGS_DOCS")"
     closest=$(kernel::closest "$name")
-    [ -z "$closest" ] || framework.console.output::fail_as "$EXIT_USAGE" "There's no command $name. Did you mean $closest?" "To list all available commands, run: bash dot"
-    framework.console.output::fail_as "$EXIT_USAGE" "There's no command $name." "To list all available commands, run: bash dot"
+    [ -z "$closest" ] || framework.console.output::fail_as "$EXIT_USAGE" "There's no command $name. Did you mean $closest?" "To list all available commands, run: bash hey"
+    framework.console.output::fail_as "$EXIT_USAGE" "There's no command $name." "To list all available commands, run: bash hey"
   fi
   file="$KERNEL_FILE"
   shift
@@ -356,19 +357,19 @@ kernel::run() {
     migrate:* | upgrade:* | *:-h | *:--help) ;;
     *)
       [ -z "$(kernel::pending_migrations)" ] \
-        || framework.console.output::fail_as "$EXIT_PRECONDITION" "dotdot's files need a quick upgrade first." "Please run: bash dot migrate"
+        || framework.console.output::fail_as "$EXIT_PRECONDITION" "dotHey's files need a quick upgrade first." "Please run: bash hey migrate"
       ;;
   esac
-  DOT_COMMAND="$name"
-  DOT_PLUGIN=""
+  HEY_COMMAND="$name"
+  HEY_PLUGIN=""
   case "$file" in
     "$PLUGINS_DIR"/*)
-      DOT_PLUGIN="${file#"$PLUGINS_DIR"/}"
-      DOT_PLUGIN="${DOT_PLUGIN%%/"$MODULE_COMMANDS_DIR"/*}"
+      HEY_PLUGIN="${file#"$PLUGINS_DIR"/}"
+      HEY_PLUGIN="${HEY_PLUGIN%%/"$MODULE_COMMANDS_DIR"/*}"
       ;;
   esac
   # Who is running is fixed before the command's code loads.
-  readonly DOT_COMMAND DOT_PLUGIN
+  readonly HEY_COMMAND HEY_PLUGIN
   . "$file"
   # --<flag>=<value> is the same as --<flag> <value>; --json is taken here
   # when the command supports it (JSON=true), and left as an unknown flag when
@@ -389,7 +390,7 @@ kernel::run() {
   set -- ${arguments[@]+"${arguments[@]}"}
   case "${1-}" in
     -h | --help)
-      if $DOT_JSON; then
+      if $HEY_JSON; then
         kernel::help_json "$name" "$file"
       else
         { usage; kernel::docs_section "$file"; } | framework.console.output::help
@@ -404,11 +405,11 @@ kernel::run() {
 # Until setup has run (state.setup.harnesses is empty), anyone running any other
 # <command> is told to: a line for a person, a notice on stderr under --json.
 kernel::suggest_setup() {
-  ! $DOT_INTERNAL || return 0
+  ! $HEY_INTERNAL || return 0
   [[ "$KERNEL_SETUP_COMMANDS" != *" $1 "* ]] || return 0
-  [ "$(dot::state setup.harnesses "[]" 2>/dev/null)" = "[]" ] || return 0
-  framework.console.output::info "dotdot isn't set up yet: run bash dot setup to link it where your agents read it." >&2
-  $DOT_JSON || framework.console.output::newline >&2
+  [ "$(hey::state setup.harnesses "[]" 2>/dev/null)" = "[]" ] || return 0
+  framework.console.output::info "dotHey isn't set up yet: run bash hey setup to link it where your agents read it." >&2
+  $HEY_JSON || framework.console.output::newline >&2
 }
 
 kernel::docs_section() {
@@ -430,7 +431,7 @@ kernel::wants_json() {
 }
 
 kernel::handle() {
-  ! kernel::wants_json "$@" || DOT_JSON=true
+  ! kernel::wants_json "$@" || HEY_JSON=true
   case "${1-}" in
     '' | list | -h | --help | --json)
       kernel::suggest_setup list

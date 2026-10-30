@@ -1,8 +1,8 @@
 # shellcheck shell=bash
 
-dot::use framework.helpers.date framework.helpers.fs framework.helpers.record framework.helpers.text
+hey::use framework.helpers.date framework.helpers.fs framework.helpers.record framework.helpers.text
 
-XRAY_TEMPLATE="$MODULES_DIR/xrays/skills/dot-xray/xray-template.md"
+XRAY_TEMPLATE="$MODULES_DIR/xrays/skills/hey-xray/xray-template.md"
 XRAY_STATUSES="open discussing blocked decided done"
 XRAY_DEFAULT_STATUS="open"
 

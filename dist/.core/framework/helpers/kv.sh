@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 
-dot::use framework.helpers.fs
+hey::use framework.helpers.fs
 
 KV_KEY_PATTERN='^[A-Za-z_][A-Za-z0-9_]*$'
 

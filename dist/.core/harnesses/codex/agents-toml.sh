@@ -1,11 +1,11 @@
 # shellcheck shell=bash
 
 # Codex reads agents as TOML (.codex/agents/<name>.toml: name, description,
-# developer_instructions), not Markdown: each of dotdot's is rendered into
-# it, and the project's own are imported back into dotdot's format when
-# dotdot owns them. Fields only one format knows (tools, model) don't port.
+# developer_instructions), not Markdown: each of dotHey's is rendered into
+# it, and the project's own are imported back into dotHey's format when
+# dotHey owns them. Fields only one format knows (tools, model) don't port.
 
-dot::use framework.helpers.frontmatter
+hey::use framework.helpers.frontmatter
 
 # <text> as a TOML basic string, quotes included: one line, every quote,
 # backslash, and control character escaped.
@@ -84,7 +84,7 @@ core.harnesses.codex.agents-toml::yaml() {
   printf '"%s"' "$(printf '%s' "$1" | tr '\n\t' '  ' | sed 's/\\/\\\\/g; s/"/\\"/g')"
 }
 
-# import <name> <file>: the Codex agent at <file> in dotdot's format.
+# import <name> <file>: the Codex agent at <file> in dotHey's format.
 core.harnesses.codex.agents-toml::import() {
   local name="$1" file="$2" description instructions
   instructions=$(core.harnesses.codex.agents-toml::field "$file" developer_instructions)

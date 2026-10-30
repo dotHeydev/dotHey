@@ -1,8 +1,8 @@
 # shellcheck shell=bash
 
-DESCRIPTION="GitHub issues with the task label, through gh or DOT_GH_TOKEN."
+DESCRIPTION="GitHub issues with the task label, through gh or HEY_GH_TOKEN."
 
-dot::use framework.helpers.date framework.helpers.json framework.integrations.github.service
+hey::use framework.helpers.date framework.helpers.json framework.integrations.github.service
 
 TASK_LABEL="task"
 TASK_LABEL_COLOR="EDEDED"
@@ -25,15 +25,15 @@ core.modules.tasks.drivers.github::status_color() {
 
 core.modules.tasks.drivers.github::repository() {
   local repository
-  repository=$(dot::setting "$TASK_REPOSITORY_SETTING") || return 1
+  repository=$(hey::setting "$TASK_REPOSITORY_SETTING") || return 1
   framework.integrations.github.service::is_repository "$repository" \
-    || dot::abort "$TASK_REPOSITORY_SETTING \"$repository\" isn't an <owner>/<name> repo."
+    || hey::abort "$TASK_REPOSITORY_SETTING \"$repository\" isn't an <owner>/<name> repo."
   printf '%s\n' "$repository"
 }
 
 core.modules.tasks.drivers.github::number() {
   local number="${1#\#}"
-  [[ "$number" =~ ^[0-9]+$ ]] || dot::abort "\"$1\" isn't an issue number (like #12)."
+  [[ "$number" =~ ^[0-9]+$ ]] || hey::abort "\"$1\" isn't an issue number (like #12)."
   printf '%s\n' "$number"
 }
 
@@ -61,7 +61,7 @@ core.modules.tasks.drivers.github::task_issue() {
   row=$(framework.integrations.github.service::issue "$repository" "$number") || return 1
   labels=$(printf '%s' "$row" | cut -f3)
   [[ ",$labels," == *",$TASK_LABEL,"* ]] \
-    || dot::abort "Issue #$number isn't a task (it has no \"$TASK_LABEL\" label), so it was left alone."
+    || hey::abort "Issue #$number isn't a task (it has no \"$TASK_LABEL\" label), so it was left alone."
   printf '%s\n' "$row"
 }
 
@@ -108,7 +108,7 @@ core.modules.tasks.drivers.github::detected_repository() {
 }
 
 core.modules.tasks.drivers.github::check_repository() {
-  framework.integrations.github.service::is_repository "$1" || dot::abort "\"${1:-}\" isn't an <owner>/<name> repo."
+  framework.integrations.github.service::is_repository "$1" || hey::abort "\"${1:-}\" isn't an <owner>/<name> repo."
   framework.integrations.github.service::can_reach "$1"
 }
 
@@ -122,19 +122,19 @@ core.modules.tasks.drivers.github::managed_labels() {
 
 core.modules.tasks.drivers.github::configure() {
   local repository="$1" status
-  framework.integrations.github.service::save_label "$repository" "$TASK_LABEL" "$TASK_LABEL_COLOR" "Managed by dotdot tasks" || return 1
+  framework.integrations.github.service::save_label "$repository" "$TASK_LABEL" "$TASK_LABEL_COLOR" "Managed by dotHey tasks" || return 1
   while IFS= read -r status; do
     framework.integrations.github.service::save_label "$repository" "$TASK_STATUS_LABEL_PREFIX$status" \
-      "$(core.modules.tasks.drivers.github::status_color "$status")" "dot task: $status" || return 1
+      "$(core.modules.tasks.drivers.github::status_color "$status")" "hey task: $status" || return 1
   done < <(core.modules.tasks.service::statuses)
-  dot::save_setting "$TASK_REPOSITORY_SETTING" "$(framework.helpers.json::string "$repository")"
+  hey::save_setting "$TASK_REPOSITORY_SETTING" "$(framework.helpers.json::string "$repository")"
 }
 
 core.modules.tasks.drivers.github::create() {
   local title="$1" status="$2" body="$3" repository number row
   repository=$(core.modules.tasks.drivers.github::repository) || return 1
   number=$(framework.integrations.github.service::create_issue "$repository" "$title" "$body" "$TASK_LABEL") || return 1
-  [[ "$number" =~ ^[0-9]+$ ]] || dot::abort "GitHub answered unexpectedly while creating the issue."
+  [[ "$number" =~ ^[0-9]+$ ]] || hey::abort "GitHub answered unexpectedly while creating the issue."
   row=$(framework.integrations.github.service::issue "$repository" "$number") || return 1
   core.modules.tasks.drivers.github::apply_status "$repository" "$number" "$status" "$row" || return 1
   printf '#%s\n' "$number"

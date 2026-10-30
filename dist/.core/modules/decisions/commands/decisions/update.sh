@@ -3,15 +3,15 @@
 DESCRIPTION="Change a decision's status."
 DOCS="decisions"
 
-dot::use framework.console.args core.modules.decisions.console core.modules.decisions.service framework.helpers.frontmatter framework.console.output
+hey::use framework.console.args core.modules.decisions.console core.modules.decisions.service framework.helpers.frontmatter framework.console.output
 
 usage() {
   cat <<EOF
 Sets a decision's status and refreshes its "modified" date, in one step.
 
 Usage:
-  bash dot decisions:update <decision> --status <status>
-  bash dot decisions:update <decision> --status $DECISION_SUPERSEDED_FLAG --by <replacement>
+  bash hey decisions:update <decision> --status <status>
+  bash hey decisions:update <decision> --status $DECISION_SUPERSEDED_FLAG --by <replacement>
 
 Arguments:
   <decision>        The decision, as 2, 002, or its file name.
@@ -26,8 +26,8 @@ Options:
   -h, --help        Show this help.
 
 Examples:
-  bash dot decisions:update 002 --status accepted
-  bash dot decisions:update 002 --status $DECISION_SUPERSEDED_FLAG --by 007
+  bash hey decisions:update 002 --status accepted
+  bash hey decisions:update 002 --status $DECISION_SUPERSEDED_FLAG --by 007
 
 Notes:
   - Only the status and the date change. To change the prose, edit the file
@@ -69,7 +69,7 @@ handle() {
   else
     [ -z "$superseder" ] || framework.console.args::invalid "--by only goes with $DECISION_SUPERSEDED_FLAG."
   fi
-  file=$(core.modules.decisions.service::find "$reference") || framework.console.output::fail_as "$EXIT_NOT_FOUND" "No decision matches \"$reference\"." "See them all: bash dot frontmatter:show Decisions"
+  file=$(core.modules.decisions.service::find "$reference") || framework.console.output::fail_as "$EXIT_NOT_FOUND" "No decision matches \"$reference\"." "See them all: bash hey frontmatter:show Decisions"
   path="$DECISIONS_DIR/$file"
   if [ "$status_flag" = "$DECISION_SUPERSEDED_FLAG" ]; then
     status=$(core.modules.decisions.service::superseded_status "$superseder") \
@@ -82,5 +82,5 @@ handle() {
   previous=$(framework.helpers.frontmatter::field "$path" status)
   core.modules.decisions.service::update_status "$path" "$status" || framework.console.output::fail "$file's frontmatter needs status: and modified:."
   framework.console.output::success "Decision $(framework.helpers.record::number "$file") is now $status (was ${previous:-unset})."
-  framework.console.output::detail "$(dot::relative "$path")"
+  framework.console.output::detail "$(hey::relative "$path")"
 }

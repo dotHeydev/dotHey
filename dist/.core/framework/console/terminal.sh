@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 
-dot::use framework.console.output framework.console.prompt framework.ui.rule
+hey::use framework.console.output framework.console.prompt framework.ui.rule
 
 TERMINAL_FALLBACK_EDITORS=(nano vi)
 

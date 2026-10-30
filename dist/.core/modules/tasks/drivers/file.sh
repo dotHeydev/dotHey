@@ -1,20 +1,20 @@
 # shellcheck shell=bash
 
-DESCRIPTION="Plain Markdown files in .dot/Tasks/ (t001--slug.md)."
+DESCRIPTION="Plain Markdown files in .hey/Tasks/ (t001--slug.md)."
 
-dot::use framework.helpers.date framework.helpers.frontmatter framework.helpers.fs framework.helpers.record framework.helpers.text
+hey::use framework.helpers.date framework.helpers.frontmatter framework.helpers.fs framework.helpers.record framework.helpers.text
 
 TASK_SLUG_LIMIT=60
 TASK_FALLBACK_SLUG="task"
 
 core.modules.tasks.drivers.file::file() {
   local number matches=() file
-  number=$(framework.helpers.record::normalize "$1") || dot::abort "\"$1\" isn't a task id (like t004)."
+  number=$(framework.helpers.record::normalize "$1") || hey::abort "\"$1\" isn't a task id (like t004)."
   for file in "$TASKS_DIR/$TASK_PREFIX$number$RECORD_SEPARATOR"*"$RECORD_EXTENSION"; do
     [ -f "$file" ] && matches+=("$file")
   done
-  [ ${#matches[@]} -gt 0 ] || dot::abort_as "$EXIT_NOT_FOUND" "There's no task $TASK_PREFIX$number." "See them all: bash dot tasks:list"
-  [ ${#matches[@]} -eq 1 ] || dot::abort "Found more than one file for task $TASK_PREFIX$number in $(dot::relative "$TASKS_DIR")/; please keep one."
+  [ ${#matches[@]} -gt 0 ] || hey::abort_as "$EXIT_NOT_FOUND" "There's no task $TASK_PREFIX$number." "See them all: bash hey tasks:list"
+  [ ${#matches[@]} -eq 1 ] || hey::abort "Found more than one file for task $TASK_PREFIX$number in $(hey::relative "$TASKS_DIR")/; please keep one."
   printf '%s\n' "${matches[0]}"
 }
 
@@ -45,14 +45,14 @@ core.modules.tasks.drivers.file::rewrite() {
 }
 
 core.modules.tasks.drivers.file::configure() {
-  mkdir -p -- "$TASKS_DIR" || dot::abort "Couldn't create $(dot::relative "$TASKS_DIR")/."
+  mkdir -p -- "$TASKS_DIR" || hey::abort "Couldn't create $(hey::relative "$TASKS_DIR")/."
 }
 
 core.modules.tasks.drivers.file::create() {
   local title="$1" status="$2" body="$3" slug path stamp
   slug=$(framework.helpers.text::slug "$title" "$TASK_SLUG_LIMIT")
   path=$(framework.helpers.record::next_path "$TASKS_DIR" "$TASK_PREFIX" "${slug:-$TASK_FALLBACK_SLUG}") \
-    || dot::abort "Couldn't create the task file in $(dot::relative "$TASKS_DIR")/; please try again."
+    || hey::abort "Couldn't create the task file in $(hey::relative "$TASKS_DIR")/; please try again."
   stamp=$(framework.helpers.date::now)
   core.modules.tasks.drivers.file::write "$path" "$title" "$status" "$stamp" "$stamp" "$body"
   framework.helpers.record::id "$TASK_PREFIX" "$path"
@@ -95,5 +95,5 @@ core.modules.tasks.drivers.file::delete() {
 core.modules.tasks.drivers.file::link() {
   local file
   file=$(core.modules.tasks.drivers.file::file "$1") || return
-  dot::relative "$file"
+  hey::relative "$file"
 }

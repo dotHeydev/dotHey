@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 
-dot::use framework.console.output framework.ui.screen framework.ui.banner framework.ui.box framework.ui.message \
+hey::use framework.console.output framework.ui.screen framework.ui.banner framework.ui.box framework.ui.message \
   framework.ui.list framework.ui.rule framework.ui.select framework.ui.checkbox framework.ui.confirm \
   framework.ui.progress framework.ui.steps framework.ui.spinner
 
@@ -81,13 +81,13 @@ core.modules.tui.console::still() {
 core.modules.tui.console::live() {
   local answer style step
   case "$1" in
-    banner) framework.ui.banner::show "dotdot" "The context, rules, and tools your agents work by." ;;
+    banner) framework.ui.banner::show "dotHey" "The context, rules, and tools your agents work by." ;;
     box) framework.ui.box::show "WHAT'S LINKED" "Claude Code: 12 skills" "Cursor: 12 skills" ;;
     message)
-      framework.ui.message::success "Linked dotdot to Claude Code." "Your skills show up there now."
+      framework.ui.message::success "Linked dotHey to Claude Code." "Your skills show up there now."
       framework.ui.message::info "Cursor reads the same skills."
       framework.ui.message::warning "Codex has no agents folder yet."
-      framework.ui.message::error "Couldn't read .dot/dot.json." "Check that the file is valid JSON."
+      framework.ui.message::error "Couldn't read .hey/hey.json." "Check that the file is valid JSON."
       ;;
     list)
       framework.ui.list::item "Claude Code" "detected"
@@ -150,8 +150,8 @@ core.modules.tui.console::unanswered() {
 # person, the first harness and every skill.
 core.modules.tui.console::tour() {
   local harness skills count
-  framework.ui.banner::show "dotdot tour" "Every component, in one run."
-  framework.ui.screen::on_cancel "Run bash dot tui:view all to start over."
+  framework.ui.banner::show "dotHey tour" "Every component, in one run."
+  framework.ui.screen::on_cancel "Run bash hey tui:view all to start over."
   harness=$(framework.ui.select::ask "Which harness do you use most?" "${TUI_HARNESSES[@]}") || harness="${TUI_HARNESSES[0]}"
   skills=$(framework.ui.box::wrap "SELECT ANY" framework.ui.checkbox::ask "Which skills should we link?" "${TUI_SKILLS[@]}") \
     || skills=$(printf '%s\n' "${TUI_SKILLS[@]}")
@@ -166,5 +166,5 @@ core.modules.tui.console::tour() {
   # shellcheck disable=SC2086 # skill names, one word each
   [ "$count" -eq 0 ] || framework.ui.list::show $skills
   framework.ui.rule::show
-  framework.ui.box::show "NEXT" "Run bash dot tui:view select to try one alone."
+  framework.ui.box::show "NEXT" "Run bash hey tui:view select to try one alone."
 }

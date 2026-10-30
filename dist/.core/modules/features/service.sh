@@ -1,8 +1,8 @@
 # shellcheck shell=bash
 
-dot::use framework.helpers.fs framework.helpers.record framework.helpers.template framework.helpers.text
+hey::use framework.helpers.fs framework.helpers.record framework.helpers.template framework.helpers.text
 
-FEATURE_TEMPLATE="$MODULES_DIR/features/skills/dot-document-feature/feature-template.md"
+FEATURE_TEMPLATE="$MODULES_DIR/features/skills/hey-document-feature/feature-template.md"
 FEATURE_DESCRIPTION_KEY="description"
 
 core.modules.features.service::create() {

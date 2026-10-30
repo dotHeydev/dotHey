@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 
-dot::use framework.ui.screen
+hey::use framework.ui.screen
 
 # Each <item> as a bullet on stdout.
 framework.ui.list::show() {

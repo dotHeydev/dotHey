@@ -1,6 +1,6 @@
-# Extending dotdot
+# Extending dotHey
 
-How to write plugins: new commands, skills, agents, context, and project files, built on dotdot's public API. To use dotdot, see [Using dotdot](usage.md).
+How to write plugins: new commands, skills, agents, context, and project files, built on dotHey's public API. To use dotHey, see [Using dotHey](usage.md).
 
 - [What a plugin is](#what-a-plugin-is)
 - [Creating a plugin](#creating-a-plugin)
@@ -18,40 +18,40 @@ How to write plugins: new commands, skills, agents, context, and project files, 
 
 ## What a plugin is
 
-A plugin is a GitHub repo, `<owner>/<name>`, with a `dotdot/` directory. That directory is all dotdot installs, into `.dot/.plugins/<owner>/<name>/`; the rest of the repo is yours.
+A plugin is a GitHub repo, `<owner>/<name>`, with a `dothey/` directory. That directory is all dotHey installs, into `.hey/.plugins/<owner>/<name>/`; the rest of the repo is yours.
 
 A plugin can bring:
 
-- **Commands**, run as `bash dot <owner>:<command>`.
+- **Commands**, run as `bash hey <owner>:<command>`.
 - **Skills and agents**, linked where the harness reads them.
-- **Context**, appended to dotdot's docs (`STANDARDS.md`, `TECHSTACK.md`, …).
+- **Context**, appended to dotHey's docs (`STANDARDS.md`, `TECHSTACK.md`, …).
 - **Stubs**, appended to files in the project.
-- **Code**, organized as you like and loaded through dotdot's module system.
+- **Code**, organized as you like and loaded through dotHey's module system.
 
-Everything that touches the project is a *suggestion*: it lands under `"inactive"` in the links, and only the user takes it, with `bash dot plugins:link`.
+Everything that touches the project is a *suggestion*: it lands under `"inactive"` in the links, and only the user takes it, with `bash hey plugins:link`.
 
-Harness plugins, like `dotdot-sh/claude-code`, are ordinary plugins that link dotdot's skills, agents, and docs where one agent reads them.
+Harness plugins, like `dotHeydev/claude-code`, are ordinary plugins that link dotHey's skills, agents, and docs where one agent reads them.
 
-**Instructions reach agents through the root `AGENTS.md`**, which `bash dot setup` always provides: linked to dotdot's, or with dotdot's section appended to the project's own. Link a plugin's context into dotdot's docs (or append to `AGENTS.md`), never into a harness's own instructions file. Claude Code is the one exception to know: it skips `AGENTS.md` whenever a `CLAUDE.md` exists, so setup always gives it a `CLAUDE.md` importing `@AGENTS.md` (appended to the project's `CLAUDE.md` or `.claude/CLAUDE.md`, or a new `CLAUDE.md`). Anything reaching `AGENTS.md` therefore reaches Claude Code too, with nothing more to link.
+**Instructions reach agents through the root `AGENTS.md`**, which `bash hey setup` always provides: linked to dotHey's, or with dotHey's section appended to the project's own. Link a plugin's context into dotHey's docs (or append to `AGENTS.md`), never into a harness's own instructions file. Claude Code is the one exception to know: it skips `AGENTS.md` whenever a `CLAUDE.md` exists, so setup always gives it a `CLAUDE.md` importing `@AGENTS.md` (appended to the project's `CLAUDE.md` or `.claude/CLAUDE.md`, or a new `CLAUDE.md`). Anything reaching `AGENTS.md` therefore reaches Claude Code too, with nothing more to link.
 
 ---
 
 ## Creating a plugin
 
 ```sh
-bash dot plugins:new acme/widgets               # scaffolds ./widgets, one example of each part
-bash dot plugins:add acme/widgets --from ./widgets
-bash dot acme:hello dotdot                      # → ✓ Hello, dotdot!
+bash hey plugins:new acme/widgets               # scaffolds ./widgets, one example of each part
+bash hey plugins:add acme/widgets --from ./widgets
+bash hey acme:hello dotHey                      # → ✓ Hello, dotHey!
 ```
 
 `--from` installs from a local copy inside the project: as committed when it's a git repo, as it is on disk otherwise. Rerun `plugins:update acme/widgets` after each change.
 
 ```text
 widgets/
-└── dotdot/
+└── dothey/
     ├── plugin.json
     ├── commands/        # <owner>:<command>
-    ├── context/         # *.md appended to dotdot's docs
+    ├── context/         # *.md appended to dotHey's docs
     ├── skills/          # linked into .agents/skills/
     ├── agents/          # linked into .agents/agents/
     └── stubs/           # <path>.stub appended to <path>
@@ -68,7 +68,7 @@ widgets/
   "depends": ["jq", "framework.integrations.github"],
   "settings": { "apiUrl": "https://widgets.acme.test", "strict": false },
   "link": { "skills/acme-review": [".claude/skills/acme-review"] },
-  "append": { "context/STANDARDS.md": ["@dot:STANDARDS.md"] }
+  "append": { "context/STANDARDS.md": ["@hey:STANDARDS.md"] }
 }
 ```
 
@@ -83,44 +83,44 @@ widgets/
 **Origins** in `link` and `append`:
 
 - A path in the plugin, written into the links as `@plugin:<owner>.<name>:<path>`.
-- `@dot:<Doc>.md`, one of dotdot's top-level docs.
-- `@dotdotSkills`, `@dotdotAgents`: dotdot's own skills and agents, for a harness plugin.
+- `@hey:<Doc>.md`, one of dotHey's top-level docs.
+- `@dotheySkills`, `@dotheyAgents`: dotHey's own skills and agents, for a harness plugin.
 
 **Destinations:**
 
-- Links go to project paths outside `.dot/` and `.git/`, never `.env`.
-- Appends may also go to `@dot:<Doc>.md`.
+- Links go to project paths outside `.hey/` and `.git/`, never `.env`.
+- Appends may also go to `@hey:<Doc>.md`.
 - A destination protected by `plugins.denyLinkDestination` is reported and never applied.
 
 > [!NOTE]
-> For each of `skills/`, `agents/`, `context/`, and `stubs/`, dotdot suggests what it finds there, unless `plugin.json` places something from that directory itself. Once it does, only what `plugin.json` declares is suggested for that directory.
+> For each of `skills/`, `agents/`, `context/`, and `stubs/`, dotHey suggests what it finds there, unless `plugin.json` places something from that directory itself. Once it does, only what `plugin.json` declares is suggested for that directory.
 
 ---
 
 ## Commands
 
-Each `dotdot/commands/<name>.sh` is a command; subdirectories become namespaces (`commands/db/seed.sh` runs as `bash dot acme:db:seed`; one level of subdirectories at most). A command declares a `DESCRIPTION`, a `usage` function for `--help`, and a `handle` function that receives the arguments. dotdot sources every file, never runs it on its own, so a file starts with `# shellcheck shell=bash` instead of a shebang and needs no executable bit:
+Each `dothey/commands/<name>.sh` is a command; subdirectories become namespaces (`commands/db/seed.sh` runs as `bash hey acme:db:seed`; one level of subdirectories at most). A command declares a `DESCRIPTION`, a `usage` function for `--help`, and a `handle` function that receives the arguments. dotHey sources every file, never runs it on its own, so a file starts with `# shellcheck shell=bash` instead of a shebang and needs no executable bit:
 
 ```bash
 # shellcheck shell=bash
 
 DESCRIPTION="Seed the database with sample data."
 
-dot::use framework.console.args framework.console.output
+hey::use framework.console.args framework.console.output
 
 usage() {
   cat <<USAGE
 Seeds the database with the plugin's sample data.
 
 Usage:
-  bash dot $DOT_COMMAND [--fresh]
+  bash hey $HEY_COMMAND [--fresh]
 
 Options:
   --fresh      Empty the database first.
   -h, --help   Show this help.
 
 Examples:
-  bash dot $DOT_COMMAND --fresh
+  bash hey $HEY_COMMAND --fresh
 USAGE
 }
 
@@ -137,12 +137,12 @@ handle() {
 }
 ```
 
-- `DESCRIPTION` is one short line, shown in `bash dot`. `HIDDEN=true` keeps a command out of that list; it still runs.
-- `usage` follows the layout of every dotdot help page: a short description, then `Usage:`, `Arguments:`, `Options:`, `Examples:`, and `Notes:` when they help. dotdot styles it at a terminal; keep it plain text.
+- `DESCRIPTION` is one short line, shown in `bash hey`. `HIDDEN=true` keeps a command out of that list; it still runs.
+- `usage` follows the layout of every dotHey help page: a short description, then `Usage:`, `Arguments:`, `Options:`, `Examples:`, and `Notes:` when they help. dotHey styles it at a terminal; keep it plain text.
 - `--flag=value` reaches `handle` as `--flag value`, already split.
 - An argument error via `framework.console.args::invalid` or `::unexpected` shows the first usage line and where the help is.
 
-Commands are refused when their owner is one of dotdot's command names, or when another plugin already has them. `plugins.unprefixedCommandOwners` lets an owner's commands run without the prefix, never over dotdot's own.
+Commands are refused when their owner is one of dotHey's command names, or when another plugin already has them. `plugins.unprefixedCommandOwners` lets an owner's commands run without the prefix, never over dotHey's own.
 
 ---
 
@@ -150,35 +150,35 @@ Commands are refused when their owner is one of dotdot's command names, or when 
 
 | Directory | Suggested as |
 |---|---|
-| `context/<Doc>.md` | An append to `.dot/<Doc>.md`, created when dotdot has none |
+| `context/<Doc>.md` | An append to `.hey/<Doc>.md`, created when dotHey has none |
 | `skills/<name>/` | A link into `.agents/skills/` |
 | `agents/<name>.md` | A link into `.agents/agents/` |
 | `stubs/<path>.stub` | An append to `<path>` in the project |
 
-- Appends go between markers naming the plugin, so they never collide with dotdot's or another plugin's, and are taken back cleanly on removal.
-- A skill or agent with the same name as dotdot's or another plugin's is reported; wherever both link to one place, the first declared wins.
+- Appends go between markers naming the plugin, so they never collide with dotHey's or another plugin's, and are taken back cleanly on removal.
+- A skill or agent with the same name as dotHey's or another plugin's is reported; wherever both link to one place, the first declared wins.
 
 ---
 
 ## Settings and secrets
 
-A plugin's settings live in the project's `.dot/dot.json` under `plugins["<owner>/<name>"]`. Adding or updating the plugin writes each key its `plugin.json` declares and `dot.json` lacks, with its default; keys already there stay.
+A plugin's settings live in the project's `.hey/hey.json` under `plugins["<owner>/<name>"]`. Adding or updating the plugin writes each key its `plugin.json` declares and `hey.json` lacks, with its default; keys already there stay.
 
 ```bash
-url=$(dot::plugin_setting apiUrl)                         # its own, from dot.json
-strict=$(dot::plugin_setting strict false)                # with a default
-dot::save_plugin_setting lastRun '"2026-10-27"'           # JSON values
-timezone=$(dot::setting general.timezone "")              # dotdot's, read only
+url=$(hey::plugin_setting apiUrl)                         # its own, from hey.json
+strict=$(hey::plugin_setting strict false)                # with a default
+hey::save_plugin_setting lastRun '"2026-10-27"'           # JSON values
+timezone=$(hey::setting general.timezone "")              # dotHey's, read only
 ```
 
 Text prints raw; booleans, numbers, lists, and objects print as JSON (`framework.helpers.json::values "$value" '.[]'` lists one entry per line). An unset setting prints the default when one is given, and stops with how to set it otherwise.
 
-Secrets live in the project's `.env`, named `DOT_<OWNER>_<FOLDER>__<KEY>` (its folder's name, see [the public API](#the-public-api) on names and folders), and only their plugin can read them:
+Secrets live in the project's `.env`, named `HEY_<OWNER>_<FOLDER>__<KEY>` (its folder's name, see [the public API](#the-public-api) on names and folders), and only their plugin can read them:
 
 ```bash
-token=$(dot::secret DOT_ACME_WIDGETS__TOKEN)
-dot::save_secret DOT_ACME_WIDGETS__TOKEN "$token"
-dot::remove_secret DOT_ACME_WIDGETS__TOKEN
+token=$(hey::secret HEY_ACME_WIDGETS__TOKEN)
+hey::save_secret HEY_ACME_WIDGETS__TOKEN "$token"
+hey::remove_secret HEY_ACME_WIDGETS__TOKEN
 ```
 
 Leave passwords and passphrases to the system's own prompts (ssh-add, gpg, the keychain): never ask for them yourself. For a secret no system prompt takes, use `framework.console.prompt::pinentry "<description>" ["<label>"]`: gpg's pinentry asks for it on the terminal only (`pinentry-curses` or `pinentry-tty`, never a window), and you get it on stdout to pipe on, never through an argument, the environment, or a file. It fails, asking nothing, with no one at a terminal or no terminal pinentry installed.
@@ -187,24 +187,24 @@ Leave passwords and passphrases to the system's own prompts (ssh-add, gpg, the k
 
 ## The public API
 
-Plugin code may use this, and only this; `dot::use` refuses anything else.
+Plugin code may use this, and only this; `hey::use` refuses anything else.
 
-**The `dot::` functions:**
+**The `hey::` functions:**
 
 | Function | Does |
 |---|---|
-| `dot::use <module>...` | Load modules |
-| `dot::path project\|dotdot\|plugin` | The project's, dotdot's, or the plugin's directory |
-| `dot::relative <path>` | A path relative to the project, for messages |
-| `dot::setting <path> [default]` | Read one of dotdot's settings (never `state.*`) |
-| `dot::state <path> [default]` | Read dotdot's own state (`state.*`: the installed commit, `isReady`, `setup.*`); only dotdot writes it |
-| `dot::version` | dotdot's release (`state.version`, `N.N.N`), for display |
-| `dot::plugin_setting <key> [default]`, `dot::save_plugin_setting <key> <json>` | Read and write its own settings |
-| `dot::secret`, `dot::save_secret`, `dot::remove_secret` | Its own secrets |
-| `dot::plugin_key <name>`, `dot::plugin_name <key>` | A plugin's `<owner>/<folder>` from its name, and back |
-| `dot::call <command> [args]` | Run another `bash dot` command |
-| `dot::raise <message> [next step]...`, `dot::abort …` | Report an error (and exit) |
-| `dot::on_exit <command> [<argument>...]` | Run cleanup when the command ends; each argument stays one word, never code |
+| `hey::use <module>...` | Load modules |
+| `hey::path project\|dothey\|plugin` | The project's, dotHey's, or the plugin's directory |
+| `hey::relative <path>` | A path relative to the project, for messages |
+| `hey::setting <path> [default]` | Read one of dotHey's settings (never `state.*`) |
+| `hey::state <path> [default]` | Read dotHey's own state (`state.*`: the installed commit, `isReady`, `setup.*`); only dotHey writes it |
+| `hey::version` | dotHey's release (`state.version`, `N.N.N`), for display |
+| `hey::plugin_setting <key> [default]`, `hey::save_plugin_setting <key> <json>` | Read and write its own settings |
+| `hey::secret`, `hey::save_secret`, `hey::remove_secret` | Its own secrets |
+| `hey::plugin_key <name>`, `hey::plugin_name <key>` | A plugin's `<owner>/<folder>` from its name, and back |
+| `hey::call <command> [args]` | Run another `bash hey` command |
+| `hey::raise <message> [next step]...`, `hey::abort …` | Report an error (and exit) |
+| `hey::on_exit <command> [<argument>...]` | Run cleanup when the command ends; each argument stays one word, never code |
 
 **Modules:**
 
@@ -216,7 +216,7 @@ Plugin code may use this, and only this; `dot::use` refuses anything else.
 
 Every function is named after its module: `framework.console.output::success`, `plugins.acme.widgets.db::seed`.
 
-**A plugin's name is its GitHub repo's**, `<owner>/<name>` in lowercase, as GitHub tells repos apart: `acme/my-plg`, `acme/my.plg`, and `acme/my_plg` are three plugins, `acme/MyPlg` and `acme/myplg` one. Commands, settings (`plugins["acme/my.plg"]`), links, and the lock use the name. Its **folder** in `.dot/.plugins/<owner>/` is the name too, unless the name can't be a folder and module name (anything but letters, digits, and `-`, or a name Windows reserves): then it is the name with those characters as `-` and a random noun (`my-plg---otter`), and dotdot says so as it installs. The lock records it as `directory`. The folder names the plugin's modules (`plugins.acme.my-plg---otter.db`) and its secrets' prefix; `dot::plugin_key` and `dot::plugin_name` turn one into the other. dotdot's `core.*` modules, `internal` parts of the framework, and other plugins are off limits.
+**A plugin's name is its GitHub repo's**, `<owner>/<name>` in lowercase, as GitHub tells repos apart: `acme/my-plg`, `acme/my.plg`, and `acme/my_plg` are three plugins, `acme/MyPlg` and `acme/myplg` one. Commands, settings (`plugins["acme/my.plg"]`), links, and the lock use the name. Its **folder** in `.hey/.plugins/<owner>/` is the name too, unless the name can't be a folder and module name (anything but letters, digits, and `-`, or a name Windows reserves): then it is the name with those characters as `-` and a random noun (`my-plg---otter`), and dotHey says so as it installs. The lock records it as `directory`. The folder names the plugin's modules (`plugins.acme.my-plg---otter.db`) and its secrets' prefix; `hey::plugin_key` and `hey::plugin_name` turn one into the other. dotHey's `core.*` modules, `internal` parts of the framework, and other plugins are off limits.
 
 ---
 
@@ -226,7 +226,7 @@ Print through `framework.console.output`, never with raw `echo`: every line pass
 
 ```bash
 framework.console.output::success "Seeded the database."                  # ✓
-framework.console.output::error "Couldn't reach the API." "Please check apiUrl in .dot/dot.json."
+framework.console.output::error "Couldn't reach the API." "Please check apiUrl in .hey/hey.json."
 framework.console.output::fail  "Couldn't reach the API." "Please try again later."   # and exit
 framework.console.output::warn  "The API is slow today."                  # !
 framework.console.output::info  "Pushing to staging…"                     # ℹ
@@ -236,8 +236,8 @@ framework.console.output::entry green "$UI_MARK_ADDED" ".agents/skills/acme-revi
 
 - **One message, one line** when it fits: what happened, then at most one `→` next step.
 - **The voice is plain and friendly:** "Couldn't…", "Please…", "Do you want to…?"; never "Invalid", "Error:", or "the user".
-- **Commands, paths, and values are styled for you** at a terminal: write `bash dot link`, `.dot/dot.json`, and `"value"` as they are.
-- **When something needs a person**, end with `"$OUTPUT_MANUAL_RUN bash dot <command>"`: people read "Please run the command manually:", agents "Please ask the user to run it in a terminal:".
+- **Commands, paths, and values are styled for you** at a terminal: write `bash hey link`, `.hey/hey.json`, and `"value"` as they are.
+- **When something needs a person**, end with `"$OUTPUT_MANUAL_RUN bash hey <command>"`: people read "Please run the command manually:", agents "Please ask the user to run it in a terminal:".
 - **Questions** go through `framework.console.prompt::confirm "Do you want to…?"`, which needs a terminal.
 
 ### Styling
@@ -251,7 +251,7 @@ Styles compose in three levels, and nest freely: an inner style ends without end
 | Messages | `success`, `error`, `fail`, `warn`, `info`, `next`, `entry`, `change`, `title` |
 
 ```bash
-framework.console.output::warn "Kept $(framework.console.output::path "$file"); see $(framework.console.output::command "bash dot link -v")."
+framework.console.output::warn "Kept $(framework.console.output::path "$file"); see $(framework.console.output::command "bash hey link -v")."
 framework.console.output::line "$(framework.console.output::bold acme/widgets) $(framework.console.output::note "from ./widgets")"
 ```
 
@@ -261,22 +261,22 @@ Each helper returns markup, not escape codes. The markup becomes escape codes on
 
 ## UI components
 
-`framework.ui.*` draws interfaces for people from plain arguments. For agents, CI, pipes, `--json`, and dumb terminals, it falls back on its own to plain lines with the same content. Load each component you use: `dot::use framework.ui.select framework.ui.progress`.
+`framework.ui.*` draws interfaces for people from plain arguments. For agents, CI, pipes, `--json`, and dumb terminals, it falls back on its own to plain lines with the same content. Load each component you use: `hey::use framework.ui.select framework.ui.progress`.
 
 - **Ask:** `select`, `checkbox`, and `confirm` print the answer, or return it as their status. Without a terminal that reads keys, they ask for a typed answer; with no one to answer, they return 1, so fall back to your flags.
 - **Cancel:** Esc, q, or Ctrl-C stops the command (status 130) and says so. Set the next steps it shows with `framework.ui.screen::on_cancel <step>...`.
-- **Look:** every icon, glyph, color, size, and label is in `framework/ui/theme.sh`, with ASCII stand-ins for terminals without Unicode. Override one for a single call, as in `UI_PROGRESS_STYLE=fat framework.ui.progress::show 3 6`. `DOT_UI=plain` turns the drawing off.
-- **Preview:** `bash dot tui:view` shows every component; `bash dot tui:view select,progress` runs those; `bash dot tui:view all` runs them all in one flow.
+- **Look:** every icon, glyph, color, size, and label is in `framework/ui/theme.sh`, with ASCII stand-ins for terminals without Unicode. Override one for a single call, as in `UI_PROGRESS_STYLE=fat framework.ui.progress::show 3 6`. `HEY_UI=plain` turns the drawing off.
+- **Preview:** `bash hey tui:view` shows every component; `bash hey tui:view select,progress` runs those; `bash hey tui:view all` runs them all in one flow.
 
 ### banner
 
 ```bash
-framework.ui.banner::show "dotdot setup" "Let's link your harnesses."
+framework.ui.banner::show "dotHey setup" "Let's link your harnesses."
 ```
 
 ```text
 ╭──────────────────────────────╮
-│  dotdot setup                │
+│  dotHey setup                │
 │  Let's link your harnesses.  │
 ╰──────────────────────────────╯
 ```
@@ -304,18 +304,18 @@ picked=$(framework.ui.box::wrap "SELECT ANY" framework.ui.checkbox::ask "Which s
 One line, and up to two more: indented for `info`, `success`, and `warning`; next steps for `error`.
 
 ```bash
-framework.ui.message::success "Linked dotdot to Claude Code." "Your skills show up there now."
+framework.ui.message::success "Linked dotHey to Claude Code." "Your skills show up there now."
 framework.ui.message::info "Cursor reads the same skills."
 framework.ui.message::warning "Codex has no agents folder yet."
-framework.ui.message::error "Couldn't read .dot/dot.json." "Check that the file is valid JSON."
+framework.ui.message::error "Couldn't read .hey/hey.json." "Check that the file is valid JSON."
 ```
 
 ```text
-✓ Linked dotdot to Claude Code.
+✓ Linked dotHey to Claude Code.
    Your skills show up there now.
 i Cursor reads the same skills.
 ! Codex has no agents folder yet.
-✗ Couldn't read .dot/dot.json.
+✗ Couldn't read .hey/hey.json.
    → Check that the file is valid JSON.
 ```
 
@@ -430,11 +430,11 @@ Linking:
 A spinner beside the label while the command runs; its errors print once it's done.
 
 ```bash
-framework.ui.spinner::run "Downloading dotdot…" download "$version"
+framework.ui.spinner::run "Downloading dotHey…" download "$version"
 ```
 
 ```text
-Downloading dotdot… ·●
+Downloading dotHey… ·●
 ```
 
 ---
@@ -442,15 +442,15 @@ Downloading dotdot… ·●
 ## Architecture
 
 ```text
-.dot/.core/
-├── system/          # what dotdot needs to run
-│   ├── bin/dot      # the entry point
-│   ├── boot.sh      # module loading and the dot:: API
+.hey/.core/
+├── system/          # what dotHey needs to run
+│   ├── bin/hey      # the entry point
+│   ├── boot.sh      # module loading and the hey:: API
 │   ├── kernel.sh    # the command registry and dispatch
 │   ├── paths.sh     # where everything is
 │   ├── guards.sh    # the policy every action is checked against
 │   └── link/  plugins/  update/  migrations/
-├── modules/         # what dotdot can do
+├── modules/         # what dotHey can do
 │   └── onboarding/  ready/  setup/  frontmatter/  housekeeping/  notes/
 │       xrays/  features/  decisions/  tasks/  release/
 ├── harnesses/       # one folder per harness, and capabilities/ shared by them
@@ -458,34 +458,34 @@ Downloading dotdot… ·●
 │   ├── helpers/     # project-agnostic building blocks
 │   ├── console/     # command-line input and output
 │   └── integrations/  # external services, each behind service.sh
-└── dot.defaults.json
+└── hey.defaults.json
 ```
 
 - **System parts** load as `core.system.<part>.*`, **modules** as `core.modules.<module>.*`, **harnesses** as `core.harnesses.<id>.*` (from anywhere in the core, never from a plugin), the **framework** as `framework.*`.
-- Every system part and module uses only the framework and its own code; it reaches another one through `dot::call`.
+- Every system part and module uses only the framework and its own code; it reaches another one through `hey::call`.
 - An integration exposes only its `service.sh`; its `internal/` parts load from inside it alone.
-- Migrations (`system/migrations/NNNN-<slug>.sh`, each with `DESCRIPTION` and `migrate()`) convert the files dotdot keeps when a new version changes their format; `state.migrations` lists those applied.
+- Migrations (`system/migrations/NNNN-<slug>.sh`, each with `DESCRIPTION` and `migrate()`) convert the files dotHey keeps when a new version changes their format; `state.migrations` lists those applied.
 - Everything runs on bash 3.2+ with standard Unix tools.
 
 ---
 
 ## Security model
 
-- **Every guard is a predicate in `guards.sh`**, called where dotdot acts: where links and appends may go, what plugins may declare, which settings and secrets code may touch, when `-y` may skip a confirmation.
-- **At boot, dotdot's functions and its path variables become read-only**, so no plugin or edited file can switch a guard off during a run.
-- **dotdot never runs plugin code while adding it**, and refuses archives with paths outside the plugin, symlinks, or stubs for `.git/`.
+- **Every guard is a predicate in `guards.sh`**, called where dotHey acts: where links and appends may go, what plugins may declare, which settings and secrets code may touch, when `-y` may skip a confirmation.
+- **At boot, dotHey's functions and its path variables become read-only**, so no plugin or edited file can switch a guard off during a run.
+- **dotHey never runs plugin code while adding it**, and refuses archives with paths outside the plugin, symlinks, or stubs for `.git/`.
 - **Changes need a person:** adding, updating, and removing plugins, linking, updating, and migrating all ask at a terminal, so no agent or script can approve them.
 - **Secrets never surface:** they're read from `.env` alone, every printed line is masked, and releases refuse to ship anything that looks like one.
 
 > [!CAUTION]
-> These guards protect what *dotdot* does, not what a plugin's own code does: a plugin runs with your permissions. Deciding whom to trust at `plugins:add` stays the real boundary.
+> These guards protect what *dotHey* does, not what a plugin's own code does: a plugin runs with your permissions. Deciding whom to trust at `plugins:add` stays the real boundary.
 
 ---
 
 ## Publishing
 
-1. Push the repo to `github.com/<owner>/<name>`, with the plugin in its `dotdot/` directory.
-2. Tag versions, so users can pin one: `bash dot plugins:add <owner>/<name>@v1.0.0`.
+1. Push the repo to `github.com/<owner>/<name>`, with the plugin in its `dothey/` directory.
+2. Tag versions, so users can pin one: `bash hey plugins:add <owner>/<name>@v1.0.0`.
 3. Keep `requires` in `plugin.json` in step with the plugin API you build against.
 
-Private repos work too, for users with `gh` signed in or a `DOT_GH_TOKEN` that can read them.
+Private repos work too, for users with `gh` signed in or a `HEY_GH_TOKEN` that can read them.

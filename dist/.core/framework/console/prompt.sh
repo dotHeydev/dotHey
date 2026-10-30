@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 
-dot::use framework.console.output framework.console.args
+hey::use framework.console.output framework.console.args
 
 PROMPT_YES_PATTERN='^[Yy]([Ee][Ss])?$'
 
@@ -29,9 +29,9 @@ framework.console.prompt::confirm() {
   local question="$1" default="${2:-n}" hint="[y/N]" reply=""
   [ "$default" != y ] || hint="[Y/n]"
   framework.console.prompt::can_ask || return 1
-  dot::use framework.ui.screen
+  hey::use framework.ui.screen
   if framework.ui.screen::reads_keys; then
-    dot::use framework.ui.confirm
+    hey::use framework.ui.confirm
     framework.ui.confirm::ask "$question" "$default"
     return
   fi
@@ -98,23 +98,23 @@ framework.console.prompt::assuan() {
 
 # Asks for a secret through pinentry, gpg's secure prompt, on the terminal
 # only (pinentry-curses, else pinentry-tty: never a window), for a secret no
-# system prompt takes (a token gpg is to encrypt). dotdot never reads keys
+# system prompt takes (a token gpg is to encrypt). dotHey never reads keys
 # itself; passwords and passphrases are left to the system's own prompts
 # (ssh-add, gpg, the keychain). Prints the secret on stdout, for the caller
 # to hand on through a pipe; fails with no terminal, no terminal pinentry,
 # or nothing typed.
 framework.console.prompt::pinentry() {
   local description="$1" label="${2:-Secret:}" program="" candidate tty reply
-  framework.console.prompt::can_ask_secret || { dot::raise "A secret is only typed at a terminal, so nothing was asked."; return 1; }
+  framework.console.prompt::can_ask_secret || { hey::raise "A secret is only typed at a terminal, so nothing was asked."; return 1; }
   for candidate in pinentry-curses pinentry-tty; do
     command -v "$candidate" >/dev/null && { program="$candidate"; break; }
   done
-  [ -n "$program" ] || { dot::raise "There's no terminal pinentry to ask with, so nothing was asked." "Please install pinentry-curses or pinentry-tty (gnupg's pinentry package)."; return 1; }
-  tty=$(tty </dev/tty 2>/dev/null) || { dot::raise "Couldn't find the terminal to ask at."; return 1; }
-  reply=$(printf 'OPTION ttyname=%s\nOPTION ttytype=%s\nSETTITLE dotdot\nSETDESC %s\nSETPROMPT %s\nGETPIN\nBYE\n' \
+  [ -n "$program" ] || { hey::raise "There's no terminal pinentry to ask with, so nothing was asked." "Please install pinentry-curses or pinentry-tty (gnupg's pinentry package)."; return 1; }
+  tty=$(tty </dev/tty 2>/dev/null) || { hey::raise "Couldn't find the terminal to ask at."; return 1; }
+  reply=$(printf 'OPTION ttyname=%s\nOPTION ttytype=%s\nSETTITLE dotHey\nSETDESC %s\nSETPROMPT %s\nGETPIN\nBYE\n' \
     "$tty" "${TERM:-dumb}" "$(framework.console.prompt::assuan "$description")" "$(framework.console.prompt::assuan "$label")" \
     | "$program" --ttyname "$tty" 2>/dev/null | sed -n 's/^D //p') || reply=""
-  [ -n "$reply" ] || { dot::raise "Nothing was typed."; return 1; }
+  [ -n "$reply" ] || { hey::raise "Nothing was typed."; return 1; }
   printf '%s' "$reply"
   reply=""
 }
@@ -125,9 +125,9 @@ framework.console.prompt::choice() {
   local question="$1" option index=0
   shift
   framework.console.prompt::can_ask || return 1
-  dot::use framework.ui.screen
+  hey::use framework.ui.screen
   if framework.ui.screen::reads_keys; then
-    dot::use framework.ui.select
+    hey::use framework.ui.select
     option=$(framework.ui.select::ask "$question" "$@") || return
     for ((index = 1; index < $#; index++)); do
       [ "${!index}" != "$option" ] || break

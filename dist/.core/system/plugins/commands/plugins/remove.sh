@@ -3,16 +3,16 @@
 DESCRIPTION="Remove a plugin and everything it linked."
 DOCS="using-plugins"
 
-dot::use framework.console.args framework.console.output framework.console.prompt core.system.plugins.console core.system.plugins.manifest core.system.plugins.service
+hey::use framework.console.args framework.console.output framework.console.prompt core.system.plugins.console core.system.plugins.manifest core.system.plugins.service
 
 usage() {
   cat <<USAGE
-Removes the plugin's files and lock entry, its links in $(dot::relative "$SETTINGS_FILE"),
+Removes the plugin's files and lock entry, its links in $(hey::relative "$SETTINGS_FILE"),
 everything it linked, and the sections it appended. Its settings, secrets and
 records are listed for you to review.
 
 Usage:
-  bash dot plugins:remove <owner>/<name> [-y, --yes]
+  bash hey plugins:remove <owner>/<name> [-y, --yes]
 
 Arguments:
   <owner>/<name>   The plugin.
@@ -22,7 +22,7 @@ Options:
   -h, --help       Show this help.
 
 Examples:
-  bash dot plugins:remove acme/widgets
+  bash hey plugins:remove acme/widgets
 USAGE
 }
 
@@ -38,14 +38,14 @@ handle() {
   done
   [ -n "$plugin" ] || framework.console.args::invalid "Which plugin? Please give it as <owner>/<name>."
   plugin=$(core.system.plugins.console::plugin "$plugin")
-  core.system.plugins.manifest::lock_entry "$plugin" >/dev/null || framework.console.output::fail_as "$EXIT_NOT_FOUND" "$plugin isn't installed." "See what is: bash dot plugins:list"
-  core.system.plugins.console::confirm "Do you want to remove $plugin and everything it linked?" "$confirmed" "bash dot plugins:remove $plugin" || exit 1
-  directory=$(dot::relative "$(core.system.plugins.manifest::directory "$plugin")")
+  core.system.plugins.manifest::lock_entry "$plugin" >/dev/null || framework.console.output::fail_as "$EXIT_NOT_FOUND" "$plugin isn't installed." "See what is: bash hey plugins:list"
+  core.system.plugins.console::confirm "Do you want to remove $plugin and everything it linked?" "$confirmed" "bash hey plugins:remove $plugin" || exit 1
+  directory=$(hey::relative "$(core.system.plugins.manifest::directory "$plugin")")
   left=$(core.system.plugins.service::uninstall "$plugin")
   core.system.plugins.manifest::unlock "$plugin"
   framework.console.output::success "Removed $plugin."
   framework.console.output::entry red "$UI_MARK_REMOVED" "$directory/"
-  dot::call link --remove-uninstalled -y || framework.console.output::fail "Some of $plugin's links or appended sections couldn't be removed (see above)." "Please finish with: bash dot link"
+  hey::call link --remove-uninstalled -y || framework.console.output::fail "Some of $plugin's links or appended sections couldn't be removed (see above)." "Please finish with: bash hey link"
   framework.console.output::newline
   if [ -n "$left" ]; then
     framework.console.output::warn "Left for you to review:"

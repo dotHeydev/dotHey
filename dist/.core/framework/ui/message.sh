@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 
-dot::use framework.ui.screen
+hey::use framework.ui.screen
 
 # A message of one line, with up to two more under it: indented for info,
 # success, and warning; as next steps for an error.

@@ -3,20 +3,20 @@
 DESCRIPTION="Add a plugin from a GitHub repo you trust."
 DOCS="using-plugins"
 
-dot::use framework.console.args framework.console.output core.system.plugins.console core.system.plugins.manifest
+hey::use framework.console.args framework.console.output core.system.plugins.console core.system.plugins.manifest
 
 usage() {
   cat <<USAGE
-Installs the repo's $PLUGIN_ROOT/ directory into $(dot::relative "$PLUGINS_DIR")/<owner>/<name>/,
+Installs the repo's $PLUGIN_ROOT/ directory into $(hey::relative "$PLUGINS_DIR")/<owner>/<name>/,
 after previewing every file and asking. Nothing gets linked: its links wait
-in $(dot::relative "$SETTINGS_FILE") under "inactive" until you take them.
+in $(hey::relative "$SETTINGS_FILE") under "inactive" until you take them.
 
 Usage:
-  bash dot plugins:add <owner>/<name>[@<version>] [options]
-  bash dot plugins:add <GitHub URL> [options]
+  bash hey plugins:add <owner>/<name>[@<version>] [options]
+  bash hey plugins:add <GitHub URL> [options]
 
 Arguments:
-  <owner>/<name>       The plugin's GitHub repo, as GitHub names it; dotdot
+  <owner>/<name>       The plugin's GitHub repo, as GitHub names it; dotHey
                        knows it by that name in lowercase, . and _ as -.
   @<version>           A branch, tag or commit (default: $PLUGIN_DEFAULT_REF).
   <GitHub URL>         The repo's address: https://github.com/<owner>/<name>,
@@ -31,20 +31,20 @@ Options:
   -h, --help           Show this help.
 
 Examples:
-  bash dot plugins:add acme/laravel
-  bash dot plugins:add https://github.com/acme/laravel/tree/v2
-  bash dot plugins:add acme/svelte@v1.0.0 --preview
-  bash dot plugins:add acme/widgets --from ./widgets
+  bash hey plugins:add acme/laravel
+  bash hey plugins:add https://github.com/acme/laravel/tree/v2
+  bash hey plugins:add acme/svelte@v1.0.0 --preview
+  bash hey plugins:add acme/widgets --from ./widgets
 
 Notes:
   - Plugins aren't vetted by anyone: only add one whose source you trust.
-  - Its commands run as bash dot <owner>:<command>. A plugin whose owner is a
-    dotdot command name, or whose commands are taken, is refused.
-  - Private repos need gh signed in, or DOT_GH_TOKEN in $(dot::relative "$HOST_ENV_FILE").
+  - Its commands run as bash hey <owner>:<command>. A plugin whose owner is a
+    dotHey command name, or whose commands are taken, is refused.
+  - Private repos need gh signed in, or HEY_GH_TOKEN in $(hey::relative "$HOST_ENV_FILE").
   - Adding links nothing: its links wait under "inactive" in the links.
-    Only the user takes them (bash dot plugins:link <owner>/<name>, which
+    Only the user takes them (bash hey plugins:link <owner>/<name>, which
     --preview shows first); never take them on their behalf.
-  - Next: bash dot plugins:link <owner>/<name>.
+  - Next: bash hey plugins:link <owner>/<name>.
 USAGE
 }
 
@@ -65,14 +65,14 @@ handle() {
   ref="$PLUGIN_SPEC_REF"
   core.system.plugins.manifest::choose_place "$plugin"
   ! core.system.plugins.manifest::lock_entry "$plugin" >/dev/null \
-    || framework.console.output::fail "$plugin is already installed." "To get its latest version: bash dot plugins:update $plugin"
+    || framework.console.output::fail "$plugin is already installed." "To get its latest version: bash hey plugins:update $plugin"
   core.system.plugins.console::fetch "$plugin" "$ref" "$path" "$PLUGIN_REPOSITORY"
   core.system.plugins.manifest::validate "$PLUGIN_SOURCE" "$plugin" || exit 1
   core.system.plugins.console::warn "$plugin"
   core.system.plugins.console::header "$plugin" "$PLUGIN_ORIGIN${PLUGIN_COMMIT:+ @ ${PLUGIN_COMMIT:0:7}}"
   core.system.plugins.console::preview "$plugin" "$PLUGIN_SOURCE"
-  ! $preview || core.system.plugins.console::previewed "bash dot plugins:add $source${path:+ --from $path}"
-  core.system.plugins.console::confirm "Do you want to add $plugin?" "$confirmed" "bash dot plugins:add $source" || exit 1
+  ! $preview || core.system.plugins.console::previewed "bash hey plugins:add $source${path:+ --from $path}"
+  core.system.plugins.console::confirm "Do you want to add $plugin?" "$confirmed" "bash hey plugins:add $source" || exit 1
   core.system.plugins.console::install "$plugin" "$PLUGIN_SOURCE"
   core.system.plugins.console::suggest --refresh-plugin "$plugin"
   core.system.plugins.console::installed "Added $plugin." "$plugin"

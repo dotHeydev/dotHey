@@ -3,32 +3,39 @@
 TESTS_DIR=$(CDPATH='' cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 REPOSITORY_DIR=$(dirname -- "$TESTS_DIR")
 SOURCE_DIR="$REPOSITORY_DIR/dist"
-DOTDOT_DIRECTORY=".dot"
+DOTHEY_DIRECTORY=".hey"
 
 sandbox::create() {
   SANDBOX=$(mktemp -d)
   SANDBOX=$(cd -P -- "$SANDBOX" && pwd)
-  cp -a "$SOURCE_DIR" "$SANDBOX/$DOTDOT_DIRECTORY"
-  ln -s "$DOTDOT_DIRECTORY/.core/system/bin/dot" "$SANDBOX/dot"
-  DOTDOT="$SANDBOX/$DOTDOT_DIRECTORY"
+  cp -a "$SOURCE_DIR" "$SANDBOX/$DOTHEY_DIRECTORY"
+  ln -s "$DOTHEY_DIRECTORY/.core/system/bin/hey" "$SANDBOX/hey"
+  DOTHEY="$SANDBOX/$DOTHEY_DIRECTORY"
   sandbox::settings
 }
 
-# Writes .dot/dot.json as the installer leaves it (every migration applied),
+# Writes .hey/hey.json as the installer leaves it (every migration applied),
 # every feature flag on unless the members given set featureFlags, plus the
 # members given, e.g. '"tasks": {"service": "x"}'.
 sandbox::settings() {
-  local file list="" flags
-  for file in "$DOTDOT"/.core/system/migrations/*.sh; do
+  local list flags
+  list=$(sandbox::migrations)
+  case "${1-}" in
+    *'"featureFlags"'*) flags="" ;;
+    *) flags=$(sed -n '/"featureFlags"/,/}/{s/: *false/: true/;p;}' "$DOTHEY/.core/hey.defaults.json" | tr -d '\n') ;;
+  esac
+  printf '{"state": {"version": "", "commit": "", "isReady": false, "migrations": [%s]}%s%s}\n' "$list" "${flags:+, ${flags%,}}" "${1:+, $1}" > "$DOTHEY/hey.json"
+}
+
+# Every migration dotHey ships, as the items of a JSON list.
+sandbox::migrations() {
+  local file list=""
+  for file in "$DOTHEY"/.core/system/migrations/*.sh; do
     [ -f "$file" ] || continue
     file="${file##*/}"
     list="$list${list:+, }\"${file%.sh}\""
   done
-  case "${1-}" in
-    *'"featureFlags"'*) flags="" ;;
-    *) flags=$(sed -n '/"featureFlags"/,/}/{s/: *false/: true/;p;}' "$DOTDOT/.core/dot.defaults.json" | tr -d '\n') ;;
-  esac
-  printf '{"state": {"version": "", "commit": "", "isReady": false, "migrations": [%s]}%s%s}\n' "$list" "${flags:+, ${flags%,}}" "${1:+, $1}" > "$DOTDOT/dot.json"
+  printf '%s' "$list"
 }
 
 # A secret-shaped value built at run time, <count> times "F4k3", so no
@@ -48,20 +55,20 @@ sandbox::destroy() {
 
 run() {
   local status=0
-  OUTPUT=$(cd "$SANDBOX" && DOT_INTERNAL_CALL="${DOT_INTERNAL_CALL-1}" "$@" 2>"$SANDBOX/.stderr" </dev/null) || status=$?
+  OUTPUT=$(cd "$SANDBOX" && HEY_INTERNAL_CALL="${HEY_INTERNAL_CALL-1}" "$@" 2>"$SANDBOX/.stderr" </dev/null) || status=$?
   ERRORS=""
   IFS= read -r -d '' ERRORS < "$SANDBOX/.stderr" || true
   ERRORS="${ERRORS%$'\n'}"
   STATUS=$status
 }
 
-dot() {
-  run bash ./dot "$@"
+hey() {
+  run bash ./hey "$@"
 }
 
 core() {
   local code="$1"
-  run bash -c ". '$DOTDOT/.core/system/boot.sh'; set -euo pipefail; $code"
+  run bash -c ". '$DOTHEY/.core/system/boot.sh'; set -euo pipefail; $code"
 }
 
 count_assertion() {
@@ -123,7 +130,7 @@ assert_link_to() {
 
 add_plugin() {
   local plugin="$1" path="$2"
-  core "dot::use core.system.plugins.console core.system.plugins.manifest core.system.plugins.service
+  core "hey::use core.system.plugins.console core.system.plugins.manifest core.system.plugins.service
     core.system.plugins.service::fetch $plugin '' $path
     core.system.plugins.manifest::validate \"\$PLUGIN_SOURCE\" $plugin
     core.system.plugins.console::install $plugin \"\$PLUGIN_SOURCE\"
@@ -131,7 +138,7 @@ add_plugin() {
   assert_success "add $plugin"
 }
 
-# Writes a plugin's dotdot/plugin.json in <directory>: the current plugin API
+# Writes a plugin's dothey/plugin.json in <directory>: the current plugin API
 # and each "<kind>:<origin>-><destination>[-><destination>…]" given (kind
 # link or append).
 manifest() {
@@ -151,10 +158,10 @@ manifest() {
       printf '}'
     done
     printf '}\n'
-  } > "$directory/dotdot/plugin.json"
+  } > "$directory/dothey/plugin.json"
 }
 
-# Writes the links of .dot/dot.json from
+# Writes the links of .hey/hey.json from
 # "<kind>:<origin>-><destination>[-><destination>…]" entries (kind link,
 # append, or skip): the general ones.
 links() {
@@ -184,18 +191,18 @@ links() {
 # Rows on stdin, as read_map gives them, written as the links.
 save_links() {
   printf "core.system.link.service::write_map | { map=\$(cat); framework.helpers.json::set \"\$(cat '%s')\" .links \"\$map\"; } > '%s.new' && mv '%s.new' '%s'" \
-    "$DOTDOT/dot.json" "$DOTDOT/dot.json" "$DOTDOT/dot.json" "$DOTDOT/dot.json"
+    "$DOTHEY/hey.json" "$DOTHEY/hey.json" "$DOTHEY/hey.json" "$DOTHEY/hey.json"
 }
 
 # Links a plugin's waiting links, as a user does.
 take_suggestions() {
-  dot plugins:link "$1" -y
+  hey plugins:link "$1" -y
   assert_success "activate the links of $1"
 }
 
 # Adds an entry to the general links: link, append, or skip.
 add_entry() {
-  core "dot::use core.system.link.service
+  core "hey::use core.system.link.service
     { core.system.link.service::read_map; printf '.\t%s\t%s\t%s\n' '$1' '$2' '$3'; } \
       | $(save_links)"
   assert_success "add $1 $2 -> $3"
@@ -205,7 +212,7 @@ add_entry() {
 map_value() {
   local path=".links$1"
   [ "$1" != . ] || path=".links"
-  core "dot::use framework.helpers.json; framework.helpers.json::values \"\$(cat '$DOTDOT/dot.json')\" '$path'"
+  core "hey::use framework.helpers.json; framework.helpers.json::values \"\$(cat '$DOTHEY/hey.json')\" '$path'"
   printf '%s' "$OUTPUT"
 }
 
@@ -213,6 +220,6 @@ map_value() {
 # framework.helpers.json::values prints it.
 json_value() {
   printf '%s' "$1" > "$SANDBOX/.json"
-  core "dot::use framework.helpers.json; framework.helpers.json::values \"\$(cat '$SANDBOX/.json')\" '$2'"
+  core "hey::use framework.helpers.json; framework.helpers.json::values \"\$(cat '$SANDBOX/.json')\" '$2'"
   printf '%s' "$OUTPUT"
 }

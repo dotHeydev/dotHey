@@ -1,11 +1,11 @@
 # shellcheck shell=bash
 
-dot::use framework.helpers.secrets framework.helpers.fs framework.ui.theme
+hey::use framework.helpers.secrets framework.helpers.fs framework.ui.theme
 
 OUTPUT_HIGHLIGHTER="${BASH_SOURCE[0]%/*}/highlight.awk"
 OUTPUT_HIGHLIGHT=true
 
-# Exit statuses (set by dotdot's boot; these are the defaults).
+# Exit statuses (set by dotHey's boot; these are the defaults).
 : "${EXIT_FAILURE:=1}" "${EXIT_USAGE:=2}" "${EXIT_NOT_FOUND:=4}" "${EXIT_PRECONDITION:=5}"
 
 # Whether an AI agent runs this (AI_AGENT set, or CLAUDECODE=1): the output
@@ -14,11 +14,11 @@ framework.console.output::is_agent() {
   [ -n "${AI_AGENT-}" ] || [ "${CLAUDECODE-}" = 1 ]
 }
 
-# Whether no person is there to answer: an agent, or DOT_NO_INPUT=1 (--no-input,
+# Whether no person is there to answer: an agent, or HEY_NO_INPUT=1 (--no-input,
 # CI). Nothing then prompts, even on a terminal, and the output stays plain text,
 # without colors, highlighting, or a spinner.
 framework.console.output::is_unattended() {
-  framework.console.output::is_agent || [ "${DOT_NO_INPUT-}" = 1 ]
+  framework.console.output::is_agent || [ "${HEY_NO_INPUT-}" = 1 ]
 }
 
 # Whether FORCE_COLOR or CLICOLOR_FORCE asks for colors wherever the output goes.
@@ -146,7 +146,7 @@ framework.console.output::highlight() {
 }
 
 # Keeps printing from copies of the files output reads, for a run that moves
-# them (dotdot moving itself); the copies go when the run ends.
+# them (dotHey moving itself); the copies go when the run ends.
 framework.console.output::detach() {
   local copies
   framework.helpers.fs::make_temp_dir copies || return 1
@@ -170,7 +170,7 @@ framework.console.output::line() {
 
 # A help page on stdin, its optional options marked (optional.awk), then a
 # blank line. At a terminal only these are
-# styled, the rest left plain: section headings bold blue; bash dot, command
+# styled, the rest left plain: section headings bold blue; bash hey, command
 # names, [options], and --flags bold; in a command line (a usage line, an
 # example), the values it gives and everything optional ([...]) in italics
 # too; settings, paths, and link shortcuts italic bright, a shortcut's
@@ -220,10 +220,10 @@ framework.console.output::style_help() {
           core = substr(core, 1, length(core) - length(tail))
           if (command) depth += times(head, "[")
           optional = command && depth > 0
-          if ((core == "bash" && words[i + 1] == "dot") || (core == "dot" && words[i - 1] ~ /bash$/)) core = styled(core, "bold")
+          if ((core == "bash" && words[i + 1] == "hey") || (core == "hey" && words[i - 1] ~ /bash$/)) core = styled(core, "bold")
           else if (core ~ /^--?[A-Za-z][A-Za-z0-9-]*$/ || core ~ /^--<[^>]+>$/) core = optional ? styled(core, "bold", "italic") : styled(core, "bold")
           else if (core == "options" && head ~ /\[$/) core = styled(core, "bold", "italic")
-          else if (core ~ /^[a-z]+:[a-z][a-z:-]*$/ || (i > 2 && words[i - 1] == "dot" && words[i - 2] ~ /bash$/ && core ~ /^[a-z][a-z:-]*$/)) { core = styled(core, "bold"); command = 1 }
+          else if (core ~ /^[a-z]+:[a-z][a-z:-]*$/ || (i > 2 && words[i - 1] == "hey" && words[i - 2] ~ /bash$/ && core ~ /^[a-z][a-z:-]*$/)) { core = styled(core, "bold"); command = 1 }
           else if (core ~ /^@[A-Za-z]+:/) { prefix = core; sub(/:.*$/, ":", prefix); core = styled(prefix, "bold") styled(substr(core, length(prefix) + 1), "italic", "bright") }
           else if (core ~ /^@[A-Za-z]+$/) core = styled(core, "italic", "bright")
           else if (core ~ /</) core = placeholders(core, optional)
@@ -268,8 +268,8 @@ framework.console.output::success() {
 # {"id", "path"} instead.
 framework.console.output::created() {
   local message="$1" id="$2" path="$3"
-  if [ "${DOT_JSON-}" = true ]; then
-    dot::use framework.helpers.json
+  if [ "${HEY_JSON-}" = true ]; then
+    hey::use framework.helpers.json
     printf '{"id":%s,"path":%s}\n' "$(framework.helpers.json::string "$id")" "$(framework.helpers.json::string "$path")"
     return
   fi
@@ -281,7 +281,7 @@ framework.console.output::created() {
 # A side note: its icon in the theme's info style. Under --json, a notice on
 # stderr (json_message), so stdout keeps only the result.
 framework.console.output::info() {
-  [ "${DOT_JSON-}" != true ] || { framework.console.output::json_message notice "$*"; return; }
+  [ "${HEY_JSON-}" != true ] || { framework.console.output::json_message notice "$*"; return; }
   framework.console.output::emit 1 "$(framework.console.output::paint "$UI_STYLE_INFO" "$UI_ICON_INFO") $*"
 }
 
@@ -295,7 +295,7 @@ framework.console.output::detail() {
 
 # The next step to take, under the message it follows.
 framework.console.output::next() {
-  [ "${DOT_JSON-}" != true ] || { framework.console.output::json_message next "$*"; return; }
+  [ "${HEY_JSON-}" != true ] || { framework.console.output::json_message next "$*"; return; }
   framework.console.output::emit 1 "$UI_INDENT$(framework.console.output::paint "$UI_STYLE_NEXT" "$UI_ICON_NEXT") $*"
 }
 
@@ -326,16 +326,16 @@ framework.console.output::item() {
 
 # A warning, all of it yellow.
 framework.console.output::warn() {
-  [ "${DOT_JSON-}" != true ] || { framework.console.output::json_message warning "$*"; return; }
+  [ "${HEY_JSON-}" != true ] || { framework.console.output::json_message warning "$*"; return; }
   framework.console.output::emit 2 "$(framework.console.output::paint "$UI_STYLE_WARNING" "$UI_ICON_WARNING $*")"
 }
 
 # <message>, then each further argument as a next step under it; under --json
-# (DOT_JSON=true), one JSON error on stderr instead, for the exit status in
+# (HEY_JSON=true), one JSON error on stderr instead, for the exit status in
 # OUTPUT_ERROR_STATUS (fail_as sets it).
 framework.console.output::error() {
   local step
-  if [ "${DOT_JSON-}" = true ]; then
+  if [ "${HEY_JSON-}" = true ]; then
     framework.console.output::json_error "${OUTPUT_ERROR_STATUS:-$EXIT_FAILURE}" "$@"
     return
   fi
@@ -347,11 +347,11 @@ framework.console.output::error() {
 }
 
 # {"error": {"code", "exitCode", "message", "run", "next"}} on stderr: "run" is
-# the first dotdot command among the next steps, or null.
+# the first dotHey command among the next steps, or null.
 framework.console.output::json_error() {
   local status="$1" message="$2" code step run=null next=""
   shift 2
-  dot::use framework.helpers.json
+  hey::use framework.helpers.json
   case "$status" in
     "$EXIT_USAGE") code=USAGE ;;
     "$EXIT_NOT_FOUND") code=NOT_FOUND ;;
@@ -360,7 +360,7 @@ framework.console.output::json_error() {
   esac
   for step in "$@"; do
     step=$(framework.helpers.secrets::mask "$(framework.console.output::plain "$step")")
-    [ "$run" != null ] || [[ "$step" != *"bash dot "* ]] || run=$(framework.helpers.json::string "bash dot ${step#*bash dot }")
+    [ "$run" != null ] || [[ "$step" != *"bash hey "* ]] || run=$(framework.helpers.json::string "bash hey ${step#*bash hey }")
     next="$next${next:+,}$(framework.helpers.json::string "$step")"
   done
   message=$(framework.helpers.secrets::mask "$(framework.console.output::plain "$message")")
@@ -370,12 +370,12 @@ framework.console.output::json_error() {
 
 # A diagnostic under --json, one line of JSON on stderr, as an error is:
 # {"<kind>": {"message", "run"}} for a warning, notice, or next step; "run" is
-# the dotdot command in it, or null.
+# the dotHey command in it, or null.
 framework.console.output::json_message() {
   local kind="$1" message run=null
-  dot::use framework.helpers.json
+  hey::use framework.helpers.json
   message=$(framework.helpers.secrets::mask "$(framework.console.output::plain "$2")")
-  [[ "$message" != *"bash dot "* ]] || run=$(framework.helpers.json::string "bash dot ${message#*bash dot }")
+  [[ "$message" != *"bash hey "* ]] || run=$(framework.helpers.json::string "bash hey ${message#*bash hey }")
   printf '{"%s":{"message":%s,"run":%s}}\n' "$kind" "$(framework.helpers.json::string "$message")" "$run" >&2
 }
 

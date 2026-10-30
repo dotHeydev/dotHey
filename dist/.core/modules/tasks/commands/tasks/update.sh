@@ -3,7 +3,7 @@
 DESCRIPTION="Change a task's title, content or status."
 DOCS="tasks"
 
-dot::use framework.console.args framework.helpers.fs framework.console.output core.modules.tasks.console core.modules.tasks.service
+hey::use framework.console.args framework.helpers.fs framework.console.output core.modules.tasks.console core.modules.tasks.service
 
 usage() {
   core.modules.tasks.service::require_template
@@ -12,7 +12,7 @@ Changes a task's title, content and status, in one step. At a terminal, with
 nothing to change given, your editor opens on its current body.
 
 Usage:
-  bash dot tasks:update <id> [options]
+  bash hey tasks:update <id> [options]
 
 Arguments:
   <id>                     The task's id (t004, #12).
@@ -28,13 +28,13 @@ $(core.modules.tasks.console::section_flags_help)
   -h, --help               Show this help.
 
 Examples:
-  bash dot tasks:update t004 --status doing
-  bash dot tasks:update t004 --done-when "- [x] lock after 5" --status done
-  bash dot tasks:update '#12' --title "Throttle failed logins"
+  bash hey tasks:update t004 --status doing
+  bash hey tasks:update t004 --done-when "- [x] lock after 5" --status done
+  bash hey tasks:update '#12' --title "Throttle failed logins"
 
 Notes:
   - A section flag replaces that section only; the rest stays as it is.
-  - Statuses are todo, doing, paused, done, discarded; bash dot tasks:<status>
+  - Statuses are todo, doing, paused, done, discarded; bash hey tasks:<status>
     <id> moves one, --status here alongside other changes.
   - Working on a task you were handed: move it to doing when you start, record
     progress and answers in its sections (ticking its Done When items), and

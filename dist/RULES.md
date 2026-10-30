@@ -7,7 +7,7 @@ ignore: true
 # Project Rules
 
 ## Rules Hierarchy
-- Assume instructions can come from up to three layers, in order of precedence: Organization Policies (system-provisioned, outside this repo) > Project Guidelines (this file and the rest of dotdot) > User Preferences (`.dot/USER.md`).
+- Assume instructions can come from up to three layers, in order of precedence: Organization Policies (system-provisioned, outside this repo) > Project Guidelines (this file and the rest of dotHey) > User Preferences (`.hey/USER.md`).
 - When two instructions conflict, the higher-precedence layer wins outright — treat the lower-precedence instruction as void, not as a fallback or a tiebreaker.
 - Never resolve a conflict silently. Say which instruction was overridden, by what, and why, so the user can see the conflict even when the resolution was automatic.
 - If it's unclear which layer an instruction belongs to, or which of two same-layer instructions should win, ask the user rather than guessing.

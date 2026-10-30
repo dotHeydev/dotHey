@@ -4,7 +4,7 @@ DESCRIPTION="Document a new decision from the template."
 JSON=true
 DOCS="decisions"
 
-dot::use framework.console.args core.modules.decisions.console core.modules.decisions.service framework.helpers.fs framework.console.output framework.console.prompt framework.helpers.template framework.helpers.text
+hey::use framework.console.args core.modules.decisions.console core.modules.decisions.service framework.helpers.fs framework.console.output framework.console.prompt framework.helpers.template framework.helpers.text
 
 usage() {
   local heading key
@@ -13,7 +13,7 @@ Creates the next numbered decision in Decisions/ from the decision template;
 one flag per template section.
 
 Usage:
-  bash dot decisions:create <name> --statement <text> --explanation <text>
+  bash hey decisions:create <name> --statement <text> --explanation <text>
                             [options]
 
 Arguments:
@@ -43,14 +43,14 @@ EOF
   -h, --help                   Show this help.
 
 Examples:
-  bash dot decisions:create "JWT in httpOnly cookie" \\
+  bash hey decisions:create "JWT in httpOnly cookie" \\
     --statement "We keep the session JWT in an httpOnly cookie." \\
     --explanation "Every authenticated response sets it as one." \\
     --status accepted --influenced-by 002 --impacts 7
 
 Notes:
   - At a terminal, a missing name, --statement or --explanation is asked for.
-  - To change its status afterwards, use bash dot decisions:update; to change
+  - To change its status afterwards, use bash hey decisions:update; to change
     its prose, edit the file and bump "modified".
   - The section flags and statuses come from the decision template.
   - A <ref> is a number (2, 002) or a file name; it's checked to exist, and
@@ -61,7 +61,7 @@ EOF
 handle() {
   local name="" statement="" has_name=false has_statement=false has_explanation=false
   local status="$DECISION_DEFAULT_STATUS" status_flag="" superseder="" sections_dir key kind link slug path
-  [ -f "$DECISION_TEMPLATE" ] || framework.console.output::fail "The template $(dot::relative "$DECISION_TEMPLATE") is missing." "bash dot upgrade restores it."
+  [ -f "$DECISION_TEMPLATE" ] || framework.console.output::fail "The template $(hey::relative "$DECISION_TEMPLATE") is missing." "bash hey upgrade restores it."
   framework.helpers.fs::make_temp_dir sections_dir || framework.console.output::fail "Couldn't create a temporary directory; please check free space and \$TMPDIR."
   while [ $# -gt 0 ]; do
     case "$1" in
@@ -109,7 +109,7 @@ handle() {
   statement=$(framework.console.prompt::require "$statement" "What's the decision statement" "A decision needs --statement.")
   explanation=$(framework.console.prompt::require "$explanation" "What's the decision explanation" "A decision needs --explanation.")
   printf '%s' "$explanation" > "$sections_dir/.explanation"
-  ! $asked || framework.console.prompt::hint "bash dot decisions:create \"$name\" --statement \"$statement\" --explanation \"$explanation\""
+  ! $asked || framework.console.prompt::hint "bash hey decisions:create \"$name\" --statement \"$statement\" --explanation \"$explanation\""
   if [ "$status_flag" = "$DECISION_SUPERSEDED_FLAG" ]; then
     status=$(core.modules.decisions.service::superseded_status "$superseder") \
       || framework.console.args::invalid "No decision matches \"$superseder\" (--$DECISION_SUPERSEDED_FLAG-by)."
@@ -117,5 +117,5 @@ handle() {
   slug=$(framework.helpers.text::slug "$name")
   [ -n "$slug" ] || framework.console.args::invalid "The name needs at least one letter or digit."
   path=$(core.modules.decisions.service::create "$slug" "$status" "$statement" "$sections_dir") || framework.console.output::fail "Couldn't create the decision; please try again."
-  framework.console.output::created "Documented decision $(framework.helpers.record::number "$(basename -- "$path")")." "$(basename -- "$path" .md)" "$(dot::relative "$path")"
+  framework.console.output::created "Documented decision $(framework.helpers.record::number "$(basename -- "$path")")." "$(basename -- "$path" .md)" "$(hey::relative "$path")"
 }

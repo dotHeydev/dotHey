@@ -34,7 +34,7 @@ section == "" {
 }
 section == "Usage:" || section == "Examples:" {
   line = trim($0)
-  if (kind != "" && (joined || line !~ /^bash dot /)) {
+  if (kind != "" && (joined || line !~ /^bash hey /)) {
     name = name " " line
   } else {
     flush(); kind = section == "Usage:" ? "usage" : "example"; name = line

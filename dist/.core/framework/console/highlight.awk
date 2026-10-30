@@ -1,6 +1,6 @@
-# Marks up a line of dotdot's output for render.awk, by what its words look
+# Marks up a line of dotHey's output for render.awk, by what its words look
 # like, each in the theme's style given as a variable (see
-# framework.console.output::highlight): commands (bash dot <name> and the
+# framework.console.output::highlight): commands (bash hey <name> and the
 # arguments after it), paths, "quoted values", and plugin ids (acme/widgets)
 # and record and task references (d002, t004, #12). A word already marked up
 # is left as it is.
@@ -48,7 +48,7 @@ function is_path(word,   last) {
 
 # A line holding only a command (a usage line, an example) is all command,
 # whatever its arguments look like; a trailing "# comment" stays as it is.
-/^ *bash dot [a-z]/ {
+/^ *bash hey [a-z]/ {
   line = $0
   indent = line
   sub(/[^ ].*$/, "", indent)
@@ -84,18 +84,18 @@ function is_path(word,   last) {
         core = substr(core, 2)
       }
     }
-    if (!command && core == "bash" && words[i + 1] == "dot" && words[i + 2] ~ /^[a-z0-9][a-z0-9:-]*[.,;:)]*$/) {
+    if (!command && core == "bash" && words[i + 1] == "hey" && words[i + 2] ~ /^[a-z0-9][a-z0-9:-]*[.,;:)]*$/) {
       command = 1
       word = head COMMAND core tail
       if (tail != "") { word = word COMMAND_OFF; command = 0 }
     } else if (command) {
-      if (core == "dot" || words[i - 1] == "dot" || (is_argument(core) && words[i - 1] !~ /[.,;:)]$/)) {
+      if (core == "hey" || words[i - 1] == "hey" || (is_argument(core) && words[i - 1] !~ /[.,;:)]$/)) {
         word = head core tail
       } else {
         out = out COMMAND_OFF
         command = 0
       }
-      if (command && core != "dot" && (tail != "" || i == count || !is_argument(bare(words[i + 1])))) {
+      if (command && core != "hey" && (tail != "" || i == count || !is_argument(bare(words[i + 1])))) {
         word = head core COMMAND_OFF tail
         command = 0
       }

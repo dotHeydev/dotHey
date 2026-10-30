@@ -1,15 +1,15 @@
 # shellcheck shell=bash
 
-# Setting dotdot up for a project: which harnesses it has and holds, and the
-# links map entries that put dotdot where the chosen ones read it. Links are
-# only ever changed through the map; bash dot link does the linking. Rows are
+# Setting dotHey up for a project: which harnesses it has and holds, and the
+# links map entries that put dotHey where the chosen ones read it. Links are
+# only ever changed through the map; bash hey link does the linking. Rows are
 # tab-separated: "<link|append|skip>\t<origin>\t<destination>".
 
-dot::use core.harnesses.harness core.harnesses.capabilities.agents framework.helpers.fs framework.helpers.json framework.helpers.text
+hey::use core.harnesses.harness core.harnesses.capabilities.agents framework.helpers.fs framework.helpers.json framework.helpers.text
 
 SETUP_TYPES=" parallel centralize "
 SETUP_DEFAULT_TYPE="parallel"
-# Setup's record, in dotdot's state (dot::state).
+# Setup's record, in dotHey's state (hey::state).
 SETUP_HARNESSES_SETTING="setup.harnesses"
 SETUP_TYPE_SETTING="setup.type"
 SETUP_PENDING_SETTING="setup.pending"
@@ -71,14 +71,14 @@ core.modules.setup.service::scan() {
 }
 
 # "-\tunsure\t<path>\t<size>" for each top-level Markdown doc no harness
-# claims (not in <rows>), nor dotdot links or knows: context that may belong
+# claims (not in <rows>), nor dotHey links or knows: context that may belong
 # to the project's setup, for the agent to raise with the user.
 core.modules.setup.service::unsure() {
   local rows="$1" file name
   for file in "$BASE"/*.md; do
     [ -f "$file" ] || continue
     name="${file##*/}"
-    [[ "$SETUP_KNOWN_DOCS" != *" $name "* ]] && ! core.harnesses.harness::is_dotdots "$file" \
+    [[ "$SETUP_KNOWN_DOCS" != *" $name "* ]] && ! core.harnesses.harness::is_dotheys "$file" \
       && ! core.harnesses.harness::leaves_project "$file" || continue
     printf '%s\n' "$rows" | awk -F '\t' -v path="$name" '$3 == path { found = 1 } END { exit !found }' && continue
     printf '%s\tunsure\t%s\t%s\n' "$SETUP_NO_HARNESS" "$name" "$(core.harnesses.harness::size "$file")"
@@ -118,14 +118,14 @@ core.modules.setup.service::holds_items() {
 }
 
 # Whether the project uses .agents/ for more than skills, or links into it
-# from a harness's folders: then dotdot may belong there too.
+# from a harness's folders: then dotHey may belong there too.
 core.modules.setup.service::agents_home_in_use() {
   local home="$BASE/$SETUP_AGENTS_HOME" entry destination target
-  [ -d "$home" ] && [ ! -L "$home" ] && [ "$DOTDOT_NAME" != "$SETUP_AGENTS_HOME/.dot" ] || return 1
+  [ -d "$home" ] && [ ! -L "$home" ] && [ "$DOTHEY_NAME" != "$SETUP_AGENTS_HOME/.hey" ] || return 1
   for entry in "$home"/* "$home"/.[!.]*; do
     [ -e "$entry" ] || [ -L "$entry" ] || continue
     case "${entry##*/}" in
-      skills | .dot) ;;
+      skills | .hey) ;;
       *) return 0 ;;
     esac
   done
@@ -139,10 +139,10 @@ core.modules.setup.service::agents_home_in_use() {
 }
 
 core.modules.setup.service::state() {
-  dot::state "$1" "$2" 2>/dev/null || printf '%s\n' "$2"
+  hey::state "$1" "$2" 2>/dev/null || printf '%s\n' "$2"
 }
 
-# The names of dotdot's own skills and agents, which an owned item may not take.
+# The names of dotHey's own skills and agents, which an owned item may not take.
 core.modules.setup.service::taken_names() {
   local root
   while IFS= read -r root; do
@@ -156,7 +156,7 @@ core.modules.setup.service::taken_names() {
 }
 
 # What centralizing would move, into SETUP_MOVES ("<from>\t<to>\t<harness>", project
-# and dotdot paths); the copies of an item already moving, which go once it
+# and dotHey paths); the copies of an item already moving, which go once it
 # has, into SETUP_DUPLICATES ("<path>"); and what it leaves, into
 # SETUP_SKIPPED ("<path>\t<why>").
 core.modules.setup.service::plan_moves() {
@@ -173,7 +173,7 @@ core.modules.setup.service::plan_moves() {
       agent)
         folder="$SETUP_AGENTS_DIR"
         if ! name=$(core.harnesses.capabilities.agents::name_of "$id" "${path##*/}"); then
-          SETUP_SKIPPED+=("$path${SETUP_TAB}in $(core.harnesses.harness::data "$id" .name)'s own format, not dotdot's")
+          SETUP_SKIPPED+=("$path${SETUP_TAB}in $(core.harnesses.harness::data "$id" .name)'s own format, not dotHey's")
           continue
         fi
         name="$name.md"
@@ -187,9 +187,9 @@ core.modules.setup.service::plan_moves() {
     if [ -L "$absolute" ]; then
       SETUP_SKIPPED+=("$path${SETUP_TAB}a link, left where it points")
     elif [[ "$taken" == *" ${name%.md} "* ]]; then
-      SETUP_SKIPPED+=("$path${SETUP_TAB}dotdot has one named ${name%.md}")
-    elif [ -e "$DOTDOT_ROOT/$folder/$name" ] || [ -L "$DOTDOT_ROOT/$folder/$name" ]; then
-      SETUP_SKIPPED+=("$path${SETUP_TAB}$DOTDOT_NAME/$folder/$name already exists")
+      SETUP_SKIPPED+=("$path${SETUP_TAB}dotHey has one named ${name%.md}")
+    elif [ -e "$DOTHEY_ROOT/$folder/$name" ] || [ -L "$DOTHEY_ROOT/$folder/$name" ]; then
+      SETUP_SKIPPED+=("$path${SETUP_TAB}$DOTHEY_NAME/$folder/$name already exists")
     elif first=$(core.modules.setup.service::moving_to "$folder/$name"); then
       if diff -rq -- "$BASE/$first" "$absolute" > /dev/null 2>&1; then
         SETUP_DUPLICATES+=("$path")
@@ -202,7 +202,7 @@ core.modules.setup.service::plan_moves() {
   done < <(core.modules.setup.service::scan "$@")
 }
 
-# The item planned to move to <to> (a dotdot path), if any.
+# The item planned to move to <to> (a dotHey path), if any.
 core.modules.setup.service::moving_to() {
   local move rest
   for move in ${SETUP_MOVES[@]+"${SETUP_MOVES[@]}"}; do
@@ -215,11 +215,11 @@ core.modules.setup.service::moving_to() {
   return 1
 }
 
-# Whether dotdot holds owned items in <folder> (Skills, Agents), or will
+# Whether dotHey holds owned items in <folder> (Skills, Agents), or will
 # once the planned moves are made.
 core.modules.setup.service::will_own() {
   local entry move
-  for entry in "$DOTDOT_ROOT/$1"/*; do
+  for entry in "$DOTHEY_ROOT/$1"/*; do
     [ -e "$entry" ] && [ "${entry##*/}" != "$KEEP_FILE" ] && return 0
   done
   for move in ${SETUP_MOVES[@]+"${SETUP_MOVES[@]}"}; do
@@ -228,12 +228,12 @@ core.modules.setup.service::will_own() {
   return 1
 }
 
-# The general entries of the links (no plugin's), as rows: dot.json's, or
-# dotdot's default links when it has none.
+# The general entries of the links (no plugin's), as rows: hey.json's, or
+# dotHey's default links when it has none.
 core.modules.setup.service::map_rows() {
   local document
   document=$(framework.helpers.json::encoded "$(cat -- "$SETTINGS_FILE" 2>/dev/null)" .links)
-  [ -n "$document" ] && [ "$document" != null ] || document=$(dot::default_value links "")
+  [ -n "$document" ] && [ "$document" != null ] || document=$(hey::default_value links "")
   framework.helpers.json::leaves "{\"links\": $document}" | awk -F '\t' -v OFS='\t' '
     $1 != "links" { next }
     NF == 4 && $2 != "append" && $2 != "skip" && $2 != "inactive" && $3 ~ /^[0-9]+$/ { print "link", $2, $4; next }
@@ -242,20 +242,20 @@ core.modules.setup.service::map_rows() {
 }
 
 # The rows the chosen harnesses need: AGENTS.md at the root (appended into
-# the project's own), then each harness's; owned items only once dotdot
+# the project's own), then each harness's; owned items only once dotHey
 # holds some.
 core.modules.setup.service::wanted_rows() {
   local id kind origin destination
   if [ -f "$BASE/AGENTS.md" ] && [ ! -L "$BASE/AGENTS.md" ]; then
-    printf 'append\t@dot:AGENTS.md\tAGENTS.md\n'
+    printf 'append\t@hey:AGENTS.md\tAGENTS.md\n'
   else
-    printf 'link\t@dot:AGENTS.md\tAGENTS.md\n'
+    printf 'link\t@hey:AGENTS.md\tAGENTS.md\n'
   fi
   for id in "$@"; do
     while IFS="$SETUP_TAB" read -r kind origin destination; do
       case "$origin" in
-        "@dot:$SETUP_SKILLS_DIR/*") core.modules.setup.service::will_own "$SETUP_SKILLS_DIR" || continue ;;
-        "@dot:$SETUP_AGENTS_DIR/*") core.modules.setup.service::will_own "$SETUP_AGENTS_DIR" || continue ;;
+        "@hey:$SETUP_SKILLS_DIR/*") core.modules.setup.service::will_own "$SETUP_SKILLS_DIR" || continue ;;
+        "@hey:$SETUP_AGENTS_DIR/*") core.modules.setup.service::will_own "$SETUP_AGENTS_DIR" || continue ;;
       esac
       printf '%s\t%s\t%s\n' "$kind" "$origin" "$destination"
     done < <(core.harnesses.harness::call "$id" rows)
@@ -272,7 +272,7 @@ core.modules.setup.service::destinations() {
 }
 
 # The links rows after choosing <chosen> (space-separated) among <all>: a
-# harness's rows (what a harness.json describes: dotdot's skills, agents, and
+# harness's rows (what a harness.json describes: dotHey's skills, agents, and
 # instructions into a place a harness reads) are setup's, the rest the
 # user's. The chosen harnesses' rows are added, unless skipped; the other
 # harnesses' rows go; every other row, skip included, stays as it is. Into
@@ -291,7 +291,7 @@ core.modules.setup.service::plan_map() {
     function harness_row(origin, destination) {
       sub(/\/$/, "", destination)
       if (!(destination in place)) return 0
-      return origin ~ /^@dotdot(Skills|Agents)$/ || origin == "@dot:Skills/*" || origin == "@dot:Agents/*" || origin == "@dot:AGENTS.md" || origin ~ /^@harness:/
+      return origin ~ /^@dothey(Skills|Agents)$/ || origin == "@hey:Skills/*" || origin == "@hey:Agents/*" || origin == "@hey:AGENTS.md" || origin ~ /^@harness:/
     }
     BEGIN {
       n = split(places, lines, "\n")
@@ -335,7 +335,7 @@ core.modules.setup.service::object() {
   printf '{%s}' "$json"
 }
 
-# Writes <rows> as the general links in dot.json, keeping every plugin's group
+# Writes <rows> as the general links in hey.json, keeping every plugin's group
 # and the inactive ones as they are.
 core.modules.setup.service::write_map() {
   local rows="$1" document links key kept="" general
@@ -355,41 +355,41 @@ core.modules.setup.service::write_map() {
   general="{$general${general:+, }\"append\": $(core.modules.setup.service::object append "$rows"), \"skip\": $(core.modules.setup.service::object skip "$rows")$kept}"
   document=$(framework.helpers.json::set "$document" .links "$general" --keep-format) \
     && printf '%s\n' "$document" | framework.helpers.fs::write "$SETTINGS_FILE" \
-    || dot::raise "Couldn't write the links to $(dot::relative "$SETTINGS_FILE"); please check that it's writable."
+    || hey::raise "Couldn't write the links to $(hey::relative "$SETTINGS_FILE"); please check that it's writable."
 }
 
-# Centralizing: dotdot's Skills/ and Agents/ made (kept by a .gitkeep, as
+# Centralizing: dotHey's Skills/ and Agents/ made (kept by a .gitkeep, as
 # git tracks no empty folder), and the planned items moved in.
 core.modules.setup.service::centralize() {
   local folder
   for folder in "$SETUP_SKILLS_DIR" "$SETUP_AGENTS_DIR"; do
-    mkdir -p -- "$DOTDOT_ROOT/$folder" && touch -- "$DOTDOT_ROOT/$folder/$KEEP_FILE" \
-      || { dot::raise "Couldn't create $DOTDOT_NAME/$folder/."; return 1; }
+    mkdir -p -- "$DOTHEY_ROOT/$folder" && touch -- "$DOTHEY_ROOT/$folder/$KEEP_FILE" \
+      || { hey::raise "Couldn't create $DOTHEY_NAME/$folder/."; return 1; }
   done
   core.modules.setup.service::move
 }
 
-# Moves each planned item into dotdot; an agent in a harness's own format is
-# imported into dotdot's, and the original removed. Then the duplicates go:
-# link puts dotdot's copy in their place.
+# Moves each planned item into dotHey; an agent in a harness's own format is
+# imported into dotHey's, and the original removed. Then the duplicates go:
+# link puts dotHey's copy in their place.
 core.modules.setup.service::move() {
   local move from to id rest name duplicate
   for move in ${SETUP_MOVES[@]+"${SETUP_MOVES[@]}"}; do
     from="$BASE/${move%%"$SETUP_TAB"*}"
     rest="${move#*"$SETUP_TAB"}"
-    to="$DOTDOT_ROOT/${rest%%"$SETUP_TAB"*}"
+    to="$DOTHEY_ROOT/${rest%%"$SETUP_TAB"*}"
     id="${rest#*"$SETUP_TAB"}"
-    mkdir -p -- "${to%/*}" || { dot::raise "Couldn't create $(dot::relative "${to%/*}")."; return 1; }
-    if [[ "$to" == "$DOTDOT_ROOT/$SETUP_AGENTS_DIR/"* ]]; then
+    mkdir -p -- "${to%/*}" || { hey::raise "Couldn't create $(hey::relative "${to%/*}")."; return 1; }
+    if [[ "$to" == "$DOTHEY_ROOT/$SETUP_AGENTS_DIR/"* ]]; then
       name="${to##*/}"
       core.harnesses.capabilities.agents::import "$id" "${name%.md}" "$from" > "$to" && rm -f -- "$from" \
-        || { rm -f -- "$to"; dot::raise "Couldn't take $(dot::relative "$from") into $(dot::relative "$to")."; return 1; }
+        || { rm -f -- "$to"; hey::raise "Couldn't take $(hey::relative "$from") into $(hey::relative "$to")."; return 1; }
     else
-      mv -- "$from" "$to" || { dot::raise "Couldn't move $(dot::relative "$from") into $(dot::relative "$to")."; return 1; }
+      mv -- "$from" "$to" || { hey::raise "Couldn't move $(hey::relative "$from") into $(hey::relative "$to")."; return 1; }
     fi
   done
   for duplicate in ${SETUP_DUPLICATES[@]+"${SETUP_DUPLICATES[@]}"}; do
-    rm -rf -- "${BASE:?}/$duplicate" || { dot::raise "Couldn't remove $duplicate, a copy of what moved."; return 1; }
+    rm -rf -- "${BASE:?}/$duplicate" || { hey::raise "Couldn't remove $duplicate, a copy of what moved."; return 1; }
   done
 }
 
@@ -409,8 +409,8 @@ core.modules.setup.service::json_list() {
 
 # What only the agent can finish, from <type> and <rows> (the scan, the
 # unsure docs included), less what it already finished: the context while
-# dotdot isn't ready; with own, splitting each instructions file into
-# dotdot's docs and checking that every harness still reads what moved; and
+# dotHey isn't ready; with own, splitting each instructions file into
+# dotHey's docs and checking that every harness still reads what moved; and
 # the unsure docs, to raise with the user.
 core.modules.setup.service::pending() {
   local type="$1" rows="$2" finished
@@ -429,16 +429,16 @@ core.modules.setup.service::finish() {
   local item="$1" pending
   pending=$(core.modules.setup.service::list "$SETUP_PENDING_SETTING")
   [ "$item" != "$SETUP_APPLY_ITEM" ] && printf '%s\n' "$pending" | grep -qxF -- "$item" || return 1
-  dot::save_state "$SETUP_PENDING_SETTING" "$(printf '%s\n' "$pending" | grep -vxF -- "$item" | core.modules.setup.service::json_list)" \
-    && dot::save_state "$SETUP_DONE_SETTING" "$({ core.modules.setup.service::list "$SETUP_DONE_SETTING"; printf '%s\n' "$item"; } | core.modules.setup.service::json_list)"
+  hey::save_state "$SETUP_PENDING_SETTING" "$(printf '%s\n' "$pending" | grep -vxF -- "$item" | core.modules.setup.service::json_list)" \
+    && hey::save_state "$SETUP_DONE_SETTING" "$({ core.modules.setup.service::list "$SETUP_DONE_SETTING"; printf '%s\n' "$item"; } | core.modules.setup.service::json_list)"
 }
 
-# The dot entry at the project's root, linked to dotdot's when it's missing
+# The hey entry at the project's root, linked to dotHey's when it's missing
 # or broken; one the project put there itself is left alone.
 core.modules.setup.service::entry_link() {
   [ ! -e "$ENTRY_LINK" ] || return 0
-  rm -f -- "$ENTRY_LINK" && ln -s -- "${DOT_BIN#"$BASE"/}" "$ENTRY_LINK" \
-    || { dot::raise "Couldn't link $(dot::relative "$ENTRY_LINK") to dotdot." "Please run: ln -s ${DOT_BIN#"$BASE"/} dot"; return 1; }
+  rm -f -- "$ENTRY_LINK" && ln -s -- "${HEY_BIN#"$BASE"/}" "$ENTRY_LINK" \
+    || { hey::raise "Couldn't link $(hey::relative "$ENTRY_LINK") to dotHey." "Please run: ln -s ${HEY_BIN#"$BASE"/} hey"; return 1; }
 }
 
 # Saves the choice: the harnesses, the type, the rows written, and what
@@ -446,7 +446,7 @@ core.modules.setup.service::entry_link() {
 core.modules.setup.service::save() {
   local harnesses="$1" type="$2" pending="$3"
   # shellcheck disable=SC2086 # harness ids, one word each (^[a-z][a-z0-9-]*$)
-  dot::save_state "$SETUP_HARNESSES_SETTING" "$(printf '%s\n' $harnesses | core.modules.setup.service::json_list)" \
-    && dot::save_state "$SETUP_TYPE_SETTING" "$(framework.helpers.json::string "$type")" \
-    && dot::save_state "$SETUP_PENDING_SETTING" "$(printf '%s\n' "$pending" | core.modules.setup.service::json_list)"
+  hey::save_state "$SETUP_HARNESSES_SETTING" "$(printf '%s\n' $harnesses | core.modules.setup.service::json_list)" \
+    && hey::save_state "$SETUP_TYPE_SETTING" "$(framework.helpers.json::string "$type")" \
+    && hey::save_state "$SETUP_PENDING_SETTING" "$(printf '%s\n' "$pending" | core.modules.setup.service::json_list)"
 }

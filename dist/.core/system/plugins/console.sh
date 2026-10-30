@@ -1,13 +1,13 @@
 # shellcheck shell=bash
 
-dot::use framework.console.output framework.console.prompt core.system.plugins.manifest core.system.plugins.service
+hey::use framework.console.output framework.console.prompt core.system.plugins.manifest core.system.plugins.service
 
 core.system.plugins.console::plugin() {
   case "$1" in
-    http://*) framework.console.output::fail_as "$EXIT_USAGE" "dotdot only fetches plugins over https, so it refused $1." "Please give it as https://${1#http://}, or as <owner>/<name>." ;;
+    http://*) framework.console.output::fail_as "$EXIT_USAGE" "dotHey only fetches plugins over https, so it refused $1." "Please give it as https://${1#http://}, or as <owner>/<name>." ;;
   esac
   core.system.plugins.manifest::id "$1" \
-    || framework.console.output::fail "\"$1\" isn't a plugin dotdot can use." "Please give it as <owner>/<name>, or its GitHub URL; its name needs a letter or digit first."
+    || framework.console.output::fail "\"$1\" isn't a plugin dotHey can use." "Please give it as <owner>/<name>, or its GitHub URL; its name needs a letter or digit first."
 }
 
 # <plugin> fetched at <ref>, from <path> in the project, or from GitHub's
@@ -20,7 +20,7 @@ core.system.plugins.console::fetch() {
 
 core.system.plugins.console::warn() {
   framework.console.output::newline
-  framework.console.output::warn "Plugins are code from their author, not from dotdot."
+  framework.console.output::warn "Plugins are code from their author, not from dotHey."
   framework.console.output::detail "Once added, $1's commands, hooks and skills can run anything"
   framework.console.output::detail "on this machine and steer your agents. Please only continue"
   framework.console.output::detail "if you trust the source."
@@ -36,7 +36,7 @@ core.system.plugins.console::header() {
 core.system.plugins.console::preview() {
   local plugin="$1" source="$2" rows kind first second
   rows=$(core.system.plugins.service::preview "$plugin" "$source") || exit 1
-  framework.console.output::detail "Into $(dot::relative "$(core.system.plugins.manifest::directory "$plugin")")/:"
+  framework.console.output::detail "Into $(hey::relative "$(core.system.plugins.manifest::directory "$plugin")")/:"
   while IFS=$'\t' read -r kind first second; do
     [ "$kind" = file ] || continue
     case "$first" in
@@ -49,7 +49,7 @@ core.system.plugins.console::preview() {
       missing) framework.console.output::warn "$plugin needs $first, which isn't installed here; please install it." ;;
     esac
   done <<< "$rows"
-  framework.console.output::detail "Nothing gets linked yet; its links wait in $(dot::relative "$SETTINGS_FILE") under \"inactive\"."
+  framework.console.output::detail "Nothing gets linked yet; its links wait in $(hey::relative "$SETTINGS_FILE") under \"inactive\"."
 }
 
 core.system.plugins.console::confirm() {
@@ -86,17 +86,17 @@ core.system.plugins.console::install() {
   core.system.plugins.service::install "$plugin" "$source" || exit 1
   core.system.plugins.manifest::lock "$plugin" "$PLUGIN_ORIGIN $PLUGIN_REF ${PLUGIN_COMMIT:-$PLUGIN_UNKNOWN_COMMIT} ${directory##*/}"
   [ "${directory##*/}" = "${plugin#*/}" ] \
-    || framework.console.output::info "Its folder is $(dot::relative "$directory")/, as ${plugin#*/} can't name one here; it's still $plugin everywhere else."
+    || framework.console.output::info "Its folder is $(hey::relative "$directory")/, as ${plugin#*/} can't name one here; it's still $plugin everywhere else."
   added=$(core.system.plugins.service::register_settings "$plugin") || exit 1
-  [ -z "$added" ] || framework.console.output::detail "Its settings are in $(dot::relative "$SETTINGS_FILE") under plugins[\"$plugin\"], with their defaults."
+  [ -z "$added" ] || framework.console.output::detail "Its settings are in $(hey::relative "$SETTINGS_FILE") under plugins[\"$plugin\"], with their defaults."
 }
 
 # Writes the plugins' blocks into the links; links and appends nothing.
 core.system.plugins.console::suggest() {
-  dot::call link --settings-only -y "$@" >/dev/null || framework.console.output::fail "Couldn't write the plugin's links to $(dot::relative "$SETTINGS_FILE")." "Please try again with: bash dot link --settings-only"
+  hey::call link --settings-only -y "$@" >/dev/null || framework.console.output::fail "Couldn't write the plugin's links to $(hey::relative "$SETTINGS_FILE")." "Please try again with: bash hey link --settings-only"
 }
 
 core.system.plugins.console::installed() {
   framework.console.output::success "$1"
-  framework.console.output::next "Next: bash dot plugins:link $2"
+  framework.console.output::next "Next: bash hey plugins:link $2"
 }

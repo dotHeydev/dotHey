@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 
-dot::use framework.ui.screen
+hey::use framework.ui.screen
 
 # Yes or no to <question>, <default> (y or n, n by default) chosen first:
 # ←/→ to change it, Enter to confirm, or y or n straight away. Status 0 for
@@ -9,7 +9,7 @@ framework.ui.confirm::ask() {
   local question="$1" default="${2:-n}" yes=true
   [ "$default" = y ] || yes=false
   if ! framework.ui.screen::reads_keys; then
-    dot::use framework.console.prompt
+    hey::use framework.console.prompt
     framework.console.prompt::confirm "$question" "$default"
     return
   fi

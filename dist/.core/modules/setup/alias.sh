@@ -1,15 +1,15 @@
 # shellcheck shell=bash
 
-# The dot alias: one line in the user's shell rc file, so typing dot runs
-# ./dot, or dotdot's own entry when that link is missing. It sits between
+# The hey alias: one line in the user's shell rc file, so typing hey runs
+# ./hey, or dotHey's own entry when that link is missing. It sits between
 # markers, so it's added once and taken back exactly.
 
-dot::use framework.helpers.fs
+hey::use framework.helpers.fs
 
 # The shells offered; mksh counts as ksh, and csh as tcsh.
 ALIAS_SHELLS=(bash zsh fish ksh tcsh)
-ALIAS_OPEN="# dotdot"
-ALIAS_CLOSE="# /dotdot"
+ALIAS_OPEN="# dothey"
+ALIAS_CLOSE="# /dothey"
 
 # The user's shell, by its login shell ($SHELL): one of ALIAS_SHELLS, or
 # nothing.
@@ -41,24 +41,24 @@ core.modules.setup.alias::file() {
   esac
 }
 
-# The alias in <shell>'s syntax (POSIX's for any other): ./dot, or the entry
-# at <entry> (a project path) when ./dot is missing.
+# The alias in <shell>'s syntax (POSIX's for any other): ./hey, or the entry
+# at <entry> (a project path) when ./hey is missing.
 core.modules.setup.alias::line() {
   local shell="$1" entry="$2"
   case "$shell" in
-    fish) printf "alias dot 'bash (test -e dot; and echo dot; or echo %s)'\n" "$entry" ;;
-    tcsh) printf "alias dot 'bash \`test -e dot && echo dot || echo %s\`'\n" "$entry" ;;
-    *) printf "alias dot='bash \$([ -e dot ] && echo dot || echo %s)'\n" "$entry" ;;
+    fish) printf "alias hey 'bash (test -e hey; and echo hey; or echo %s)'\n" "$entry" ;;
+    tcsh) printf "alias hey 'bash \`test -e hey && echo hey || echo %s\`'\n" "$entry" ;;
+    *) printf "alias hey='bash \$([ -e hey ] && echo hey || echo %s)'\n" "$entry" ;;
   esac
 }
 
-# The line between dotdot's markers in <file>, if any.
+# The line between dotHey's markers in <file>, if any.
 core.modules.setup.alias::current() {
   [ -f "$1" ] || return 1
   awk -v opening="$ALIAS_OPEN" -v closing="$ALIAS_CLOSE" '$0 == opening { on = 1; next } $0 == closing { on = 0; next } on { print; found = 1 } END { exit !found }' "$1"
 }
 
-# <file> without dotdot's block.
+# <file> without dotHey's block.
 core.modules.setup.alias::without() {
   awk -v opening="$ALIAS_OPEN" -v closing="$ALIAS_CLOSE" '$0 == opening { on = 1; next } on && $0 == closing { on = 0; next } !on' "$1"
 }
@@ -68,22 +68,22 @@ core.modules.setup.alias::target() {
   if [ -L "$1" ]; then framework.helpers.fs::resolve "$1"; else printf '%s\n' "$1"; fi
 }
 
-# <line> as dotdot's block in <file>: in place of the one there, or appended.
+# <line> as dotHey's block in <file>: in place of the one there, or appended.
 core.modules.setup.alias::write() {
   local file line="$2" kept=""
-  file=$(core.modules.setup.alias::target "$1") || { dot::raise "Couldn't follow the link $1."; return 1; }
-  mkdir -p -- "$(dirname -- "$file")" || { dot::raise "Couldn't create $(dirname -- "$file")."; return 1; }
+  file=$(core.modules.setup.alias::target "$1") || { hey::raise "Couldn't follow the link $1."; return 1; }
+  mkdir -p -- "$(dirname -- "$file")" || { hey::raise "Couldn't create $(dirname -- "$file")."; return 1; }
   # Failing to read the file stops here, never writing over it.
-  [ ! -f "$file" ] || kept=$(core.modules.setup.alias::without "$file") || { dot::raise "Couldn't read $file."; return 1; }
+  [ ! -f "$file" ] || kept=$(core.modules.setup.alias::without "$file") || { hey::raise "Couldn't read $file."; return 1; }
   { [ -z "$kept" ] || printf '%s\n\n' "$kept"; printf '%s\n%s\n%s\n' "$ALIAS_OPEN" "$line" "$ALIAS_CLOSE"; } \
-    | framework.helpers.fs::write "$file" || { dot::raise "Couldn't write $file."; return 1; }
+    | framework.helpers.fs::write "$file" || { hey::raise "Couldn't write $file."; return 1; }
 }
 
-# <file> with dotdot's block taken out.
+# <file> with dotHey's block taken out.
 core.modules.setup.alias::remove() {
   local file
-  file=$(core.modules.setup.alias::target "$1") || { dot::raise "Couldn't follow the link $1."; return 1; }
+  file=$(core.modules.setup.alias::target "$1") || { hey::raise "Couldn't follow the link $1."; return 1; }
   local kept
-  kept=$(core.modules.setup.alias::without "$file") || { dot::raise "Couldn't read $file."; return 1; }
-  printf '%s\n' "$kept" | framework.helpers.fs::write "$file" || { dot::raise "Couldn't write $file."; return 1; }
+  kept=$(core.modules.setup.alias::without "$file") || { hey::raise "Couldn't read $file."; return 1; }
+  printf '%s\n' "$kept" | framework.helpers.fs::write "$file" || { hey::raise "Couldn't write $file."; return 1; }
 }

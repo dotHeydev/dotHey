@@ -3,7 +3,7 @@
 DESCRIPTION="Preview the UI components, still or in action."
 HIDDEN=true
 
-dot::use framework.console.args framework.ui.screen framework.ui.select framework.ui.checkbox core.modules.tui.console
+hey::use framework.console.args framework.ui.screen framework.ui.select framework.ui.checkbox core.modules.tui.console
 
 usage() {
   cat <<EOF
@@ -11,7 +11,7 @@ Shows the framework.ui components as they look at your terminal, or as
 plain text where there is none.
 
 Usage:
-  bash dot tui:view [<components> | all]
+  bash hey tui:view [<components> | all]
 
 Arguments:
   <components>  The components to see in action, separated by commas:
@@ -24,9 +24,9 @@ Options:
   -h, --help    Show this help.
 
 Examples:
-  bash dot tui:view
-  bash dot tui:view select,progress
-  bash dot tui:view all
+  bash hey tui:view
+  bash hey tui:view select,progress
+  bash hey tui:view all
 EOF
 }
 

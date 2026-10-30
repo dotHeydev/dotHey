@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 
-dot::use framework.ui.screen
+hey::use framework.ui.screen
 
 # <line>... in a box on stdout, under <title> when it isn't empty; in plain
 # output, the title and the lines as they are.

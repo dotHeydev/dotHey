@@ -1,0 +1,39 @@
+{
+  "general": {
+    "timezone": ""
+  },
+  "tasks": {
+    "service": "file",
+    "githubRepo": ""
+  },
+  "plugins": {
+    "unprefixedCommandOwners": [],
+    "denyLinkOrigin": [],
+    "denyLinkDestination": ["@hey:AGENTS.md", "@hey:RULES.md", "@hey:SECURITY.md", "@hey:USER.md", "AGENTS.md"]
+  },
+  "links": {
+    "@hey:AGENTS.md": ["AGENTS.md"],
+    "append": {},
+    "skip": {},
+    "inactive": {}
+  },
+  "release": {
+    "signingKey": "",
+    "authorName": "",
+    "authorEmail": "",
+    "destination": ".ignore/release",
+    "branch": "main",
+    "remotes": {
+      "github": "https://github.com/_USER_/_REPO_.git"
+    },
+    "exclude": [
+      "secrets/",
+      ".hey/",
+      "hey"
+    ],
+    "versionFiles": {}
+  },
+  "featureFlags": {
+    "release": false
+  }
+}

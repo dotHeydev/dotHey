@@ -3,7 +3,7 @@
 DESCRIPTION="Delete a task for good."
 DOCS="tasks"
 
-dot::use framework.console.args framework.helpers.fs framework.console.output framework.console.prompt core.modules.tasks.console core.modules.tasks.service
+hey::use framework.console.args framework.helpers.fs framework.console.output framework.console.prompt core.modules.tasks.console core.modules.tasks.service
 
 usage() {
   cat <<USAGE
@@ -11,7 +11,7 @@ Deletes a task for good, after asking at a terminal. Moving it to done or
 discarded is the usual way to end one.
 
 Usage:
-  bash dot tasks:delete <id> [-y, --yes]
+  bash hey tasks:delete <id> [-y, --yes]
 
 Arguments:
   <id>                     The task's id (t004, #12).
@@ -21,7 +21,7 @@ Options:
   -h, --help               Show this help.
 
 Examples:
-  bash dot tasks:delete t004
+  bash hey tasks:delete t004
 USAGE
 }
 
@@ -34,7 +34,7 @@ handle() {
     -y | --yes) confirmed=true; shift ;;
   esac
   [ $# -eq 0 ] || framework.console.args::unexpected "$1"
-  framework.console.prompt::can_ask || framework.console.output::fail_as "$EXIT_PRECONDITION" "This needs your confirmation in a terminal, so nothing changed." "$OUTPUT_MANUAL_RUN bash dot tasks:delete $id"
+  framework.console.prompt::can_ask || framework.console.output::fail_as "$EXIT_PRECONDITION" "This needs your confirmation in a terminal, so nothing changed." "$OUTPUT_MANUAL_RUN bash hey tasks:delete $id"
   core.modules.tasks.console::ensure_service
   framework.helpers.fs::make_temp_dir work || framework.console.output::fail "Couldn't create a temporary directory; please check free space and \$TMPDIR."
   core.modules.tasks.console::call show "$id" > "$work/show" || exit

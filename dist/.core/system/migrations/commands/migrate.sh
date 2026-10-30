@@ -1,26 +1,26 @@
 # shellcheck shell=bash
 
-DESCRIPTION="Upgrade dotdot's own files to this version's format."
-DOCS="updating-dotdot"
+DESCRIPTION="Upgrade dotHey's own files to this version's format."
+DOCS="updating-dothey"
 
-dot::use framework.console.args framework.console.output framework.console.prompt framework.helpers.json framework.helpers.text
+hey::use framework.console.args framework.console.output framework.console.prompt framework.helpers.json framework.helpers.text
 
 usage() {
   cat <<USAGE
-Runs the migrations still pending, in order: each converts a file dotdot keeps
-in $DOTDOT_NAME/ from an older format. While one is pending, every command but
+Runs the migrations still pending, in order: each converts a file dotHey keeps
+in $DOTHEY_NAME/ from an older format. While one is pending, every command but
 upgrade asks for this one first.
 
 Usage:
-  bash dot migrate [-y, --yes]
+  bash hey migrate [-y, --yes]
 
 Options:
-  -y, --yes      Run without asking. Only at a terminal, or when dotdot itself
+  -y, --yes      Run without asking. Only at a terminal, or when dotHey itself
                  runs it.
   -h, --help     Show this help.
 
 Notes:
-  - state.migrations in $(dot::relative "$SETTINGS_FILE") lists the migrations applied.
+  - state.migrations in $(hey::relative "$SETTINGS_FILE") lists the migrations applied.
 USAGE
 }
 
@@ -46,13 +46,13 @@ handle() {
     framework.console.output::entry blue "$UI_SEPARATOR" "${file##*/}" "$(kernel::description "$file")"
   done
   if $confirmed; then
-    guards::skip_confirmation || framework.console.output::fail_as "$EXIT_PRECONDITION" "-y only works in a terminal, so nothing ran unseen." "$OUTPUT_MANUAL_RUN bash dot migrate"
+    guards::skip_confirmation || framework.console.output::fail_as "$EXIT_PRECONDITION" "-y only works in a terminal, so nothing ran unseen." "$OUTPUT_MANUAL_RUN bash hey migrate"
     framework.console.output::line "Migrating (-y)…"
   else
-    framework.console.prompt::confirm_or_exit "Do you want to run $(framework.helpers.text::plural "${#pending[@]}" migration)?" y "bash dot migrate"
+    framework.console.prompt::confirm_or_exit "Do you want to run $(framework.helpers.text::plural "${#pending[@]}" migration)?" y "bash hey migrate"
   fi
   for file in "${pending[@]}"; do
-    ( . "$file"; migrate ) || framework.console.output::fail "${file##*/} didn't finish, so the ones after it didn't run." "Please fix the errors above, then run: bash dot migrate"
+    ( . "$file"; migrate ) || framework.console.output::fail "${file##*/} didn't finish, so the ones after it didn't run." "Please fix the errors above, then run: bash hey migrate"
     record "${file##*/}"
     framework.console.output::success "${file##*/}"
   done
@@ -61,9 +61,9 @@ handle() {
 # Adds a migration to state.migrations.
 record() {
   local applied list
-  applied=$(dot::state migrations "[]") && applied=$(framework.helpers.json::values "$applied" '.[]') \
-    || framework.console.output::fail "${1%.sh} ran, but couldn't be recorded in $(dot::relative "$SETTINGS_FILE") (state.migrations); it may run again next time."
+  applied=$(hey::state migrations "[]") && applied=$(framework.helpers.json::values "$applied" '.[]') \
+    || framework.console.output::fail "${1%.sh} ran, but couldn't be recorded in $(hey::relative "$SETTINGS_FILE") (state.migrations); it may run again next time."
   list=$({ [ -z "$applied" ] || printf '%s\n' "$applied"; printf '%s\n' "${1%.sh}"; } | framework.helpers.json::lines | paste -sd, -)
-  dot::save_state migrations "[$list]" \
-    || framework.console.output::fail "${1%.sh} ran, but couldn't be recorded in $(dot::relative "$SETTINGS_FILE") (state.migrations); it may run again next time."
+  hey::save_state migrations "[$list]" \
+    || framework.console.output::fail "${1%.sh} ran, but couldn't be recorded in $(hey::relative "$SETTINGS_FILE") (state.migrations); it may run again next time."
 }

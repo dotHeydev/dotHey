@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 
-# dotdot's look, in one place: every icon, glyph, style, size, and label its
+# dotHey's look, in one place: every icon, glyph, style, size, and label its
 # output and its UI components draw with. Change them here only.
 #
 # Styles are render.awk's names, space-separated, outermost first: bold, dim,

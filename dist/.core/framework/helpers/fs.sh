@@ -2,7 +2,7 @@
 
 FS_MAX_LINK_HOPS=40
 # Where temporary files go when the system's temporary folder can't take
-# them: set by whoever runs the code (dotdot's boot), and changed for a run
+# them: set by whoever runs the code (dotHey's boot), and changed for a run
 # that moves that place itself. Leftovers older than FS_TEMP_STALE_MINUTES,
 # from a run that was killed, are cleared as the fallback is used.
 : "${FS_TEMP_FALLBACK:=}"
@@ -122,15 +122,15 @@ framework.helpers.fs::make_temp() {
     fs_temp_path=$(mktemp $fs_temp_kind "$fs_temp_fallback/XXXXXX") || return 1
     fs_temp_fell_back=true
   fi
-  dot::on_exit rm -rf -- "$fs_temp_path"
+  hey::on_exit rm -rf -- "$fs_temp_path"
   # The fallback folder goes too, once nothing else is in it.
-  ! $fs_temp_fell_back || dot::on_exit framework.helpers.fs::remove_if_empty "$fs_temp_fallback"
+  ! $fs_temp_fell_back || hey::on_exit framework.helpers.fs::remove_if_empty "$fs_temp_fallback"
   printf -v "$fs_temp_target" '%s' "$fs_temp_path"
 }
 
 framework.helpers.fs::write() {
   local file="$1" partial
-  partial="$file.dot-$$"
+  partial="$file.hey-$$"
   if cat > "$partial" && mv -f -- "$partial" "$file"; then
     return 0
   fi
@@ -140,7 +140,7 @@ framework.helpers.fs::write() {
 
 framework.helpers.fs::replace() {
   local file="$1" partial
-  partial="$file.dot-$$"
+  partial="$file.hey-$$"
   if cp -p -- "$file" "$partial" 2>/dev/null && cat > "$partial" && mv -f -- "$partial" "$file"; then
     return 0
   fi

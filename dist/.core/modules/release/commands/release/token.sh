@@ -3,30 +3,30 @@
 DESCRIPTION="Save the token a release remote pushes with."
 DOCS="releases"
 
-dot::use framework.console.args core.modules.release.console core.modules.release.service framework.console.output framework.console.prompt
+hey::use framework.console.args core.modules.release.console core.modules.release.service framework.console.output framework.console.prompt
 
 usage() {
   cat <<EOF
 Asks for a remote's personal access token (never as an argument) and saves it
 encrypted for that remote's url: in the macOS keychain, the desktop keyring,
-or, without either, gpg-encrypted in $(dot::relative "$HOST_ENV_FILE") with a passphrase you choose.
+or, without either, gpg-encrypted in $(hey::relative "$HOST_ENV_FILE") with a passphrase you choose.
 
 Usage:
-  bash dot release:token <remote>
+  bash hey release:token <remote>
 
 Arguments:
-  <remote>     The remote, a key of release.remotes in $(dot::relative "$SETTINGS_FILE").
+  <remote>     The remote, a key of release.remotes in $(hey::relative "$SETTINGS_FILE").
 
 Options:
   -h, --help   Show this help.
 
 Examples:
-  bash dot release:token github
+  bash hey release:token github
 
 Notes:
   - Give the token write access to the release repo, and nothing else.
   - Saving again replaces it; a changed remote url needs a new one.
-  - bash dot release:token:delete <remote> removes it.
+  - bash hey release:token:delete <remote> removes it.
 EOF
 }
 
@@ -42,7 +42,7 @@ handle() {
   cd "$RELEASE_PROJECT" || framework.console.output::fail "Can't open the project at $RELEASE_PROJECT."
   core.modules.release.service::load_remotes
   url=$(core.modules.release.service::remote_url "$name")
-  framework.console.prompt::can_ask || framework.console.output::fail_as "$EXIT_PRECONDITION" "Tokens are only entered in a terminal." "$OUTPUT_MANUAL_RUN bash dot release:token $name"
+  framework.console.prompt::can_ask || framework.console.output::fail_as "$EXIT_PRECONDITION" "Tokens are only entered in a terminal." "$OUTPUT_MANUAL_RUN bash hey release:token $name"
   if [ "$(core.modules.release.service::token_store)" = gpg ]; then
     # gpg takes no secret itself, so pinentry asks for the token; gpg then
     # asks for the passphrase on the terminal.

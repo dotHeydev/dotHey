@@ -9,6 +9,6 @@ RELEASE="1.2.0"
 
 # An install of release $RELEASE, as install or upgrade records it.
 installed_release() {
-  core "dot::save_state version '\"$RELEASE\"'"
+  core "hey::save_state version '\"$RELEASE\"'"
   assert_success "record release $RELEASE"
 }

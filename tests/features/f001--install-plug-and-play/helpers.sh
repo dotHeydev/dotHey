@@ -9,30 +9,30 @@ own_skill() {
   printf -- '---\nname: %s\ndescription: The project'"'"'s own.\n---\n' "${1##*/}" > "$SANDBOX/$1/SKILL.md"
 }
 
-# The project's own instructions file, with a line dotdot must keep.
+# The project's own instructions file, with a line dotHey must keep.
 own_instructions() {
   mkdir -p "$(dirname -- "$SANDBOX/$1")"
   printf '# Ours\n\nKeep this line.\n' > "$SANDBOX/$1"
 }
 
-# What <path> selects in .dot/dot.json (or the dot.json at $2), one per line.
+# What <path> selects in .hey/hey.json (or the hey.json at $2), one per line.
 setting_value() {
-  core "dot::use framework.helpers.json; framework.helpers.json::values \"\$(cat '${2:-$DOTDOT/dot.json}')\" '$1'"
+  core "hey::use framework.helpers.json; framework.helpers.json::values \"\$(cat '${2:-$DOTHEY/hey.json}')\" '$1'"
   printf '%s' "$OUTPUT"
 }
 
 # A harness copied from <from> as <id>, its functions renamed to match.
 copy_harness() {
   local from="$1" id="$2" file
-  cp -R "$DOTDOT/.core/harnesses/$from" "$DOTDOT/.core/harnesses/$id"
-  for file in "$DOTDOT/.core/harnesses/$id"/*.sh; do
+  cp -R "$DOTHEY/.core/harnesses/$from" "$DOTHEY/.core/harnesses/$id"
+  for file in "$DOTHEY/.core/harnesses/$id"/*.sh; do
     sed "s/core\.harnesses\.$from\./core.harnesses.$id./g" "$file" > "$file.new" && mv "$file.new" "$file"
   done
 }
 
 # Sets <key> of a harness's harness.json to the JSON <value>.
 harness_data() {
-  local file="$DOTDOT/.core/harnesses/$1/harness.json"
-  core "dot::use framework.helpers.json; framework.helpers.json::set \"\$(cat '$file')\" '.$2' '$3' > '$file.new' && mv '$file.new' '$file'"
+  local file="$DOTHEY/.core/harnesses/$1/harness.json"
+  core "hey::use framework.helpers.json; framework.helpers.json::set \"\$(cat '$file')\" '.$2' '$3' > '$file.new' && mv '$file.new' '$file'"
   assert_success "set $2 of harness $1"
 }

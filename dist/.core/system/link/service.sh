@@ -1,18 +1,18 @@
 # shellcheck shell=bash
 
-dot::use framework.helpers.date framework.helpers.frontmatter framework.helpers.fs framework.helpers.json core.harnesses.transform
+hey::use framework.helpers.date framework.helpers.frontmatter framework.helpers.fs framework.helpers.json core.harnesses.transform
 
 LINK_SEPARATOR="->"
 LINK_TREE_SUFFIX="/*"
-LINK_DOT_SHORTCUT="@dot:"
+LINK_HEY_SHORTCUT="@hey:"
 LINK_MODULE_SHORTCUT="@module:"
 LINK_PLUGIN_SHORTCUT="@plugin:"
 LINK_HARNESS_SHORTCUT="@harness:"
 LINK_TAB=$'\t'
-LINK_DOTDOT_LABEL="dotdot"
+LINK_DOTHEY_LABEL="dothey"
 LINK_AGENTS_DIR=".agents"
 LINK_NEW_FILE=" (new file)"
-LINK_MANAGED_DIRS=("$CORE_DIR" "$PLUGINS_DIR" "$DOTDOT_ROOT/.harnesses" "$DOTDOT_ROOT/Skills" "$DOTDOT_ROOT/Agents")
+LINK_MANAGED_DIRS=("$CORE_DIR" "$PLUGINS_DIR" "$DOTHEY_ROOT/.harnesses" "$DOTHEY_ROOT/Skills" "$DOTHEY_ROOT/Agents")
 
 LINK_ORIGINS=()
 LINK_DESTINATIONS=()
@@ -69,7 +69,7 @@ core.system.link.service::read_map() {
   paths::links_rows
 }
 
-# Whether dot.json holds the links map, rather than dotdot's default
+# Whether hey.json holds the links map, rather than dotHey's default
 # standing in for it.
 core.system.link.service::has_map() {
   [ -f "$SETTINGS_FILE" ] && [ "$(framework.helpers.json::encoded "$(cat -- "$SETTINGS_FILE")" .links)" != null ]
@@ -130,7 +130,7 @@ core.system.link.service::group_json() {
   framework.helpers.json::set null . "$(framework.helpers.json::encoded "$compact" ".inactive[$(framework.helpers.json::string "$1")]")"
 }
 
-# Saves the map into dot.json, the rest of the file left as written:
+# Saves the map into hey.json, the rest of the file left as written:
 # whole when the file has no links yet, else edited in place, only the
 # suggestions added, refreshed, or dropped and the entries of removed plugins
 # touched, the rest left as the user wrote it.
@@ -156,7 +156,7 @@ core.system.link.service::has_entries() {
 # group: a path in the plugin becomes @plugin:<owner>.<name>:<path>.
 core.system.link.service::declared_suggestions() {
   local plugin="$1" shortcut="$LINK_PLUGIN_SHORTCUT${1/\//.}:" kind origin _ destination manifest
-  manifest="$PLUGINS_DIR/$(dot::plugin_key "$plugin")/$PLUGIN_MANIFEST"
+  manifest="$PLUGINS_DIR/$(hey::plugin_key "$plugin")/$PLUGIN_MANIFEST"
   [ -f "$manifest" ] || return 0
   while IFS="$LINK_TAB" read -r kind origin _ destination; do
     case "$kind" in
@@ -183,13 +183,13 @@ core.system.link.service::suggests() {
   return 1
 }
 
-# What dotdot finds in a plugin's folders, for each kind it declares nothing
+# What dotHey finds in a plugin's folders, for each kind it declares nothing
 # of: its skills and agents linked into .agents/skills/ and .agents/agents/,
-# its context/*.md appended to dotdot's doc of that name (created when
+# its context/*.md appended to dotHey's doc of that name (created when
 # missing), and each stubs/<path>.stub to <path>.
 core.system.link.service::discovered_suggestions() {
   local plugin="$1" declared="$2" directory shortcut="$LINK_PLUGIN_SHORTCUT${1/\//.}:" kind destination file
-  directory="$PLUGINS_DIR/$(dot::plugin_key "$1")"
+  directory="$PLUGINS_DIR/$(hey::plugin_key "$1")"
   for kind in skills agents; do
     ! core.system.link.service::suggests "$shortcut" "$kind" <<< "$declared" || continue
     core.system.link.service::has_entries "$directory/$kind" || continue
@@ -199,7 +199,7 @@ core.system.link.service::discovered_suggestions() {
     for file in "$directory/$PLUGIN_CONTEXT_DIR"/*.md; do
       [ -f "$file" ] || continue
       file="${file##*/}"
-      printf '%s\tappend\t%s%s/%s\t%s%s\n' "$plugin" "$shortcut" "$PLUGIN_CONTEXT_DIR" "$file" "$LINK_DOT_SHORTCUT" "$file"
+      printf '%s\tappend\t%s%s/%s\t%s%s\n' "$plugin" "$shortcut" "$PLUGIN_CONTEXT_DIR" "$file" "$LINK_HEY_SHORTCUT" "$file"
     done
   fi
   if ! core.system.link.service::suggests "$shortcut" "$PLUGIN_STUBS_DIR" <<< "$declared" && [ -d "$directory/$PLUGIN_STUBS_DIR" ]; then
@@ -230,9 +230,9 @@ core.system.link.service::origin_plugin() {
       rest="${rest%%:*}"
       printf '%s/%s\n' "${rest%%.*}" "${rest#*.}"
       ;;
-    "$LINK_DOT_SHORTCUT${PLUGINS_DIR#"$DOTDOT_ROOT"/}"/*/*/*)
-      rest="${1#"$LINK_DOT_SHORTCUT${PLUGINS_DIR#"$DOTDOT_ROOT"/}"/}"
-      dot::plugin_name "$(printf '%s\n' "$rest" | cut -d/ -f1-2)"
+    "$LINK_HEY_SHORTCUT${PLUGINS_DIR#"$DOTHEY_ROOT"/}"/*/*/*)
+      rest="${1#"$LINK_HEY_SHORTCUT${PLUGINS_DIR#"$DOTHEY_ROOT"/}"/}"
+      hey::plugin_name "$(printf '%s\n' "$rest" | cut -d/ -f1-2)"
       ;;
   esac
 }
@@ -247,7 +247,7 @@ core.system.link.service::sweep() {
     append) LINK_SWEPT_APPENDS+=("$plugin|$destination") ;;
     link)
       case "$origin" in
-        @dotdotSkills | @pluginsSkills | @dotdotAgents | @pluginsAgents) LINK_TREE_DIRS+=("$BASE/${destination%/}") ;;
+        @dotheySkills | @pluginsSkills | @dotheyAgents | @pluginsAgents) LINK_TREE_DIRS+=("$BASE/${destination%/}") ;;
         *)
           if framework.helpers.fs::is_contents_pattern "$origin"; then
             LINK_TREE_DIRS+=("$BASE/${destination%/}")
@@ -261,7 +261,7 @@ core.system.link.service::sweep() {
   esac
 }
 
-# The rows this run works from: the links in dot.json (or dotdot's
+# The rows this run works from: the links in hey.json (or dotHey's
 # default when it has none), less the groups and lines of plugins no longer
 # installed (kept when only the map is written, so a full run can still sweep
 # them) and the groups to refresh, plus the fresh suggestions of each
@@ -271,21 +271,21 @@ core.system.link.service::prepare_map() {
   local refresh=" $1 " map_only="${2:-false}" rows group kind origin destination id plugin kept installed
   framework.helpers.fs::make_temp_dir LINK_WORK || { core.system.link.service::fail "Couldn't create a temporary directory; please check free space and \$TMPDIR."; return; }
   if ! rows=$(core.system.link.service::read_map); then
-    core.system.link.service::fail "The links in $(dot::relative "$SETTINGS_FILE") can't be read (invalid JSON, or \"links\" isn't an object)." "Please fix it, then run bash dot link again."
+    core.system.link.service::fail "The links in $(hey::relative "$SETTINGS_FILE") can't be read (invalid JSON, or \"links\" isn't an object)." "Please fix it, then run bash hey link again."
     return 0
   elif core.system.link.service::has_map; then
     [[ "$(framework.helpers.json::encoded "$(cat -- "$SETTINGS_FILE")" .links)" != *'"@env:'* ]] \
-      || { core.system.link.service::fail "The links can't come from .env; please set them in $(dot::relative "$SETTINGS_FILE") instead."; return 0; }
+      || { core.system.link.service::fail "The links can't come from .env; please set them in $(hey::relative "$SETTINGS_FILE") instead."; return 0; }
     core.system.link.service::note_duplicates
     LINK_EDIT_IN_PLACE=true
   else
-    LINK_MAP_NOTES+=("add dotdot's default links")
+    LINK_MAP_NOTES+=("add dotHey's default links")
   fi
   while IFS="$LINK_TAB" read -r group kind; do
-    [ "$group" = "!" ] && core.system.link.service::fail "This entry in the links of $(dot::relative "$SETTINGS_FILE") doesn't fit their shape: ${kind//$LINK_TAB/ }" "See their shape: bash dot link --help"
+    [ "$group" = "!" ] && core.system.link.service::fail "This entry in the links of $(hey::relative "$SETTINGS_FILE") doesn't fit their shape: ${kind//$LINK_TAB/ }" "See their shape: bash hey link --help"
   done <<< "$rows"
   [ "$LINK_FAILURES" -eq 0 ] || return 0
-  installed=" $(paths::plugins | sed "s|^$PLUGINS_DIR/||" | while IFS= read -r key; do dot::plugin_name "$key"; done | tr '\n' ' ') "
+  installed=" $(paths::plugins | sed "s|^$PLUGINS_DIR/||" | while IFS= read -r key; do hey::plugin_name "$key"; done | tr '\n' ' ') "
   kept=""
   while IFS="$LINK_TAB" read -r group kind origin destination; do
     [ -n "$kind" ] || continue
@@ -350,7 +350,7 @@ core.system.link.service::note_duplicates() {
     where=""
     [ "$key" = "$steps" ] || where=" under \"${steps%"$LINK_TAB"*}\""
     where="${where//$LINK_TAB/\" → \"}"
-    LINK_NOTICES+=("\"$key\" appears twice in the links of $(dot::relative "$SETTINGS_FILE")$where, so only the last one counts. Please merge them into one list: \"$key\": [\"<first>\", \"<second>\"]")
+    LINK_NOTICES+=("\"$key\" appears twice in the links of $(hey::relative "$SETTINGS_FILE")$where, so only the last one counts. Please merge them into one list: \"$key\": [\"<first>\", \"<second>\"]")
   done < <(framework.helpers.json::duplicate_keys "$(cat -- "$SETTINGS_FILE")")
 }
 
@@ -370,16 +370,16 @@ core.system.link.service::rows() {
   awk -F '\t' -v kind="$1" '$1 ~ /^\+/ && $2 == kind' "$LINK_EFFECTIVE_MAP"
 }
 
-# A destination as a project path: @dot:<path> is in dotdot.
+# A destination as a project path: @hey:<path> is in dotHey.
 core.system.link.service::destination_path() {
   case "$1" in
-    "$LINK_DOT_SHORTCUT"*) printf '%s/%s\n' "$DOTDOT_NAME" "${1#"$LINK_DOT_SHORTCUT"}" ;;
+    "$LINK_HEY_SHORTCUT"*) printf '%s/%s\n' "$DOTHEY_NAME" "${1#"$LINK_HEY_SHORTCUT"}" ;;
     *) printf '%s\n' "$1" ;;
   esac
 }
 
-# The dotdot-relative path an origin names, keeping a "/*" ending, into
-# LINK_SHORTCUT: @dot:<path>, @module:<name>:<path>, @harness:<name>:<path>,
+# The dotHey-relative path an origin names, keeping a "/*" ending, into
+# LINK_SHORTCUT: @hey:<path>, @module:<name>:<path>, @harness:<name>:<path>,
 # or @plugin:<owner>.<name>:<path>.
 core.system.link.service::shortcut_path() {
   local origin="$1" suffix="" rest name base owner path
@@ -387,8 +387,8 @@ core.system.link.service::shortcut_path() {
     */\*) suffix="$LINK_TREE_SUFFIX"; origin="${origin%"$LINK_TREE_SUFFIX"}" ;;
   esac
   case "$origin" in
-    "$LINK_DOT_SHORTCUT"*)
-      path="${origin#"$LINK_DOT_SHORTCUT"}"
+    "$LINK_HEY_SHORTCUT"*)
+      path="${origin#"$LINK_HEY_SHORTCUT"}"
       [ -n "$path" ] || return 1
       LINK_SHORTCUT="$path$suffix"
       return 0
@@ -412,23 +412,23 @@ core.system.link.service::shortcut_path() {
       name="${rest%%:*}"
       owner="${name%%.*}"
       [ "$owner" != "$name" ] && guards::plugin_name "$owner/${name#*.}" || return 1
-      base="$PLUGINS_DIR/$(dot::plugin_key "$owner/${name#*.}")"
+      base="$PLUGINS_DIR/$(hey::plugin_key "$owner/${name#*.}")"
       ;;
     *) return 1 ;;
   esac
   path=""
   [ "$rest" = "$name" ] || path="${rest#*:}"
-  base="${base#"$DOTDOT_ROOT"/}"
+  base="${base#"$DOTHEY_ROOT"/}"
   LINK_SHORTCUT="$base${path:+/$path}$suffix"
 }
 
 # The directories a set's skills or agents are found in: every system part
-# and module for dotdot (discovered, not listed), but a module a feature flag
+# and module for dotHey (discovered, not listed), but a module a feature flag
 # turns off; every plugin for plugins.
 core.system.link.service::set_roots() {
   local root
   case "$1" in
-    dotdot)
+    dothey)
       for root in "$SYSTEM_DIR"/*/ "$MODULES_DIR"/*/; do
         root="${root%/}"
         [ -d "$root" ] || continue
@@ -450,29 +450,29 @@ core.system.link.service::set_links() {
         for entry in "$root/skills"/*/SKILL.md; do
           [ -f "$entry" ] || continue
           entry="${entry%/SKILL.md}"
-          printf '%s%s%s/%s\n' "${entry#"$DOTDOT_ROOT"/}" "$LINK_SEPARATOR" "$destination" "${entry##*/}"
+          printf '%s%s%s/%s\n' "${entry#"$DOTHEY_ROOT"/}" "$LINK_SEPARATOR" "$destination" "${entry##*/}"
         done
         ;;
       agents)
         for entry in "$root/agents"/*.md; do
           [ -f "$entry" ] || continue
-          printf '%s%s%s/%s\n' "${entry#"$DOTDOT_ROOT"/}" "$LINK_SEPARATOR" "$destination" "${entry##*/}"
+          printf '%s%s%s/%s\n' "${entry#"$DOTHEY_ROOT"/}" "$LINK_SEPARATOR" "$destination" "${entry##*/}"
         done
         ;;
     esac
   done < <(core.system.link.service::set_roots "$set")
 }
 
-# An origin and destination as "<dotdot-relative origin>-><project path>"
+# An origin and destination as "<dotHey-relative origin>-><project path>"
 # lines (a set gives one per skill or agent); an origin no shortcut names
 # fails.
 core.system.link.service::map_link() {
   local origin="$1" destination set kind module
   destination=$(core.system.link.service::destination_path "$2")
   case "$origin" in
-    @dotdotSkills | @pluginsSkills | @dotdotAgents | @pluginsAgents)
+    @dotheySkills | @pluginsSkills | @dotheyAgents | @pluginsAgents)
       set=plugins
-      [ "${origin#@dotdot}" = "$origin" ] || set=dotdot
+      [ "${origin#@dothey}" = "$origin" ] || set=dothey
       kind=agents
       [ "${origin%Skills}" = "$origin" ] || kind=skills
       core.system.link.service::set_links "$set" "$kind" "$destination"
@@ -486,9 +486,9 @@ core.system.link.service::map_link() {
         esac
         printf '%s%s%s\n' "$LINK_SHORTCUT" "$LINK_SEPARATOR" "$destination"
       elif module=$(core.system.link.service::disabled_module_of "$origin"); then
-        printf '!Origin %s in %s is in the module %s, which the feature flag featureFlags.%s turns off; not linked.\n' "'$origin'" "$(dot::relative "$SETTINGS_FILE")" "$module" "$module"
+        printf '!Origin %s in %s is in the module %s, which the feature flag featureFlags.%s turns off; not linked.\n' "'$origin'" "$(hey::relative "$SETTINGS_FILE")" "$module" "$module"
       else
-        printf '!Origin %s in %s is not @dot:<path>, @module:<name>:<path>, @harness:<name>:<path>, @plugin:<owner>.<name>:<path>, or a skill or agent set; not linked.\n' "'$origin'" "$(dot::relative "$SETTINGS_FILE")"
+        printf '!Origin %s in %s is not @hey:<path>, @module:<name>:<path>, @harness:<name>:<path>, @plugin:<owner>.<name>:<path>, or a skill or agent set; not linked.\n' "'$origin'" "$(hey::relative "$SETTINGS_FILE")"
       fi
       ;;
   esac
@@ -516,10 +516,10 @@ core.system.link.service::plan_removals() {
         continue
       fi
       path="${path%"$LINK_TREE_SUFFIX"}"
-      [ -d "$DOTDOT_ROOT/$path" ] || continue
+      [ -d "$DOTHEY_ROOT/$path" ] || continue
       while IFS= read -r -d '' child; do
         core.system.link.service::plan_removal "$path/${child##*/}" "${destination%/}/${child##*/}"
-      done < <(find "$DOTDOT_ROOT/$path" -mindepth 1 -maxdepth 1 ! -name "$KEEP_FILE" -print0 | sort -z)
+      done < <(find "$DOTHEY_ROOT/$path" -mindepth 1 -maxdepth 1 ! -name "$KEEP_FILE" -print0 | sort -z)
     done < <(core.system.link.service::map_link "$origin" "$destination")
   done < <(core.system.link.service::rows skip)
 }
@@ -527,7 +527,7 @@ core.system.link.service::plan_removals() {
 core.system.link.service::plan_removal() {
   local origin_absolute destination_absolute target source
   guards::stays_inside "$1" && guards::stays_inside "$2" || return 0
-  core.system.link.service::resolve_under "$1" "$DOTDOT_ROOT" origin_absolute || return 0
+  core.system.link.service::resolve_under "$1" "$DOTHEY_ROOT" origin_absolute || return 0
   core.system.link.service::resolve_under "$2" "$BASE" destination_absolute || return 0
   guards::link_destination "$destination_absolute" || return 0
   LINK_REMOVALS+=("$destination_absolute|$origin_absolute")
@@ -568,9 +568,9 @@ core.system.link.service::is_denied() {
 # (destinations as project paths).
 core.system.link.service::load_denied() {
   local list entry
-  list=$(dot::setting plugins.denyLinkOrigin "[]") || return 1
+  list=$(hey::setting plugins.denyLinkOrigin "[]") || return 1
   LINK_DENIED_ORIGINS=$(framework.helpers.json::values "$list" '.[]')
-  list=$(dot::setting plugins.denyLinkDestination "[]") || return 1
+  list=$(hey::setting plugins.denyLinkDestination "[]") || return 1
   LINK_DENIED_DESTINATIONS=$(framework.helpers.json::values "$list" '.[]' | while IFS= read -r entry; do
     core.system.link.service::destination_path "$entry"
   done)
@@ -604,7 +604,7 @@ core.system.link.service::is_inside_any() {
   return 1
 }
 
-# dotdot's former place, after a move: its links there count as dotdot's own,
+# dotHey's former place, after a move: its links there count as dotHey's own,
 # so they are relinked (or pruned) rather than left as someone else's.
 core.system.link.service::relink_from() {
   guards::stays_inside "$1" && [ -n "${1%/}" ] && [[ "$1" != /* ]] || return 1
@@ -673,9 +673,9 @@ core.system.link.service::plan_link() {
   if core.system.link.service::planned_origin "$2"; then
     [ "$LINK_PLANNED" != "$1" ] || return 0
     if [ "$LINK_PLANNED_GROUP" = . ] && [ "$LINK_GROUP" != . ]; then
-      LINK_NOTICES+=("Skipped ${LINK_GROUP#+}'s link to $3: your own links already link it to $(dot::relative "$LINK_PLANNED").")
+      LINK_NOTICES+=("Skipped ${LINK_GROUP#+}'s link to $3: your own links already link it to $(hey::relative "$LINK_PLANNED").")
     else
-      LINK_NOTICES+=("Skipped $(dot::relative "$1") → $3: an earlier entry already links it to $(dot::relative "$LINK_PLANNED").")
+      LINK_NOTICES+=("Skipped $(hey::relative "$1") → $3: an earlier entry already links it to $(hey::relative "$LINK_PLANNED").")
     fi
     return
   fi
@@ -716,19 +716,19 @@ core.system.link.service::plan_mapping() {
     origin_path="${origin%"$LINK_TREE_SUFFIX"}"
   fi
   if ! guards::stays_inside "$origin_path" || ! guards::stays_inside "$destination"; then
-    core.system.link.service::fail "Skipped $entry: it uses \"..\", which dotdot doesn't follow."
+    core.system.link.service::fail "Skipped $entry: it uses \"..\", which dotHey doesn't follow."
     return
   fi
-  core.system.link.service::resolve_under "$origin_path" "$DOTDOT_ROOT" origin_absolute \
-    || { core.system.link.service::fail "Skipped $origin_path: it's outside $DOTDOT_NAME/."; return; }
+  core.system.link.service::resolve_under "$origin_path" "$DOTHEY_ROOT" origin_absolute \
+    || { core.system.link.service::fail "Skipped $origin_path: it's outside $DOTHEY_NAME/."; return; }
   core.system.link.service::resolve_under "$destination" "$BASE" destination_absolute \
     || { core.system.link.service::fail "Skipped $destination: it's outside the project."; return; }
   guards::link_origin "$origin_absolute" \
-    || { core.system.link.service::fail "Skipped $origin_path: it's outside $DOTDOT_NAME/."; return; }
+    || { core.system.link.service::fail "Skipped $origin_path: it's outside $DOTHEY_NAME/."; return; }
   guards::link_destination "$destination_absolute" \
-    || { core.system.link.service::fail "Skipped $destination: it's a protected place ($DOTDOT_NAME/, .git/, the dot entry point, or .env)."; return; }
+    || { core.system.link.service::fail "Skipped $destination: it's a protected place ($DOTHEY_NAME/, .git/, the hey entry point, or .env)."; return; }
   if [ ! -e "$origin_absolute" ] && ! { $LINK_SEED_USER && [ "$origin_absolute" = "$USER_FILE" ]; } \
-    && ! core.harnesses.transform::is_kept "${origin_absolute#"$DOTDOT_ROOT"/}"; then
+    && ! core.harnesses.transform::is_kept "${origin_absolute#"$DOTHEY_ROOT"/}"; then
     core.system.link.service::fail "Skipped $origin_path: it doesn't exist."
     return
   fi
@@ -737,7 +737,7 @@ core.system.link.service::plan_mapping() {
     return
   fi
   if $tree && [ -L "$destination_absolute" ]; then
-    core.system.link.service::fail "Skipped $destination: it's a link to a directory. Please remove it if dotdot should link there."
+    core.system.link.service::fail "Skipped $destination: it's a link to a directory. Please remove it if dotHey should link there."
     return
   fi
   if ! $tree; then
@@ -771,11 +771,11 @@ core.system.link.service::plan_transformed() {
   id="$TRANSFORM_HARNESS"
   case "$status" in
     1) core.system.link.service::plan_mapping "$entry" "$override"; return ;;
-    2) core.system.link.service::fail "Didn't link agents into $folder/: $TRANSFORM_CLAIMS read it in different formats." "Please give one of them its own folder in $(dot::relative "$CORE_DIR")/harnesses/."; return ;;
+    2) core.system.link.service::fail "Didn't link agents into $folder/: $TRANSFORM_CLAIMS read it in different formats." "Please give one of them its own folder in $(hey::relative "$CORE_DIR")/harnesses/."; return ;;
   esac
   if framework.helpers.fs::is_contents_pattern "$origin"; then
     path="${origin%"$LINK_TREE_SUFFIX"}"
-    guards::stays_inside "$path" && [ -d "$DOTDOT_ROOT/$path" ] || { core.system.link.service::plan_mapping "$entry" "$override"; return; }
+    guards::stays_inside "$path" && [ -d "$DOTHEY_ROOT/$path" ] || { core.system.link.service::plan_mapping "$entry" "$override"; return; }
     while IFS= read -r -d '' child; do
       name="${child##*/}"
       [ "$name" != "$KEEP_FILE" ] || continue
@@ -784,25 +784,25 @@ core.system.link.service::plan_transformed() {
       else
         core.system.link.service::plan_mapping "$path/$name$LINK_SEPARATOR$folder/$name" "$override"
       fi
-    done < <(find "$DOTDOT_ROOT/$path" -mindepth 1 -maxdepth 1 -print0 | sort -z)
+    done < <(find "$DOTHEY_ROOT/$path" -mindepth 1 -maxdepth 1 -print0 | sort -z)
     return
   fi
   core.system.link.service::plan_agent "$id" "$origin" "$folder" "$override"
 }
 
-# One agent at <source> (dotdot-relative), built for harness <id> and linked
+# One agent at <source> (dotHey-relative), built for harness <id> and linked
 # into <folder>; when building fails, what is there stays as it is.
 core.system.link.service::plan_agent() {
   local id="$1" source="$2" folder="$3" override="$4" name built destination
-  guards::stays_inside "$source" && [ -f "$DOTDOT_ROOT/$source" ] || { core.system.link.service::plan_mapping "$source$LINK_SEPARATOR$folder/${source##*/}" "$override"; return; }
+  guards::stays_inside "$source" && [ -f "$DOTHEY_ROOT/$source" ] || { core.system.link.service::plan_mapping "$source$LINK_SEPARATOR$folder/${source##*/}" "$override"; return; }
   name="${source##*/}"
   name="${name%.md}"
   built=$(core.harnesses.transform::built "$id" "$name")
   destination="$folder/${built##*/}"
   if ! $LINK_PREVIEW && ! core.harnesses.transform::build "$id" "$name" "$source" "$built"; then
     LINK_HELD="$LINK_HELD$BASE/$destination "
-    [ ! -e "$DOTDOT_ROOT/$built" ] || core.harnesses.transform::keep "$built"
-    core.system.link.service::fail "Couldn't build $destination from $DOTDOT_NAME/$source, so it stays as it was."
+    [ ! -e "$DOTHEY_ROOT/$built" ] || core.harnesses.transform::keep "$built"
+    core.system.link.service::fail "Couldn't build $destination from $DOTHEY_NAME/$source, so it stays as it was."
     return
   fi
   core.harnesses.transform::keep "$built"
@@ -856,7 +856,7 @@ core.system.link.service::append_origin() {
   local origin="$1" target="$2" link_origin
   core.system.link.service::shortcut_path "$origin" && ! framework.helpers.fs::is_contents_pattern "$LINK_SHORTCUT" \
     && guards::stays_inside "$LINK_SHORTCUT" \
-    && core.system.link.service::resolve_under "$LINK_SHORTCUT" "$DOTDOT_ROOT" link_origin \
+    && core.system.link.service::resolve_under "$LINK_SHORTCUT" "$DOTHEY_ROOT" link_origin \
     && guards::link_origin "$link_origin" && [ -f "$link_origin" ] || return 1
   printf -v "$target" '%s' "$link_origin"
 }
@@ -883,11 +883,11 @@ core.system.link.service::is_append_planned() {
 }
 
 # Whose region an append writes, the label of its markers: the plugin its
-# origin is in, else dotdot.
+# origin is in, else dotHey.
 core.system.link.service::append_label() {
   local plugin
   plugin=$(core.system.link.service::origin_plugin "$1")
-  printf '%s\n' "${plugin:-$LINK_DOTDOT_LABEL}"
+  printf '%s\n' "${plugin:-$LINK_DOTHEY_LABEL}"
 }
 
 # What to do for one append; a removal takes its region out, quietly when
@@ -898,7 +898,7 @@ core.system.link.service::plan_append() {
   [ -n "$label" ] || label=$(core.system.link.service::append_label "$origin")
   if ! core.system.link.service::append_destination "$destination" path "$label"; then
     $removal && return 0
-    core.system.link.service::fail "Skipped appending to $destination: appends go to project files (not in .git/, not .env) or to dotdot's top-level docs."
+    core.system.link.service::fail "Skipped appending to $destination: appends go to project files (not in .git/, not .env) or to dotHey's top-level docs."
     return
   fi
   style=$(core.system.link.service::marker_style "$path")
@@ -912,7 +912,7 @@ core.system.link.service::plan_append() {
     if module=$(core.system.link.service::disabled_module_of "$origin"); then
       core.system.link.service::fail "Skipped appending $origin: the feature flag featureFlags.$module turns its module off."
     else
-      core.system.link.service::fail "Skipped appending $origin: it isn't a file @dot:, @module:, @harness: or @plugin: names."
+      core.system.link.service::fail "Skipped appending $origin: it isn't a file @hey:, @module:, @harness: or @plugin: names."
     fi
     return
   fi
@@ -932,7 +932,7 @@ core.system.link.service::plan_append() {
 }
 
 # Every append, removals first so they win, then what removed plugins
-# appended, then dotdot's sections no row wants in the files harnesses read.
+# appended, then dotHey's sections no row wants in the files harnesses read.
 core.system.link.service::plan_appends() {
   local group origin destination
   while IFS="$LINK_TAB" read -r _ _ origin destination; do
@@ -946,14 +946,14 @@ core.system.link.service::plan_appends() {
   [ -n "$LINK_ONLY_GROUP" ] || core.system.link.service::plan_unwanted_appends
 }
 
-# dotdot's section in each instructions file a harness reads, taken out when
+# dotHey's section in each instructions file a harness reads, taken out when
 # no row appends it any more.
 core.system.link.service::plan_unwanted_appends() {
   local id path
   while IFS= read -r id; do
     while IFS= read -r path; do
       [ -n "$path" ] && core.harnesses.harness::project_path "$path" > /dev/null || continue
-      core.system.link.service::plan_append "" "$path" true "$LINK_DOTDOT_LABEL"
+      core.system.link.service::plan_append "" "$path" true "$LINK_DOTHEY_LABEL"
     done < <(core.harnesses.harness::data "$id" '.instructions.existing[]'; core.harnesses.harness::data "$id" .instructions.create)
   done < <(core.harnesses.harness::ids)
 }
@@ -990,14 +990,14 @@ core.system.link.service::swept_directories() {
   } | sort -zu
 }
 
-# Whether <target>, where a link leads, is dotdot's: inside it, or in one of
+# Whether <target>, where a link leads, is dotHey's: inside it, or in one of
 # the places it counts as its own.
-core.system.link.service::is_dotdots() {
-  framework.helpers.fs::is_inside "$1" "$DOTDOT_ROOT" || core.system.link.service::is_managed "$1"
+core.system.link.service::is_dotheys() {
+  framework.helpers.fs::is_inside "$1" "$DOTHEY_ROOT" || core.system.link.service::is_managed "$1"
 }
 
-# Prunes dotdot's broken links, and its links into a module a feature flag
-# turns off; with "all", every link of dotdot's no row plans (a removed
+# Prunes dotHey's broken links, and its links into a module a feature flag
+# turns off; with "all", every link of dotHey's no row plans (a removed
 # row's), but what a failed build left as it is.
 core.system.link.service::plan_pruning() {
   local scope="${1-}" directory link target module off=()
@@ -1011,13 +1011,13 @@ core.system.link.service::plan_pruning() {
       [[ "$LINK_HELD" != *" $link "* ]] || continue
       framework.helpers.fs::resolve_to target "$link" || continue
       if [ "$scope" = all ]; then
-        core.system.link.service::is_dotdots "$target" || continue
+        core.system.link.service::is_dotheys "$target" || continue
       else
         core.system.link.service::is_managed "$target" || continue
         [ ! -e "$link" ] || core.system.link.service::is_inside_any "$target" ${off[@]+"${off[@]}"} || continue
       fi
       ! core.system.link.service::is_planned "$link" || continue
-      core.system.link.service::add "" "$link" "$(dot::relative "$link")" prune
+      core.system.link.service::add "" "$link" "$(hey::relative "$link")" prune
     done < <(find "$directory" -mindepth 1 -maxdepth 1 -type l -print0 | sort -z)
   done < <(core.system.link.service::swept_directories "$scope")
 }
@@ -1026,7 +1026,7 @@ core.system.link.service::plan() {
   local override="$1" refresh="${2-}" entry
   core.system.link.service::prepare_map "$refresh"
   [ -n "$LINK_EFFECTIVE_MAP" ] || return 0
-  core.system.link.service::load_denied || { core.system.link.service::fail "plugins.denyLinkOrigin or plugins.denyLinkDestination in $(dot::relative "$SETTINGS_FILE") can't be read, so nothing was linked."; return 0; }
+  core.system.link.service::load_denied || { core.system.link.service::fail "plugins.denyLinkOrigin or plugins.denyLinkDestination in $(hey::relative "$SETTINGS_FILE") can't be read, so nothing was linked."; return 0; }
   core.system.link.service::plan_removals
   if [ ! -e "$USER_FILE" ] && [ ! -L "$USER_FILE" ] && [ -f "$USER_EXAMPLE_FILE" ]; then
     LINK_SEED_USER=true
@@ -1040,7 +1040,7 @@ core.system.link.service::plan() {
   done < <(core.system.link.service::mappings)
   LINK_GROUP=""
   if [ -z "$LINK_ONLY_GROUP" ]; then
-    $LINK_PREVIEW || core.harnesses.transform::clean || core.system.link.service::fail "Couldn't remove the agents no link uses any more from $DOTDOT_NAME/$TRANSFORM_BUILD_DIR/."
+    $LINK_PREVIEW || core.harnesses.transform::clean || core.system.link.service::fail "Couldn't remove the agents no link uses any more from $DOTHEY_NAME/$TRANSFORM_BUILD_DIR/."
     core.system.link.service::plan_pruning all
   fi
   core.system.link.service::plan_appends
@@ -1091,10 +1091,10 @@ core.system.link.service::user_state() {
 
 core.system.link.service::seed() {
   if [ ${#LINK_MAP_NOTES[@]} -gt 0 ]; then
-    core.system.link.service::save || core.system.link.service::fail "Couldn't write $(dot::relative "$SETTINGS_FILE"); please check that it's writable."
+    core.system.link.service::save || core.system.link.service::fail "Couldn't write $(hey::relative "$SETTINGS_FILE"); please check that it's writable."
   fi
   if $LINK_SEED_USER; then
-    sed '/^ignore: true$/d' "$USER_EXAMPLE_FILE" > "$USER_FILE" || core.system.link.service::fail "Couldn't create $DOTDOT_NAME/USER.md."
+    sed '/^ignore: true$/d' "$USER_EXAMPLE_FILE" > "$USER_FILE" || core.system.link.service::fail "Couldn't create $DOTHEY_NAME/USER.md."
   fi
 }
 
@@ -1207,7 +1207,7 @@ core.system.link.service::apply_appends() {
     # Checked again as written: a link made earlier in this run may now lead
     # the destination somewhere the plan never allowed.
     if ! framework.helpers.fs::resolve_to physical "$path" || [ "$physical" != "$path" ] || ! guards::append_destination "$physical" "$marker"; then
-      core.system.link.service::fail "Skipped appending to $label: it changed after the preview (it now leads to $(dot::relative "${physical:-?}"))."
+      core.system.link.service::fail "Skipped appending to $label: it changed after the preview (it now leads to $(hey::relative "${physical:-?}"))."
       continue
     fi
     case "${LINK_APPEND_ACTIONS[$index]}" in
@@ -1226,7 +1226,7 @@ core.system.link.service::apply_appends() {
 }
 
 # Moves a plugin's group between "inactive" and the active links in
-# dot.json, the rest of the file left as written: <to> active places it right
+# hey.json, the rest of the file left as written: <to> active places it right
 # before "inactive", <to> inactive at the end of "inactive". With <replace>,
 # it takes the place of a group already there.
 # Where <plugin>'s links are in the links map: active, inactive, both, or none.
@@ -1246,7 +1246,7 @@ core.system.link.service::group_state() {
 
 core.system.link.service::move_group() {
   local plugin="$1" to="$2" replace="$3" document key from_path to_path group placement=()
-  core.system.link.service::has_map || { core.system.link.service::fail "$(dot::relative "$SETTINGS_FILE") has no links yet." "Please run bash dot link first."; return; }
+  core.system.link.service::has_map || { core.system.link.service::fail "$(hey::relative "$SETTINGS_FILE") has no links yet." "Please run bash hey link first."; return; }
   document=$(cat -- "$SETTINGS_FILE")
   key=$(framework.helpers.json::string "$plugin")
   if [ "$to" = active ]; then
@@ -1257,7 +1257,7 @@ core.system.link.service::move_group() {
   group=$(framework.helpers.json::encoded "$document" "$from_path")
   case "$group" in
     "{"*) ;;
-    "") core.system.link.service::fail "$(dot::relative "$SETTINGS_FILE") isn't valid JSON. Please fix it and run the command again."; return ;;
+    "") core.system.link.service::fail "$(hey::relative "$SETTINGS_FILE") isn't valid JSON. Please fix it and run the command again."; return ;;
     *)
       if [ "$to" = active ]; then
         core.system.link.service::fail "$plugin has no links waiting under \"inactive\"."
@@ -1268,17 +1268,17 @@ core.system.link.service::move_group() {
       ;;
   esac
   if [ "$(framework.helpers.json::encoded "$document" "$to_path")" != null ] && ! $replace; then
-    core.system.link.service::fail "$plugin's links are already $to. Please edit them in $(dot::relative "$SETTINGS_FILE"), or add --overwrite to take the new ones."
+    core.system.link.service::fail "$plugin's links are already $to. Please edit them in $(hey::relative "$SETTINGS_FILE"), or add --overwrite to take the new ones."
     return
   fi
   document=$(framework.helpers.json::set "$document" "$to_path" "$(framework.helpers.json::set null . "$group")" --keep-format ${placement[@]+"${placement[@]}"}) \
     && document=$(framework.helpers.json::delete "$document" "$from_path" --keep-format) \
     && printf '%s\n' "$document" | framework.helpers.fs::write "$SETTINGS_FILE" \
-    || core.system.link.service::fail "Couldn't write $(dot::relative "$SETTINGS_FILE"); please check that it's writable."
+    || core.system.link.service::fail "Couldn't write $(hey::relative "$SETTINGS_FILE"); please check that it's writable."
 }
 
 # Writes the map alone, for plugin commands: no link, no append.
 core.system.link.service::save_map() {
   [ ${#LINK_MAP_NOTES[@]} -gt 0 ] || return 0
-  core.system.link.service::save || core.system.link.service::fail "Couldn't write $(dot::relative "$SETTINGS_FILE"); please check that it's writable."
+  core.system.link.service::save || core.system.link.service::fail "Couldn't write $(hey::relative "$SETTINGS_FILE"); please check that it's writable."
 }

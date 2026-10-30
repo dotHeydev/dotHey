@@ -4,7 +4,7 @@ DESCRIPTION="Create a task."
 DOCS="tasks"
 JSON=true
 
-dot::use framework.console.args framework.helpers.fs framework.console.output framework.console.prompt core.modules.tasks.console core.modules.tasks.service framework.helpers.text framework.helpers.json
+hey::use framework.console.args framework.helpers.fs framework.console.output framework.console.prompt core.modules.tasks.console core.modules.tasks.service framework.helpers.text framework.helpers.json
 
 usage() {
   core.modules.tasks.service::require_template
@@ -14,7 +14,7 @@ template. At a terminal, a missing title is asked for, and your editor opens
 when no content is given.
 
 Usage:
-  bash dot tasks:create [<title>] [options]
+  bash hey tasks:create [<title>] [options]
 
 Arguments:
   <title>                  One line. Required without a terminal.
@@ -30,10 +30,10 @@ $(core.modules.tasks.console::section_flags_help)
   -h, --help               Show this help.
 
 Examples:
-  bash dot tasks:create "Throttle failed logins" \\
+  bash hey tasks:create "Throttle failed logins" \\
     --description "Brute-force attempts aren't throttled." \\
     --done-when "- [ ] 5 failed attempts lock the route for a minute"
-  bash dot tasks:create "Rewrite the README" --status doing
+  bash hey tasks:create "Rewrite the README" --status doing
 
 Notes:
   - Sections left out read "None"; a section flag goes on top of --body.
@@ -73,7 +73,7 @@ handle() {
   if ! $has_title; then
     framework.console.prompt::is_interactive || framework.console.args::invalid "The task needs a title."
     title=$(framework.console.prompt::require "" "Title" "The task needs a title.")
-    framework.console.prompt::hint "bash dot tasks:create \"$title\" ..."
+    framework.console.prompt::hint "bash hey tasks:create \"$title\" ..."
   fi
   core.modules.tasks.service::check_title "$title"
   $has_body || core.modules.tasks.service::compose_body "$sections" > "$body"
@@ -82,7 +82,7 @@ handle() {
   [ -z "$(core.modules.tasks.service::given_sections "$sections")" ] || has_content=true
   [ "$(core.modules.tasks.console::editor_mode "$editor" "$has_content")" = no ] || core.modules.tasks.console::edit_body "$body"
   id=$(core.modules.tasks.console::call create "$title" "$status" "$body") || exit
-  if $DOT_JSON; then
+  if $HEY_JSON; then
     printf '{"id":%s,"title":%s,"status":%s}\n' "$(framework.helpers.json::string "$id")" "$(framework.helpers.json::string "$title")" "$(framework.helpers.json::string "$status")"
     return
   fi

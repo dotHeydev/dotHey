@@ -42,4 +42,4 @@ framework.helpers.date::use_timezone() {
 }
 
 # Dates follow the project timezone from the moment this helper loads.
-dot::use_timezone
+hey::use_timezone

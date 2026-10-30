@@ -54,7 +54,7 @@ CURL
 }
 
 github() {
-  core "PATH='$SANDBOX/bin':\$PATH; dot::use framework.integrations.github.service; ${2:-}
+  core "PATH='$SANDBOX/bin':\$PATH; hey::use framework.integrations.github.service; ${2:-}
     framework.integrations.github.service::$1"
 }
 
@@ -64,9 +64,9 @@ test_gh_runs_as_the_login_and_the_token_only_for_its_own_call() {
   assert_success
   assert_equal "$OUTPUT" "7	OPEN	task,task:todo	2026-01-01T00:00:00Z	2026-01-02T00:00:00Z	A task"
   assert_equal "$(grep -c 'gh token=none issue view' "$SANDBOX/calls")" "1"
-  printf 'DOT_GH_TOKEN=secret-token\n' > "$SANDBOX/.env"
+  printf 'HEY_GH_TOKEN=secret-token\n' > "$SANDBOX/.env"
   : > "$SANDBOX/calls"
-  core "PATH='$SANDBOX/bin':\$PATH; dot::use framework.integrations.github.service
+  core "PATH='$SANDBOX/bin':\$PATH; hey::use framework.integrations.github.service
     printf 'before:%s\n' \"\${GH_TOKEN-none}\"
     framework.integrations.github.service::can_reach acme/repo
     printf 'after:%s\n' \"\${GH_TOKEN-none}\""
@@ -79,7 +79,7 @@ after:none"
 
 test_a_failing_gh_falls_back_to_the_api_with_the_same_token_only() {
   fake_github fail api
-  printf 'DOT_GH_TOKEN=secret-token\n' > "$SANDBOX/.env"
+  printf 'HEY_GH_TOKEN=secret-token\n' > "$SANDBOX/.env"
   github "issue acme/repo 7"
   assert_success
   assert_equal "$OUTPUT" "7	OPEN	task	2026-01-01T00:00:00Z	2026-01-02T00:00:00Z	A task"
@@ -97,7 +97,7 @@ test_without_a_token_a_failing_gh_has_no_fallback() {
 
 test_every_route_failing_names_each_attempt() {
   fake_github fail fail
-  printf 'DOT_GH_TOKEN=secret-token\n' > "$SANDBOX/.env"
+  printf 'HEY_GH_TOKEN=secret-token\n' > "$SANDBOX/.env"
   github "issue acme/repo 7"
   assert_failure
   assert_equal "$STATUS" 1
@@ -112,7 +112,7 @@ test_without_gh_or_a_login_the_error_says_what_to_set_up() {
   github "issue acme/repo 7" "GITHUB_CLI=gh-missing"
   assert_failure
   assert_equal "$STATUS" 1
-  printf 'DOT_GH_TOKEN=secret-token\n' > "$SANDBOX/.env"
+  printf 'HEY_GH_TOKEN=secret-token\n' > "$SANDBOX/.env"
   printf 'api\n' > "$SANDBOX/curl.mode"
   github "issue acme/repo 7" "GITHUB_CLI=gh-missing"
   assert_success "without gh, the token goes to the API"

@@ -1,9 +1,9 @@
 # shellcheck shell=bash
 
-FRAMEWORK_VARIABLES_PATTERN='\$\{?(BASE|DOTDOT_ROOT|DOTDOT_NAME|CORE_DIR|FRAMEWORK_DIR|BIN_DIR|DOT_BIN|PLUGINS_DIR|PLUGINS_LOCK|SETTINGS_FILE|SETTINGS_DEFAULTS|HOST_ENV_FILE|USER_FILE|USER_EXAMPLE_FILE|ENTRY_LINK)\b'
+FRAMEWORK_VARIABLES_PATTERN='\$\{?(BASE|DOTHEY_ROOT|DOTHEY_NAME|CORE_DIR|FRAMEWORK_DIR|BIN_DIR|HEY_BIN|PLUGINS_DIR|PLUGINS_LOCK|SETTINGS_FILE|SETTINGS_DEFAULTS|HOST_ENV_FILE|USER_FILE|USER_EXAMPLE_FILE|ENTRY_LINK)\b'
 
 core_dir() {
-  printf '%s\n' "$DOTDOT/.core"
+  printf '%s\n' "$DOTHEY/.core"
 }
 
 search() {
@@ -28,7 +28,7 @@ misnamed_functions() {
   done < <(find "$root" -name '*.sh' "$@")
 }
 
-test_helpers_console_and_ui_know_nothing_about_dotdot() {
+test_helpers_console_and_ui_know_nothing_about_dothey() {
   local found
   found=$(search "core\.|plugins\.|integrations\.|$FRAMEWORK_VARIABLES_PATTERN" "$(core_dir)/framework/helpers" "$(core_dir)/framework/console" "$(core_dir)/framework/ui")
   [ -z "$found" ] || fail "helpers, console, and ui must stay project-agnostic:
@@ -38,7 +38,7 @@ $found"
 test_framework_never_reaches_into_the_runtime_internals() {
   local found
   found=$(search "(kernel|paths)::|core\." "$(core_dir)/framework")
-  [ -z "$found" ] || fail "framework code may use only the public dot:: API, never kernel::, paths::, or core modules:
+  [ -z "$found" ] || fail "framework code may use only the public hey:: API, never kernel::, paths::, or core modules:
 $found"
 }
 
@@ -93,7 +93,7 @@ test_commands_declare_the_command_contract() {
 
 test_guards_only_decide() {
   local found
-  found=$(grep -nE 'console\.|exit|dot::(raise|abort|use)|read -[a-z]*p|>>? *"?\$|(^|[;&|[:space:]])(rm|mv|cp|ln|mkdir) ' "$(core_dir)/system/guards.sh" | grep -v '^[0-9]*: *#' || true)
+  found=$(grep -nE 'console\.|exit|hey::(raise|abort|use)|read -[a-z]*p|>>? *"?\$|(^|[;&|[:space:]])(rm|mv|cp|ln|mkdir) ' "$(core_dir)/system/guards.sh" | grep -v '^[0-9]*: *#' || true)
   [ -z "$found" ] || fail "guards are predicates: no output, prompts, exits, loads, or writes:
 $found"
 }

@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 
-# GitHub through the gh CLI: as DOT_GH_TOKEN's owner when it is set (gh then
+# GitHub through the gh CLI: as HEY_GH_TOKEN's owner when it is set (gh then
 # takes it over its own login), else as the logged-in user. Each operation
 # prints what the service expects, gh's error on stderr.
 
@@ -16,7 +16,7 @@ framework.integrations.github.internal.cli::is_logged_in() {
 
 framework.integrations.github.internal.cli::gh() {
   local token
-  token=$(dot::secret DOT_GH_TOKEN 2>/dev/null) || token=""
+  token=$(hey::secret HEY_GH_TOKEN 2>/dev/null) || token=""
   if [ -n "$token" ]; then
     GH_TOKEN="$token" GH_PROMPT_DISABLED=1 "$GITHUB_CLI" "$@"
   else

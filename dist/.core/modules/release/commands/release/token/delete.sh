@@ -3,23 +3,23 @@
 DESCRIPTION="Remove the token a release remote pushes with."
 DOCS="releases"
 
-dot::use framework.console.args core.modules.release.service framework.console.output
+hey::use framework.console.args core.modules.release.service framework.console.output
 
 usage() {
   cat <<EOF
-Removes the token saved for a remote's url by bash dot release:token.
+Removes the token saved for a remote's url by bash hey release:token.
 
 Usage:
-  bash dot release:token:delete <remote>
+  bash hey release:token:delete <remote>
 
 Arguments:
-  <remote>     The remote, a key of release.remotes in $(dot::relative "$SETTINGS_FILE").
+  <remote>     The remote, a key of release.remotes in $(hey::relative "$SETTINGS_FILE").
 
 Options:
   -h, --help   Show this help.
 
 Examples:
-  bash dot release:token:delete github
+  bash hey release:token:delete github
 EOF
 }
 

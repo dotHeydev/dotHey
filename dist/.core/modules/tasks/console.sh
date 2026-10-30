@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 
-dot::use framework.console.args core.modules.tasks.service framework.console.output framework.console.prompt framework.helpers.template framework.console.terminal framework.ui.spinner
+hey::use framework.console.args core.modules.tasks.service framework.console.output framework.console.prompt framework.helpers.template framework.console.terminal framework.ui.spinner
 
 core.modules.tasks.console::section_flags_help() {
   local section
@@ -14,9 +14,9 @@ core.modules.tasks.console::ensure_service() {
   core.modules.tasks.service::require_template
   if ! service=$(core.modules.tasks.service::selected_service); then
     framework.console.prompt::is_interactive \
-      || framework.console.output::fail_as "$EXIT_PRECONDITION" "Tasks aren't set up yet." "Choose where they're kept: bash dot tasks:initialize --service <$(core.modules.tasks.service::services | paste -sd '|' -)>"
+      || framework.console.output::fail_as "$EXIT_PRECONDITION" "Tasks aren't set up yet." "Choose where they're kept: bash hey tasks:initialize --service <$(core.modules.tasks.service::services | paste -sd '|' -)>"
     framework.console.output::warn "Tasks aren't set up yet."
-    dot::call tasks:initialize || exit
+    hey::call tasks:initialize || exit
     service=$(core.modules.tasks.service::selected_service) || framework.console.output::fail "No task service chosen, so nothing changed."
   fi
   core.modules.tasks.service::load_service "$service"
@@ -62,7 +62,7 @@ core.modules.tasks.console::status_usage() {
 Moves a task to $status.
 
 Usage:
-  bash dot tasks:$status <id>
+  bash hey tasks:$status <id>
 
 Arguments:
   <id>         The task's id (t004, #12).
@@ -71,10 +71,10 @@ Options:
   -h, --help   Show this help.
 
 Examples:
-  bash dot tasks:$status t004
+  bash hey tasks:$status t004
 
 Notes:
-  - The same as bash dot tasks:update <id> --status $status.
+  - The same as bash hey tasks:update <id> --status $status.
 USAGE
 }
 
@@ -82,5 +82,5 @@ core.modules.tasks.console::move() {
   local status="$1"
   shift
   [ $# -eq 1 ] || framework.console.args::invalid "Which task? Please give one task id, e.g. t004."
-  dot::call tasks:update "$1" --status "$status"
+  hey::call tasks:update "$1" --status "$status"
 }

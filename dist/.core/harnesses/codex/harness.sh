@@ -4,7 +4,7 @@
 # in harness.json drives the shared handler; what the data can't express goes
 # in this folder's own scripts, called from here.
 
-dot::use core.harnesses.harness core.harnesses.codex.agents-toml
+hey::use core.harnesses.harness core.harnesses.codex.agents-toml
 
 core.harnesses.codex.harness::detect() { core.harnesses.harness::detect "$@"; }
 core.harnesses.codex.harness::scan() { core.harnesses.harness::scan "$@"; }

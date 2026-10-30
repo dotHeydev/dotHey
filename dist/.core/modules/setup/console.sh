@@ -1,13 +1,13 @@
 # shellcheck shell=bash
 
-dot::use core.modules.setup.service core.modules.setup.alias framework.console.output framework.helpers.json framework.helpers.text framework.ui.list
+hey::use core.modules.setup.service core.modules.setup.alias framework.console.output framework.helpers.json framework.helpers.text framework.ui.list
 
 SETUP_STEP=0
 SETUP_STEPS=0
 SETUP_VERB_WIDTH=11
 SETUP_ENDING="🚀 Build something amazing!"
-SETUP_ALIAS_TIP="Run bash dot alias:add to type dot instead of bash dot."
-SETUP_ALIAS_LINE_TIP="To type dot instead of bash dot, add this line to your shell's rc file:"
+SETUP_ALIAS_TIP="Run bash hey alias:add to type hey instead of bash hey."
+SETUP_ALIAS_LINE_TIP="To type hey instead of bash hey, add this line to your shell's rc file:"
 
 # A warning for each harness whose data couldn't be read.
 core.modules.setup.console::warn_invalid() {
@@ -44,8 +44,8 @@ core.modules.setup.console::question() {
 }
 
 # The plan, condensed: link's <plan> (its --json preview), the moves centralizing
-# makes with <type>, and dotdot's move to <dir>, as what changes in the project, then in
-# dotdot, a line per kind of change and folder. Status 1, saying so, when
+# makes with <type>, and dotHey's move to <dir>, as what changes in the project, then in
+# dotHey, a line per kind of change and folder. Status 1, saying so, when
 # everything is already in place.
 core.modules.setup.console::plan() {
   local plan="$1" dir="$2" type="$3" rows skills=0 agents=0 move skipped scope verb text previous="" folder missing=""
@@ -58,32 +58,32 @@ core.modules.setup.console::plan() {
   rows=$(core.modules.setup.console::plan_rows "$plan" | while IFS="$SETUP_TAB" read -r scope verb text; do
     # A section added to a file not there yet makes the file.
     if [ "$verb" = Add ] && [ ! -e "$BASE/${text##* }" ]; then
-      printf '%s\tCreate\t%s, with dotdot'"'"'s section\n' "$scope" "${text##* }"
+      printf '%s\tCreate\t%s, with dotHey'"'"'s section\n' "$scope" "${text##* }"
     else
       printf '%s\t%s\t%s\n' "$scope" "$verb" "$text"
     fi
   done)
   case ${#SETUP_DUPLICATES[@]} in
     0) ;;
-    1) rows="$rows"$'\n'"project${SETUP_TAB}Remove${SETUP_TAB}${SETUP_DUPLICATES[0]}, a copy of what moves into dotdot" ;;
-    *) rows="$rows"$'\n'"project${SETUP_TAB}Remove${SETUP_TAB}${#SETUP_DUPLICATES[@]} copies of what moves into dotdot" ;;
+    1) rows="$rows"$'\n'"project${SETUP_TAB}Remove${SETUP_TAB}${SETUP_DUPLICATES[0]}, a copy of what moves into dotHey" ;;
+    *) rows="$rows"$'\n'"project${SETUP_TAB}Remove${SETUP_TAB}${#SETUP_DUPLICATES[@]} copies of what moves into dotHey" ;;
   esac
   for skipped in ${SETUP_SKIPPED[@]+"${SETUP_SKIPPED[@]}"}; do
     rows="$rows"$'\n'"project${SETUP_TAB}Leave${SETUP_TAB}${skipped%%"$SETUP_TAB"*} ($(framework.console.output::paint "$UI_STYLE_MUTED" "${skipped#*"$SETUP_TAB"}"))"
   done
   if [ "$type" = centralize ]; then
     for folder in "$SETUP_SKILLS_DIR" "$SETUP_AGENTS_DIR"; do
-      [ -d "$DOTDOT_ROOT/$folder" ] || missing="$missing${missing:+ and }$DOTDOT_NAME/$folder/"
+      [ -d "$DOTHEY_ROOT/$folder" ] || missing="$missing${missing:+ and }$DOTHEY_NAME/$folder/"
     done
-    [ -z "$missing" ] || rows="$rows"$'\n'"dotdot${SETUP_TAB}Create${SETUP_TAB}$missing, for your own skills and agents"
+    [ -z "$missing" ] || rows="$rows"$'\n'"dothey${SETUP_TAB}Create${SETUP_TAB}$missing, for your own skills and agents"
   fi
   if [ $((skills + agents)) -eq 1 ]; then
     move="${SETUP_MOVES[0]}"
-    rows="$rows"$'\n'"dotdot${SETUP_TAB}Take in${SETUP_TAB}${move%%"$SETUP_TAB"*} as $DOTDOT_NAME/$(printf '%s' "${move#*"$SETUP_TAB"}" | cut -f1), linked where your harnesses read it"
+    rows="$rows"$'\n'"dothey${SETUP_TAB}Take in${SETUP_TAB}${move%%"$SETUP_TAB"*} as $DOTHEY_NAME/$(printf '%s' "${move#*"$SETUP_TAB"}" | cut -f1), linked where your harnesses read it"
   elif [ $((skills + agents)) -gt 1 ]; then
-    rows="$rows"$'\n'"dotdot${SETUP_TAB}Take in${SETUP_TAB}$(core.modules.setup.console::items "$skills" "$agents"), linked where your harnesses read them"
+    rows="$rows"$'\n'"dothey${SETUP_TAB}Take in${SETUP_TAB}$(core.modules.setup.console::items "$skills" "$agents"), linked where your harnesses read them"
   fi
-  [ -z "$dir" ] || [ "$dir" = "$DOTDOT_NAME" ] || rows="$rows"$'\n'"dotdot${SETUP_TAB}Move${SETUP_TAB}dotdot to $dir/, and relink it"
+  [ -z "$dir" ] || [ "$dir" = "$DOTHEY_NAME" ] || rows="$rows"$'\n'"dothey${SETUP_TAB}Move${SETUP_TAB}dotHey to $dir/, and relink it"
   rows=$(printf '%s\n' "$rows" | grep -v '^$' || true)
   if [ -z "$rows" ]; then
     framework.console.output::success "Everything is already in place."
@@ -96,20 +96,20 @@ core.modules.setup.console::plan() {
       if [ "$scope" = project ]; then
         framework.console.output::line "  $(framework.console.output::heading "In your project")"
       else
-        framework.console.output::line "  $(framework.console.output::heading "In dotdot")"
+        framework.console.output::line "  $(framework.console.output::heading "In dotHey")"
       fi
       previous="$scope"
     fi
     framework.console.output::line "    $(framework.console.output::bold "$(printf '%-*s' "$SETUP_VERB_WIDTH" "$verb")")$text"
   done < <(printf '%s\n' "$rows" | sort -s -t "$SETUP_TAB" -k1,1r)
   ! printf '%s\n' "$plan" | grep -q '"taken":[1-9]' \
-    || framework.console.output::detail "$(framework.console.output::paint "$UI_STYLE_MUTED" "What's kept stays as it is; bash dot link --overwrite replaces it, backed up first.")"
+    || framework.console.output::detail "$(framework.console.output::paint "$UI_STYLE_MUTED" "What's kept stays as it is; bash hey link --overwrite replaces it, backed up first.")"
 }
 
 # "<scope>\t<verb>\t<text>" for each kind of change in link's <plan>, its
-# destinations grouped by folder; dotdot's own seeds left out.
+# destinations grouped by folder; dotHey's own seeds left out.
 core.modules.setup.console::plan_rows() {
-  framework.helpers.json::leaves "$1" | awk -F '\t' -v dotdot="$DOTDOT_NAME/" -v OFS='\t' '
+  framework.helpers.json::leaves "$1" | awk -F '\t' -v dothey="$DOTHEY_NAME/" -v OFS='\t' '
     $1 == "changes" { value[$2, $3] = $4; if ($2 + 1 > count) count = $2 + 1 }
     function verb(action) {
       if (action == "link" || action == "move") return "Link"
@@ -123,8 +123,8 @@ core.modules.setup.console::plan_rows() {
     END {
       for (i = 0; i < count; i++) {
         destination = value[i, "destination"]
-        scope = index(destination, dotdot) == 1 ? "dotdot" : "project"
-        if (scope == "dotdot" && value[i, "action"] == "create") continue
+        scope = index(destination, dothey) == 1 ? "dothey" : "project"
+        if (scope == "dothey" && value[i, "action"] == "create") continue
         folder = destination
         sub(/\/$/, "", folder)
         if (!sub(/\/[^\/]*$/, "", folder)) folder = ""
@@ -132,7 +132,7 @@ core.modules.setup.console::plan_rows() {
         key = scope SUBSEP verb(value[i, "action"]) SUBSEP (folder == "" || value[i, "action"] == "append" ? destination : folder)
         if (!(key in total)) order[++keys] = key
         total[key]++
-        only[key] = value[i, "action"] == "append" ? "dotdot'"'"'s section to " destination : destination (value[i, "action"] == "link" ? " to " value[i, "origin"] : "")
+        only[key] = value[i, "action"] == "append" ? "dotHey'"'"'s section to " destination : destination (value[i, "action"] == "link" ? " to " value[i, "origin"] : "")
       }
       # Groups alike but for their folder (19 skills in each harness) as one.
       for (k = 1; k <= keys; k++) {
@@ -154,11 +154,11 @@ core.modules.setup.console::plan_rows() {
     }'
 }
 
-# "9 skills into .dot/Skills/ and 1 agent into .dot/Agents/".
+# "9 skills into .hey/Skills/ and 1 agent into .hey/Agents/".
 core.modules.setup.console::items() {
   local skills="$1" agents="$2" items=""
-  [ "$skills" -eq 0 ] || items="$(framework.helpers.text::plural "$skills" skill) into $DOTDOT_NAME/$SETUP_SKILLS_DIR/"
-  [ "$agents" -eq 0 ] || items="$items${items:+ and }$(framework.helpers.text::plural "$agents" agent) into $DOTDOT_NAME/$SETUP_AGENTS_DIR/"
+  [ "$skills" -eq 0 ] || items="$(framework.helpers.text::plural "$skills" skill) into $DOTHEY_NAME/$SETUP_SKILLS_DIR/"
+  [ "$agents" -eq 0 ] || items="$items${items:+ and }$(framework.helpers.text::plural "$agents" agent) into $DOTHEY_NAME/$SETUP_AGENTS_DIR/"
   printf '%s' "$items"
 }
 
@@ -171,19 +171,19 @@ core.modules.setup.console::skipped() {
 }
 
 # Done, all of it in green as the one message about the whole run, then the
-# next step (by what's left in <pending>), for a person a tip to type dot
-# without bash (bash dot alias:add, or the line itself for a shell it doesn't
-# know, with dotdot's entry in <location>), and the send-off.
+# next step (by what's left in <pending>), for a person a tip to type hey
+# without bash (bash hey alias:add, or the line itself for a shell it doesn't
+# know, with dotHey's entry in <location>), and the send-off.
 core.modules.setup.console::finish() {
   local pending="$1" location="$2"
   framework.console.output::newline
-  framework.console.output::line "$(framework.console.output::paint "$UI_STYLE_SUCCESS" "$UI_ICON_SUCCESS dotdot is set up for the selected harnesses.")"
+  framework.console.output::line "$(framework.console.output::paint "$UI_STYLE_SUCCESS" "$UI_ICON_SUCCESS dotHey is set up for the selected harnesses.")"
   if [ -n "$pending" ] && framework.console.output::is_agent; then
-    framework.console.output::next "Finish what's left (setup.pending in bash dot adopt --scan --json) with the dot-ready skill."
+    framework.console.output::next "Finish what's left (setup.pending in bash hey adopt --scan --json) with the hey-ready skill."
   elif [ -n "$pending" ]; then
-    framework.console.output::next "Now open your coding agent and tell it you're using dotdot; it finishes the rest."
+    framework.console.output::next "Now open your coding agent and tell it you're using dotHey; it finishes the rest."
   else
-    framework.console.output::next "Now open your coding agent; dotdot is ready for it."
+    framework.console.output::next "Now open your coding agent; dotHey is ready for it."
   fi
   if ! framework.console.output::is_unattended; then
     framework.console.output::newline
@@ -191,7 +191,7 @@ core.modules.setup.console::finish() {
       framework.console.output::tip "$SETUP_ALIAS_TIP"
     else
       framework.console.output::tip "$SETUP_ALIAS_LINE_TIP"
-      framework.console.output::line "$UI_INDENT$(framework.console.output::code "$(core.modules.setup.alias::line "" "$location/${DOT_BIN#"$DOTDOT_ROOT"/}")")"
+      framework.console.output::line "$UI_INDENT$(framework.console.output::code "$(core.modules.setup.alias::line "" "$location/${HEY_BIN#"$DOTHEY_ROOT"/}")")"
     fi
   fi
   framework.console.output::newline

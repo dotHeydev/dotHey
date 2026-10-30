@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 
-dot::use framework.ui.screen
+hey::use framework.ui.screen
 
 # <done> of <total> after <label>, redrawn in place on each call, in the
 # theme's UI_PROGRESS_STYLE: thin or fat (a bar and its percentage), or count
