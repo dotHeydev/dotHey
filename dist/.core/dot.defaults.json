@@ -2,13 +2,6 @@
   "general": {
     "timezone": ""
   },
-  "setup": {
-    "harnesses": [],
-    "type": "parallel",
-    "links": {},
-    "pending": [],
-    "done": []
-  },
   "tasks": {
     "service": "file",
     "githubRepo": ""
@@ -37,14 +30,10 @@
       "secrets/",
       ".dot/",
       "dot"
-    ]
+    ],
+    "versionFiles": {}
   },
   "featureFlags": {
     "release": false
-  },
-  "state": {
-    "version": "",
-    "isReady": false,
-    "migrations": []
   }
 }

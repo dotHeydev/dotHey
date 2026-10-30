@@ -39,6 +39,8 @@ Settings:
 
   release.destination   The release repo's directory, from the project root.
   release.exclude       Paths left out; "!<path>" ships a git-ignored one.
+  release.versionFiles  {"<file>": "<JSON path>"}: where the release writes
+                        <version> in what it ships.
   release.branch        The release repo's branch.
   release.remotes       {"<name>": "<https url>"}, at least one.
   release.signingKey    The private SSH key's file name in ~/.ssh/.
@@ -98,6 +100,7 @@ handle() {
   core.modules.release.service::start_agent
   framework.console.output::title "Exporting the release…"
   core.modules.release.service::export
+  core.modules.release.service::stamp_version "$version"
   core.modules.release.service::scan_secrets
   core.modules.release.service::commit "$tag"
   core.modules.release.service::stop_agent

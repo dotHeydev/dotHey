@@ -77,6 +77,7 @@ main() {
   if [ ${#SETUP_FLAGS[@]} -gt 0 ]; then
     DOT_INTERNAL_CALL=1 bash "$base/$ENTRY_LINK" setup "${SETUP_FLAGS[@]}"
   elif can_prompt; then
+    printf '\n'
     bash "$base/$ENTRY_LINK" setup < /dev/tty
   else
     printf '%s%s✓%s %s is installed in %s/.\n' "$BOLD" "$GREEN" "$RESET" "$name" "$DOTDOT_DIR"
@@ -284,7 +285,7 @@ record_version() {
   local commit
   commit=$(gzip -dc -- "$1" 2>/dev/null | head -c 1024 | tr -d '\000' | grep -ao 'comment=[0-9a-f]\{40\}' | cut -d= -f2 || true)
   if [ -n "$commit" ]; then
-    set_state version "\"$commit\""
+    set_state commit "\"$commit\""
   else
     printf "%s%s! Couldn't read the installed version; the first bash dot upgrade won't clean up stale files.%s\n" "$BOLD" "$YELLOW" "$RESET"
   fi

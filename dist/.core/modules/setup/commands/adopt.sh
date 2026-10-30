@@ -45,7 +45,7 @@ print_json() {
   for id in ${SETUP_INVALID[@]+"${SETUP_INVALID[@]}"}; do
     invalid="$invalid${invalid:+,}$(framework.helpers.json::string "$id")"
   done
-  setup="{\"harnesses\":$(core.modules.setup.service::state "$SETUP_HARNESSES_SETTING" "[]"),\"type\":$(dot::json_value "$SETTINGS_FILE" ".$SETUP_TYPE_SETTING" 2>/dev/null || printf null),\"location\":$(framework.helpers.json::string "$DOTDOT_NAME"),\"pending\":$(core.modules.setup.service::state "$SETUP_PENDING_SETTING" "[]")}"
+  setup="{\"harnesses\":$(core.modules.setup.service::state "$SETUP_HARNESSES_SETTING" "[]"),\"type\":$(dot::json_value "$SETTINGS_FILE" ".state.$SETUP_TYPE_SETTING" 2>/dev/null || printf null),\"location\":$(framework.helpers.json::string "$DOTDOT_NAME"),\"pending\":$(core.modules.setup.service::state "$SETUP_PENDING_SETTING" "[]")}"
   printf '{"harnesses":[%s],"detected":[%s],"items":[%s],"setup":%s,"invalid":[%s]}\n' "$harnesses" "$found" "$items" "$setup" "$invalid"
 }
 

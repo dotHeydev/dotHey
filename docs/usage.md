@@ -208,7 +208,7 @@ Every command follows the same conventions:
 
 - What it acts on is a parameter (`<id>`, `<owner>/<name>`, `<version>`); how it acts is a flag.
 - Flags take their value after a space or an `=`: `--status done` or `--status=done`.
-- Common flags have short forms: `-y, --yes`, `-v, --verbose`, `-s, --status`, `-l, --limit`, `-p, --page`, `-h, --help`; `bash dot -v` is the version.
+- Common flags have short forms: `-y, --yes`, `-v, --verbose`, `-s, --status`, `-l, --limit`, `-p, --page`, `-h, --help`; `bash dot -v` is the version: the release (`dotdot 1.2.0`, `state.version`, written by the release that shipped it), with the installed commit too under `--json`.
 - What changes things can be looked at first with `--preview` (also `--dry-run`); `--overwrite` (also `--force`) replaces what's already there.
 - At a terminal, a missing required value is asked for, then the full command is shown to reuse; without one, it fails naming the flag.
 - Data commands take `--json`: the result alone on stdout; on stderr, one JSON object per line for everything else, an error as `{"error": {"code", "exitCode", "message", "run", "next"}}`, and a warning, notice, or next step as `{"warning" | "notice" | "next": {"message", "run"}}` (`run`: the dotdot command it names, or `null`). `bash dot --json` lists the commands, and `bash dot help <command> --json` describes one; both hold everything their help page says (`about`, `usage`, `arguments`, `options`, `notes`, `examples`, and any other section under `sections`).
@@ -238,7 +238,7 @@ A harness that reads only one instructions file gets dotdot in that one: Zed rea
 
 > **Tip:** some harnesses also read other tools' folders (Cursor reads `.claude/agents/`, GitHub Copilot and Amp read `.claude/skills/` and `CLAUDE.md`, ...). Choose them together with Claude Code and they may show dotdot's skills, agents, or instructions twice. That's harmless; if it bothers you, link only the harnesses you use.
 
-A harness's own instructions file is never replaced: dotdot appends an import of `AGENTS.md` in that harness's syntax, or links `AGENTS.md` where the harness reads one. Claude Code skips `AGENTS.md` whenever a `CLAUDE.md` exists (and some sessions can't read it at all), so it always gets a `CLAUDE.md` importing the root `AGENTS.md` (`@AGENTS.md`): appended to the first of `CLAUDE.md` and `.claude/CLAUDE.md` that exists, or a new `CLAUDE.md` when there's none. Setup changes only the [links](#the-links) and lets `bash dot link` do the linking, so everything is previewed, backed up, and reversible. Run it again to change the choice: harnesses no longer chosen are unlinked. It records the choice in `setup.harnesses`, `setup.strategy`, and `setup.links`, and what only your agent can finish in `setup.pending`: the context, with own the split of your instruction files and a check that every harness reads what moved, and any unsure docs to ask you about. Your agent picks it up at its next session, confirms with you once, finishes it, and marks each item with `bash dot setup:done <item>`; the default setup leaves it only the context.
+A harness's own instructions file is never replaced: dotdot appends an import of `AGENTS.md` in that harness's syntax, or links `AGENTS.md` where the harness reads one. Claude Code skips `AGENTS.md` whenever a `CLAUDE.md` exists (and some sessions can't read it at all), so it always gets a `CLAUDE.md` importing the root `AGENTS.md` (`@AGENTS.md`): appended to the first of `CLAUDE.md` and `.claude/CLAUDE.md` that exists, or a new `CLAUDE.md` when there's none. Setup changes only the harnesses' rows in the [links](#the-links) (what a harness's data describes) and lets `bash dot link` do the linking, so everything is previewed, backed up, and reversible; your own rows and your skips stay as they are. Run it again to change the choice: harnesses no longer chosen lose their rows, and link removes what those linked. It records the choice in dotdot's state (`state.setup.harnesses` and `state.setup.type` in `.dot/dot.json`), and what only your agent can finish in `state.setup.pending`: the context, with centralize the split of your instruction files and a check that every harness reads what moved, and any unsure docs to ask you about. While it applies the choice, `state.setup.pending` holds `apply`: a setup stopped halfway shows it, and running setup again finishes it. Your agent picks it up at its next session, confirms with you once, finishes it, and marks each item with `bash dot setup:done <item>`; the default setup leaves it only the context.
 
 | Flag | Meaning |
 |---|---|
@@ -257,11 +257,11 @@ Each harness is a folder in `.dot/.core/harnesses/<id>/`: `harness.json` keeps t
 | GitHub Copilot | linked as `.github/agents/<name>.agent.md` |
 | Codex | rendered as TOML into `.codex/agents/<name>.toml` (`name`, `description`, `developer_instructions`) |
 
-Renamed and rendered agents are built into `.dot/.harnesses/<id>/` and linked from there; `bash dot link` rebuilds them, so they follow every change. `tools` and `model` don't port: each harness writes them its own way, so keep them out of an agent meant for more than one, or check it on each.
+A format belongs to the folder a harness reads: whatever links agents into `.codex/agents/` or `.github/agents/` gets them in that harness's format, whoever wrote the row, and a folder several harnesses read (`.agents/`) gets them as they are. `bash dot link` builds them into `.dot/.harnesses/<id>/` and links them from there, so they follow every change, and deletes what no row uses any more. `tools` and `model` don't port: each harness writes them its own way, so keep them out of an agent meant for more than one, or check it on each.
 
 ### Typing `dot` instead of `bash dot`
 
-`bash dot alias:add` adds one line to your shell's rc file (bash, zsh, fish, ksh, mksh, tcsh, or csh, told by `$SHELL`), after showing it and asking: `dot` then runs `./dot`, or dotdot's own entry when that link is missing. Run it again after moving dotdot; `bash dot alias:remove` takes it back. Setup ends with this tip, and for any other shell shows the line to add yourself.
+`bash dot alias:add` adds one line to the rc file of each shell you pick (bash, zsh, fish, ksh, or tcsh; yours, from `$SHELL`, checked; `--shell <a,b>` to name them), after showing each and asking: `dot` then runs `./dot`, or dotdot's own entry when that link is missing. Run it again after moving dotdot; `bash dot alias:remove` takes it back. Setup ends with this tip, and for any other shell shows the line to add yourself.
 
 ### Relocating
 
@@ -302,7 +302,7 @@ bash dot link --overwrite    # replace taken destinations; files are backed up f
 |---|---|
 | `"<origin>": [destinations]` | Symlink each destination to the origin |
 | `"append"` | Append the origin's file to each destination, between markers naming its owner |
-| `"skip"` | Never link or append these; a destination still pointing at the origin is unlinked, and what was appended there taken back. It wins over the rest |
+| `"skip"` | Yours alone: never link or append these, a plugin's and a harness's included; a destination still pointing at the origin is unlinked, and what was appended there taken back. It wins over the rest, and setup never writes or clears it |
 | `"<owner>/<name>"` | A plugin's active links, in the same shape |
 | `"inactive"` | A plugin's suggested links, never applied until `bash dot plugins:link` takes them |
 
@@ -319,6 +319,8 @@ A `/*` ending takes each entry inside one by one.
 **Destinations** are project paths outside `.dot/` and `.git/`, never `.env`; appends may also go to `@dot:<Doc>.md`.
 
 **Appends** go between `<!-- <owner>/<name> -->` markers (`#` outside Markdown). Into Markdown, they sit under a rule and a `## <owner>/<name>` heading, with the origin's description quoted. Each owner keeps its own section of a file, so appends never collide. A `.json` takes no markers, so it is only created when missing.
+
+**Removing an entry** unlinks what it linked, and takes its appended section out, at the next `bash dot link`: link compares the disk with the links each run, in the folders it knows of (the links' own, every harness's, and the project's root). A link into `.dot/` there that no entry wants goes too, even one you made by hand; a link elsewhere, or your own file, is never touched. An entry whose folder nothing else names isn't found once deleted: skip it instead, or delete its link.
 
 **When two entries claim one destination**, your own links win over a plugin's, then the first declared; the one left out is reported.
 
@@ -366,7 +368,7 @@ Every setting lives in `.dot/dot.json`, nested by area. A value comes from there
   "plugins": { "unprefixedCommandOwners": ["acme"], "acme/widgets": { "apiUrl": "https://…" } },
   "links":   { "@dot:AGENTS.md": ["AGENTS.md"], "append": {}, "skip": {}, "inactive": {} },
   "release": { "destination": ".ignore/release", "branch": "main", "remotes": { "github": "https://github.com/<owner>/<repo>.git" } },
-  "state":   { "version": "<commit>", "isReady": true, "migrations": ["0001-<slug>"] }
+  "state":   { "version": "1.2.0", "commit": "<commit>", "isReady": true, "migrations": ["0001-<slug>"], "setup": { "harnesses": ["claude"], "type": "parallel", "pending": [], "done": ["context"] } }
 }
 ```
 
@@ -379,9 +381,8 @@ Every setting lives in `.dot/dot.json`, nested by area. A value comes from there
 | `plugins.denyLinkOrigin`, `plugins.denyLinkDestination` | What no plugin may link or append from, or to |
 | `plugins["<owner>/<name>"]` | A plugin's own settings, written with their defaults when it's added |
 | `links` | What `bash dot link` links and appends ([Linking](#linking)) |
-| `setup.*` | [Setting up](#setting-up): the harnesses chosen, the type (`parallel` or `centralize`), the links setup wrote, and what is left for the agent (`pending`, `done`) |
 | `release.*` | [Releases](#releases) |
-| `state.*` | dotdot's own: the installed version, whether the context is ready, the migrations applied |
+| `state.*` | dotdot's own, never a setting: the release installed (`version`, shown by `bash dot -v`) and its commit (what `bash dot upgrade` compares against), whether the context is ready, the migrations applied, and [setup](#setting-up)'s record (`state.setup`: the harnesses chosen, the type, and what is left for the agent). dotdot writes it; it has no defaults and never reads from `.env` |
 
 ## Feature flags
 
@@ -454,6 +455,7 @@ bash dot release:token:delete github                # forget a saved token
 |---|---|
 | `release.destination` | The release repo's directory, from the project root |
 | `release.exclude` | Paths left out; `"!<path>"` ships a git-ignored one (a build) |
+| `release.versionFiles` | `{"<file>": "<JSON path>"}`: where the release writes its version into what it ships, e.g. `{"dist/dot.json": "state.version"}`; the source keeps whatever it holds |
 | `release.branch` | The release repo's branch |
 | `release.remotes` | `{"<name>": "<https url>"}`, each pushed with its own token |
 | `release.signingKey` | The private SSH key's file name in `~/.ssh/`, with its `.pub` next to it |

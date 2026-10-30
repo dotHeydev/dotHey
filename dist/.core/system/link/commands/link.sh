@@ -137,7 +137,7 @@ handle() {
     core.system.link.service::plan_sweep
   else
     $confirmed || $DOT_JSON || offer_merge
-    $preview || core.system.link.service::build_harnesses
+    LINK_PREVIEW=$preview
     core.system.link.service::plan "$override" "$refresh"
   fi
   core.system.link.service::count_changes

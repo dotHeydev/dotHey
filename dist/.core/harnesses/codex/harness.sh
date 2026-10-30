@@ -10,6 +10,5 @@ core.harnesses.codex.harness::detect() { core.harnesses.harness::detect "$@"; }
 core.harnesses.codex.harness::scan() { core.harnesses.harness::scan "$@"; }
 core.harnesses.codex.harness::rows() { core.harnesses.harness::rows "$@"; }
 core.harnesses.codex.harness::destinations() { core.harnesses.harness::destinations "$@"; }
-core.harnesses.codex.harness::build() { core.harnesses.harness::build "$@"; }
 core.harnesses.codex.harness::agents_render() { core.harnesses.codex.agents-toml::render "$2" "$3"; }
 core.harnesses.codex.harness::agents_import() { core.harnesses.codex.agents-toml::import "$2" "$3"; }

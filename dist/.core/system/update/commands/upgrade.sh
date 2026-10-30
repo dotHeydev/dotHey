@@ -23,7 +23,7 @@ Options:
 Notes:
   - A file is deleted only when the installed version had it and the latest
     doesn't; one you edited is kept and listed.
-  - Without a known installed version ($UPDATE_VERSION_SETTING in $(dot::relative "$SETTINGS_FILE")), nothing
+  - Without a known installed version (state.$UPDATE_COMMIT_STATE in $(dot::relative "$SETTINGS_FILE")), nothing
     is deleted: the files the latest no longer has are listed instead.
   - Plugins update with bash dot plugins:update.
 EOF
@@ -66,7 +66,7 @@ handle() {
     framework.console.output::warn "The installed version ${old:0:7} isn't in the public repo, so nothing will be deleted; files the latest no longer has are listed instead."
     old=""
   elif [ -z "$old" ]; then
-    framework.console.output::warn "There's no $UPDATE_VERSION_SETTING in $(dot::relative "$SETTINGS_FILE"), so nothing will be deleted; files the latest no longer has are listed instead."
+    framework.console.output::warn "There's no state.$UPDATE_COMMIT_STATE in $(dot::relative "$SETTINGS_FILE"), so nothing will be deleted; files the latest no longer has are listed instead."
   fi
   if [ "$old" = "$new" ]; then
     framework.console.output::success "dotdot is up to date (${new:0:7})."
@@ -97,7 +97,7 @@ handle() {
     done
     framework.console.output::fail "The update didn't finish, so your version stays as it was." "Please fix the errors above, then run: bash dot upgrade"
   fi
-  core.system.update.service::record_version "$new" || framework.console.output::fail "Files updated, but the new version couldn't be recorded in $(dot::relative "$SETTINGS_FILE") ($UPDATE_VERSION_SETTING)."
+  core.system.update.service::record_version "$new" || framework.console.output::fail "Files updated, but the new version couldn't be recorded in $(dot::relative "$SETTINGS_FILE") (state.$UPDATE_COMMIT_STATE)."
   # The new core decides what to migrate: its migrate command, in its own
   # process, asks only when a migration is pending here.
   dot::call migrate --if-pending || true

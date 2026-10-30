@@ -7,8 +7,8 @@ dot::use framework.console.args framework.console.output framework.console.promp
 
 usage() {
   cat <<EOF
-Removes the line bash dot alias:add put in your shell's rc file, and nothing
-else of it, after asking.
+Removes the line bash dot alias:add put in your shells' rc files, from every
+one that has it, and nothing else of them, after asking.
 
 Usage:
   bash dot alias:remove [-y, --yes]
@@ -24,7 +24,7 @@ EOF
 }
 
 handle() {
-  local confirmed=false shell file
+  local confirmed=false shell file files=()
   while [ $# -gt 0 ]; do
     case "$1" in
       -y | --yes) confirmed=true ;;
@@ -34,11 +34,18 @@ handle() {
   done
   ! $confirmed || guards::skip_confirmation \
     || framework.console.output::fail_as "$EXIT_PRECONDITION" "-y only works in a terminal, so nothing changed unseen." "$OUTPUT_MANUAL_RUN bash dot alias:remove"
-  shell=$(core.modules.setup.alias::shell)
-  [ -n "$shell" ] || framework.console.output::fail_as "$EXIT_PRECONDITION" "Couldn't tell which shell you use (\$SHELL is ${SHELL:-unset})."
-  file=$(core.modules.setup.alias::file "$shell")
-  core.modules.setup.alias::current "$file" >/dev/null || { framework.console.output::success "There's no dot alias in $file."; return 0; }
-  $confirmed || framework.console.prompt::confirm_or_exit "Do you want to remove the dot alias from $file?" y "bash dot alias:remove"
-  core.modules.setup.alias::remove "$file" || framework.console.output::fail "Couldn't remove the alias."
-  framework.console.output::success "Removed the dot alias from $file."
+  for shell in "${ALIAS_SHELLS[@]}"; do
+    file=$(core.modules.setup.alias::file "$shell")
+    ! core.modules.setup.alias::current "$file" >/dev/null || files+=("$file")
+  done
+  [ ${#files[@]} -gt 0 ] || { framework.console.output::success "There's no dot alias to remove."; return 0; }
+  framework.console.output::line "This removes the dot alias from:"
+  for file in "${files[@]}"; do
+    framework.console.output::detail "${file/#"$HOME"/"~"}"
+  done
+  $confirmed || framework.console.prompt::confirm_or_exit "Do you want to remove it?" y "bash dot alias:remove"
+  for file in "${files[@]}"; do
+    core.modules.setup.alias::remove "$file" || framework.console.output::fail "Couldn't remove the alias from ${file/#"$HOME"/"~"}."
+  done
+  framework.console.output::success "Removed the dot alias."
 }

@@ -401,10 +401,54 @@ dot::calling_plugin() {
   dot::plugin_name "$plugin"
 }
 
+# Whether <path> is in dotdot's own state rather than the user's settings,
+# refused (said why) when so.
+dot::is_state_path() {
+  case "$1" in
+    state | state.*) dot::raise "$1 is dotdot's own state, not a setting." "Please read it with dot::state, and write it with dot::save_state."; return 0 ;;
+  esac
+  return 1
+}
+
 # dot::setting <path> [default]: one of dotdot's settings (see
 # dot::get_setting), for any code, a plugin's included.
 dot::setting() {
+  ! dot::is_state_path "$1" || return 1
   dot::get_setting "$1" "" "${@:2}"
+}
+
+# dot::state <path> [default]: one of the values dotdot keeps for itself under
+# "state" in dot.json (the release and commit installed, the migrations
+# applied, setup's record), as only dotdot writes them: no defaults, and a value pointing at
+# .env is refused. Text prints raw, anything else as JSON; unset, <default>
+# when given.
+dot::state() {
+  local path="$1" value status=0
+  guards::setting "$path" || { dot::raise "\"$path\" isn't a valid state path."; return 1; }
+  dot::use framework.helpers.json
+  value=$(dot::json_value "$SETTINGS_FILE" ".state.$path") || status=$?
+  [ "$status" -ne 2 ] || return 1
+  [[ "$value" != *'"@env:'* ]] || { dot::raise "state.$path in $(dot::relative "$SETTINGS_FILE") reads from .env; dotdot's state never does." "Please remove it; dotdot records it again."; return 1; }
+  if [ "$status" -eq 0 ]; then
+    case "$value" in
+      \"*) framework.helpers.json::values "$value" . ;;
+      *) printf '%s\n' "$value" ;;
+    esac
+  elif [ $# -gt 1 ]; then
+    printf '%s\n' "$2"
+  else
+    dot::raise "dotdot hasn't recorded state.$path yet."
+    return 1
+  fi
+}
+
+# dot::version: the release installed (state.version, N.N.N), for display
+# only; nothing when unknown.
+dot::version() {
+  local version
+  version=$(dot::state version "" 2>/dev/null) || version=""
+  [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] && printf '%s\n' "$version"
+  return 0
 }
 
 # dot::feature <name>: whether the feature flag featureFlags.<name> is on, for
@@ -440,7 +484,15 @@ dot::write_setting() {
 dot::save_setting() {
   [ -z "$(dot::plugin_of_caller "${BASH_SOURCE[1]-}")" ] \
     || { dot::raise "A plugin only saves its own settings, with dot::save_plugin_setting."; return 1; }
+  ! dot::is_state_path "$1" || return 1
   dot::write_setting "$1" ".$1" "$2"
+}
+
+# Saves one of dotdot's own state values; dotdot's own code only.
+dot::save_state() {
+  [ -z "$(dot::plugin_of_caller "${BASH_SOURCE[1]-}")" ] \
+    || { dot::raise "dotdot's state is dotdot's to write; a plugin keeps its own settings, with dot::save_plugin_setting."; return 1; }
+  dot::write_setting "state.$1" ".state.$1" "$2"
 }
 
 # Saves one of the calling plugin's own settings.

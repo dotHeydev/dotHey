@@ -8,7 +8,6 @@ dot::use framework.console.args framework.console.output framework.console.promp
   core.modules.setup.service core.modules.setup.console
 
 SETUP_LABEL_MOVE="Move your skills and agents into dotdot"
-SETUP_LABEL_BUILD="Prepare what each harness reads"
 SETUP_LABEL_LINK="Link dotdot where your harnesses read it"
 SETUP_LABEL_SAVE="Save your choices"
 SETUP_LABEL_RELOCATE=""
@@ -160,7 +159,6 @@ apply_step() {
   # shellcheck disable=SC2086
   case "$1" in
     "$SETUP_LABEL_MOVE") core.modules.setup.service::centralize ;;
-    "$SETUP_LABEL_BUILD") core.modules.setup.service::build $SETUP_CHOSEN ;;
     "$SETUP_LABEL_LINK") link_all ;;
     "$SETUP_LABEL_SAVE") save_choices ;;
     "$SETUP_LABEL_RELOCATE") dot::call relocate "$SETUP_DIR" --yes > /dev/null ;;
@@ -208,6 +206,7 @@ handle() {
     asking=true
     framework.ui.screen::on_cancel "$SETUP_RESUME"
     framework.ui.message::info "$SETUP_CANCEL_INFO" "$SETUP_RERUN_INFO"
+    framework.console.output::newline
   fi
   # Setup may move dotdot (--dir), so a fallback for its files can't be in it.
   FS_TEMP_FALLBACK="$BASE/$DOT_PROJECT_TEMP_DIR"
@@ -264,13 +263,16 @@ handle() {
     framework.ui.confirm::ask "Apply this setup?" y || { framework.console.output::aborted "$SETUP_RESUME"; return 1; }
   fi
   [ "$SETUP_TYPE" != centralize ] || steps+=("$SETUP_LABEL_MOVE")
-  steps+=("$SETUP_LABEL_BUILD" "$SETUP_LABEL_LINK" "$SETUP_LABEL_SAVE")
+  steps+=("$SETUP_LABEL_LINK" "$SETUP_LABEL_SAVE")
   if [ -n "$SETUP_DIR" ] && [ "$SETUP_DIR" != "$DOTDOT_NAME" ]; then
     SETUP_LABEL_RELOCATE="Move dotdot to $SETUP_DIR/"
     steps+=("$SETUP_LABEL_RELOCATE")
     # dotdot moves from under this run: it keeps printing from copies.
     framework.console.output::detach || framework.console.output::fail "Couldn't create a temporary directory; please check free space and \$TMPDIR."
   fi
+  # Recorded first, so a setup stopped halfway shows what it was doing.
+  core.modules.setup.service::save "$SETUP_CHOSEN" "$SETUP_TYPE" "$SETUP_APPLY_ITEM" \
+    || framework.console.output::fail "Couldn't save the setup to $(dot::relative "$SETTINGS_FILE"); please check that it's writable."
   framework.console.output::newline
   UI_STEPS_CURRENT=loader framework.ui.steps::run "Setting up" apply_step "${steps[@]}" \
     || framework.console.output::fail "The setup didn't finish; run it again with: bash dot setup"

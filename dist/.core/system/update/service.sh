@@ -6,7 +6,8 @@ UPDATE_REPOSITORY_URL="https://github.com/dotdot-sh/dotdot.git"
 UPDATE_BRANCH="main"
 UPDATE_SOURCE="dist"
 UPDATE_TREES=("$(basename -- "$CORE_DIR")")
-UPDATE_VERSION_SETTING="state.version"
+UPDATE_COMMIT_STATE="commit"
+UPDATE_RELEASE_STATE="version"
 UPDATE_COMMIT_PATTERN='^[0-9a-f]{40}([0-9a-f]{24})?$'
 UPDATE_NEW_REF="refs/dotdot/new"
 UPDATE_OLD_REF="refs/dotdot/old"
@@ -27,8 +28,8 @@ core.system.update.service::git() {
 
 core.system.update.service::installed_commit() {
   local commit
-  commit=$(dot::setting "$UPDATE_VERSION_SETTING" "") && [ -n "$commit" ] || return 0
-  [[ "$commit" =~ $UPDATE_COMMIT_PATTERN ]] || dot::abort "$UPDATE_VERSION_SETTING in $(dot::relative "$SETTINGS_FILE") isn't a commit hash." "Please set it to the installed commit, or remove it."
+  commit=$(dot::state "$UPDATE_COMMIT_STATE" "") && [ -n "$commit" ] || return 0
+  [[ "$commit" =~ $UPDATE_COMMIT_PATTERN ]] || dot::abort "state.$UPDATE_COMMIT_STATE in $(dot::relative "$SETTINGS_FILE") isn't a commit hash." "Please set it to the installed commit, or remove it."
   printf '%s\n' "$commit"
 }
 
@@ -145,6 +146,22 @@ core.system.update.service::copy() {
   [ ${#UPDATE_FAILURES[@]} -eq 0 ]
 }
 
+# The release <commit> ships, from its dot.json in <source>: N.N.N, or
+# nothing.
+core.system.update.service::release_of() {
+  local release
+  dot::use framework.helpers.json
+  release=$(framework.helpers.json::values "$(core.system.update.service::git show "$1:$2/dot.json" 2>/dev/null)" .state.version 2>/dev/null) || return 0
+  [[ "$release" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] && printf '%s\n' "$release"
+  return 0
+}
+
+# Records what is installed now: <commit>, and the release it ships from
+# <source>.
 core.system.update.service::record_version() {
-  dot::save_setting "$UPDATE_VERSION_SETTING" "\"$1\""
+  local release
+  release=$(core.system.update.service::release_of "$1" "${2:-$UPDATE_SOURCE}")
+  dot::use framework.helpers.json
+  dot::save_state "$UPDATE_COMMIT_STATE" "\"$1\"" \
+    && dot::save_state "$UPDATE_RELEASE_STATE" "$(framework.helpers.json::string "$release")"
 }

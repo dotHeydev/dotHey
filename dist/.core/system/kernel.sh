@@ -3,6 +3,8 @@
 dot::use framework.console.output
 
 KERNEL_COLUMN_WIDTH=20
+# What the version reads as for a core no release stamped (a source checkout).
+KERNEL_UNRELEASED="(unreleased)"
 KERNEL_FILE=""
 KERNEL_UNPREFIXED_SETTING="plugins.unprefixedCommandOwners"
 KERNEL_FEATURE_FLAGS_DOCS="feature-flags"
@@ -122,11 +124,11 @@ kernel::find() {
 }
 
 # Every migration not yet applied, in order: each file under migrations/
-# whose name the state.migrations setting does not list.
+# whose name state.migrations does not list.
 kernel::pending_migrations() {
   local file applied
   dot::use framework.helpers.json
-  applied=$(dot::setting state.migrations "[]" 2>/dev/null) || applied="[]"
+  applied=$(dot::state migrations "[]" 2>/dev/null) || applied="[]"
   applied=" $(framework.helpers.json::values "$applied" '.[]' | tr '\n' ' ') "
   for file in "$MIGRATIONS_DIR"/*.sh; do
     [ -f "$file" ] || continue
@@ -144,19 +146,24 @@ kernel::is_hidden() {
   grep -q '^HIDDEN=true$' "$1"
 }
 
-# The installed core version (state.version), or nothing when unknown.
-kernel::version() {
-  dot::setting state.version "" 2>/dev/null || true
+# The installed commit (state.commit), or nothing when unknown.
+kernel::commit() {
+  dot::state commit "" 2>/dev/null || true
+}
+
+# <value> as a JSON string, or null when empty.
+kernel::json_or_null() {
+  if [ -n "$1" ]; then framework.helpers.json::string "$1"; else printf null; fi
 }
 
 kernel::print_version() {
   local version
   dot::use framework.helpers.json
-  version=$(kernel::version)
+  version=$(dot::version)
   if $DOT_JSON; then
-    printf '{"version":%s}\n' "$([ -n "$version" ] && framework.helpers.json::string "$version" || printf null)"
+    printf '{"version":%s,"commit":%s}\n' "$(kernel::json_or_null "$version")" "$(kernel::json_or_null "$(kernel::commit)")"
   else
-    printf 'dotdot %s\n' "${version:-(version unknown)}"
+    printf 'dotdot %s\n' "${version:-$KERNEL_UNRELEASED}"
   fi
 }
 
@@ -236,9 +243,12 @@ kernel::help_json() {
 # The listing's page around its commands: what dotdot is and how to run it,
 # then (with "end") the options and exit statuses every command shares.
 kernel::list_page() {
+  local release
   if [ "${1-}" != end ]; then
+    release=$(dot::version)
     cat <<PAGE
-dotdot: the context, rules, and tools your coding agents work by.
+dotdot $([ -n "$release" ] && printf '(v%s)' "$release" || printf '%s' "$KERNEL_UNRELEASED")
+The context, rules, and tools your coding agents work by.
 
 Usage:
   bash dot <command> [arguments]
@@ -279,8 +289,8 @@ kernel::list() {
     while IFS='|' read -r name file; do
       commands="$commands${commands:+,}{\"name\":$(framework.helpers.json::string "$name"),\"description\":$(framework.helpers.json::string "$(kernel::description "$file")")}"
     done < <(kernel::listed_commands)
-    version=$(kernel::version)
-    printf '{"version":%s,%s,"commands":[%s]}\n' "$([ -n "$version" ] && framework.helpers.json::string "$version" || printf null)" \
+    version=$(dot::version)
+    printf '{"version":%s,%s,"commands":[%s]}\n' "$(kernel::json_or_null "$version")" \
       "$({ kernel::list_page; printf '\n'; kernel::list_page end; } | kernel::help_fields)" "$commands"
     return
   fi
@@ -385,13 +395,14 @@ kernel::run() {
   handle "$@"
 }
 
-# Until setup has run (setup.harnesses is empty), anyone running any other
+# Until setup has run (state.setup.harnesses is empty), anyone running any other
 # <command> is told to: a line for a person, a notice on stderr under --json.
 kernel::suggest_setup() {
   ! $DOT_INTERNAL || return 0
   [[ "$KERNEL_SETUP_COMMANDS" != *" $1 "* ]] || return 0
-  [ "$(dot::setting setup.harnesses "[]" 2>/dev/null)" = "[]" ] || return 0
+  [ "$(dot::state setup.harnesses "[]" 2>/dev/null)" = "[]" ] || return 0
   framework.console.output::info "dotdot isn't set up yet: run bash dot setup to link it where your agents read it." >&2
+  $DOT_JSON || framework.console.output::newline >&2
 }
 
 kernel::docs_section() {

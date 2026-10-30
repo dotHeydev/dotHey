@@ -10,4 +10,3 @@ core.harnesses.copilot.harness::detect() { core.harnesses.harness::detect "$@"; 
 core.harnesses.copilot.harness::scan() { core.harnesses.harness::scan "$@"; }
 core.harnesses.copilot.harness::rows() { core.harnesses.harness::rows "$@"; }
 core.harnesses.copilot.harness::destinations() { core.harnesses.harness::destinations "$@"; }
-core.harnesses.copilot.harness::build() { core.harnesses.harness::build "$@"; }

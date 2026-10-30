@@ -194,7 +194,9 @@ Plugin code may use this, and only this; `dot::use` refuses anything else.
 | `dot::use <module>...` | Load modules |
 | `dot::path project\|dotdot\|plugin` | The project's, dotdot's, or the plugin's directory |
 | `dot::relative <path>` | A path relative to the project, for messages |
-| `dot::setting <path> [default]` | Read one of dotdot's settings |
+| `dot::setting <path> [default]` | Read one of dotdot's settings (never `state.*`) |
+| `dot::state <path> [default]` | Read dotdot's own state (`state.*`: the installed commit, `isReady`, `setup.*`); only dotdot writes it |
+| `dot::version` | dotdot's release (`state.version`, `N.N.N`), for display |
 | `dot::plugin_setting <key> [default]`, `dot::save_plugin_setting <key> <json>` | Read and write its own settings |
 | `dot::secret`, `dot::save_secret`, `dot::remove_secret` | Its own secrets |
 | `dot::plugin_key <name>`, `dot::plugin_name <key>` | A plugin's `<owner>/<folder>` from its name, and back |

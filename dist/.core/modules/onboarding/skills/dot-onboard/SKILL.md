@@ -13,14 +13,12 @@ metadata:
 
 Output exactly: 👋👋👋 STARTING MY ONBOARDING
 
-## 0. Is dotdot set up and ready?
+## 0. Is dotdot ready?
 
-Run `bash dot adopt --scan --json` once and read its `setup`: the user's choices (`harnesses`, `type`, `location`) and what setup left for you (`pending`). Never ask again for what is already chosen there.
+This skill onboards you; finishing dotdot's setup is `dot-ready`'s job, not this one's. Run `bash dot adopt --scan --json` once and read its `setup`: the user's choices (`harnesses`, `type`, `location`) and what is left (`pending`); `state.isReady` in `.dot/dot.json` says whether the context was prepared.
 
-- **`pending` lists items:** the user installed and chose; dotdot did its part; finishing is yours. In one plain message, say what they chose and what is left (e.g. "You set dotdot up for Claude Code and Cursor, owning your files. I'll finish it: write the context, propose how to split CLAUDE.md, ask about IDEAS.md, and check every harness reads what moved. Go ahead?"). Once they agree, or their message already asks for it, invoke `dot-ready`, which works through `pending`, and finish this onboarding once it's done.
-- **`harnesses` is empty:** dotdot isn't linked to any harness yet (the user chose to set up with you, or later). Ask the choices setup needs in one Interview Tool round: the harnesses (those in `detected` first), and, only when the scan lists skills or agents, centralize or in parallel. Then apply it with `bash dot setup` (its `--help --json` says how), e.g. `bash dot setup --harness claude,cursor --type centralize --yes`, and continue with the case above.
-- **Neither, and `state.isReady` is `true`:** dotdot is set up and ready. Go on.
-- **Neither, and it is not:** offer `dot-ready` in one plain message, as above; if they decline, keep in mind that files marked `ignore: true` hold placeholders, not facts.
+- **Something is left** (`harnesses` empty, `pending` not empty, or `state.isReady` not `true`): in one plain message, say what the user chose and what is left (e.g. "You set dotdot up for Claude Code and Cursor, centralizing your skills and agents. I'll finish it: write the context, propose how to split CLAUDE.md, ask about IDEAS.md, and check every harness reads what moved. Go ahead?"). Once they agree, or their message already asks for it, invoke `dot-ready`; when it hands back, go on with step 1. If they decline, go on, keeping in mind that files marked `ignore: true` hold placeholders, not facts.
+- **Nothing is left,** or `dot-ready` already ran in this session: go on with step 1. Never invoke `dot-ready` twice in one session; what it left is the user's choice.
 
 ## 1. What this project is
 

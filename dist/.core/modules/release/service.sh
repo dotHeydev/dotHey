@@ -7,6 +7,7 @@ RELEASE_REMOTES_SETTING="release.remotes"
 # Marks an example remote, as dotdot's defaults ship one: never used.
 RELEASE_PLACEHOLDER_PATTERN='_USER_|_REPO_'
 RELEASE_EXCLUDE_SETTING="release.exclude"
+RELEASE_VERSION_FILES_SETTING="release.versionFiles"
 RELEASE_TOKEN_CACHE="$HOME/.cache/dotdot-release/socket"
 RELEASE_TOKEN_PREFIX="DOT_RELEASE_TOKEN_"
 RELEASE_REMOTE_NAME_PATTERN='^[a-z0-9][a-z0-9_-]*$'
@@ -376,6 +377,25 @@ core.modules.release.service::export() {
     mkdir -p "$RELEASE_DESTINATION/$(dirname -- "$path")"
     cp -R -- "$path" "$RELEASE_DESTINATION/$path"
   done
+}
+
+# Writes <version> into the exported files release.versionFiles names
+# ({"<file>": "<JSON path>"}), so what ships says which release it is; a file
+# missing from the release, or that isn't JSON, stops it.
+core.modules.release.service::stamp_version() {
+  local version="$1" files file path document stamped
+  files=$(dot::setting "$RELEASE_VERSION_FILES_SETTING" "{}") || dot::abort "$RELEASE_VERSION_FILES_SETTING in $(dot::relative "$SETTINGS_FILE") can't be read, so nothing was committed."
+  [[ "$files" == "{"* ]] || dot::abort "$RELEASE_VERSION_FILES_SETTING must map files to JSON paths, like {\"dist/dot.json\": \"state.version\"}, so nothing was committed."
+  while IFS= read -r file; do
+    path=$(framework.helpers.json::values "$files" ".[$(framework.helpers.json::string "$file")]")
+    guards::stays_inside "$file" && [[ "$file" != /* ]] && [ -f "$RELEASE_DESTINATION/$file" ] && [ ! -L "$RELEASE_DESTINATION/$file" ] \
+      || dot::abort "$RELEASE_VERSION_FILES_SETTING names $file, which isn't a file in the release, so nothing was committed."
+    guards::setting "$path" || dot::abort "$RELEASE_VERSION_FILES_SETTING gives $file the path \"$path\", which isn't one like state.version, so nothing was committed."
+    document=$(cat -- "$RELEASE_DESTINATION/$file")
+    stamped=$(framework.helpers.json::set "$document" ".$path" "$(framework.helpers.json::string "$version")" --keep-format) && [ -n "$stamped" ] \
+      || dot::abort "$file isn't valid JSON, so the release number couldn't be written into it, and nothing was committed."
+    printf '%s\n' "$stamped" > "$RELEASE_DESTINATION/$file" || dot::abort "Couldn't write the release number into $file, so nothing was committed."
+  done < <(framework.helpers.json::keys "$files" .)
 }
 
 # Refuses an export holding the project's .env, a known token, or a secret-named

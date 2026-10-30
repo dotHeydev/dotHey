@@ -10,4 +10,3 @@ core.harnesses.antigravity.harness::detect() { core.harnesses.harness::detect "$
 core.harnesses.antigravity.harness::scan() { core.harnesses.harness::scan "$@"; }
 core.harnesses.antigravity.harness::rows() { core.harnesses.harness::rows "$@"; }
 core.harnesses.antigravity.harness::destinations() { core.harnesses.harness::destinations "$@"; }
-core.harnesses.antigravity.harness::build() { core.harnesses.harness::build "$@"; }

@@ -28,7 +28,7 @@ sandbox::settings() {
     *'"featureFlags"'*) flags="" ;;
     *) flags=$(sed -n '/"featureFlags"/,/}/{s/: *false/: true/;p;}' "$DOTDOT/.core/dot.defaults.json" | tr -d '\n') ;;
   esac
-  printf '{"state": {"version": "", "isReady": false, "migrations": [%s]}%s%s}\n' "$list" "${flags:+, ${flags%,}}" "${1:+, $1}" > "$DOTDOT/dot.json"
+  printf '{"state": {"version": "", "commit": "", "isReady": false, "migrations": [%s]}%s%s}\n' "$list" "${flags:+, ${flags%,}}" "${1:+, $1}" > "$DOTDOT/dot.json"
 }
 
 # A secret-shaped value built at run time, <count> times "F4k3", so no

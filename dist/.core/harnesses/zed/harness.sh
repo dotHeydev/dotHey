@@ -10,4 +10,3 @@ core.harnesses.zed.harness::detect() { core.harnesses.harness::detect "$@"; }
 core.harnesses.zed.harness::scan() { core.harnesses.harness::scan "$@"; }
 core.harnesses.zed.harness::rows() { core.harnesses.harness::rows "$@"; }
 core.harnesses.zed.harness::destinations() { core.harnesses.harness::destinations "$@"; }
-core.harnesses.zed.harness::build() { core.harnesses.harness::build "$@"; }

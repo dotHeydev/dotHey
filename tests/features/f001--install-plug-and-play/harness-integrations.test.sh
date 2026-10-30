@@ -25,7 +25,7 @@ test_a_new_harness_folder_is_offered_and_linked_without_core_changes() {
   assert_link_to "$SANDBOX/.acme/skills/dot-onboard" "$DOTDOT/.core/modules/onboarding/skills/dot-onboard"
 }
 
-test_changing_harness_data_moves_its_links() {
+test_changing_harness_data_links_its_new_place_and_leaves_the_old_row_to_the_user() {
   copy_harness agents acme
   harness_data acme skills '".acme/skills/"'
   dot setup --harness acme --yes
@@ -33,7 +33,7 @@ test_changing_harness_data_moves_its_links() {
   dot setup --harness acme --yes
   assert_success
   assert_link_to "$SANDBOX/.acme/tools/dot-onboard" "$DOTDOT/.core/modules/onboarding/skills/dot-onboard"
-  assert_no_file "$SANDBOX/.acme/skills/dot-onboard"
+  assert_equal "$(map_value '["@dotdotSkills"][]' | sort | tr '\n' ' ')" ".acme/skills/ .acme/tools/ "
 }
 
 # Edge

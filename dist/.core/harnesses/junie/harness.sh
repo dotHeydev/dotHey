@@ -10,4 +10,3 @@ core.harnesses.junie.harness::detect() { core.harnesses.harness::detect "$@"; }
 core.harnesses.junie.harness::scan() { core.harnesses.harness::scan "$@"; }
 core.harnesses.junie.harness::rows() { core.harnesses.harness::rows "$@"; }
 core.harnesses.junie.harness::destinations() { core.harnesses.harness::destinations "$@"; }
-core.harnesses.junie.harness::build() { core.harnesses.harness::build "$@"; }

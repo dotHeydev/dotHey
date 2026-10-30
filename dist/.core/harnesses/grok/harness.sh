@@ -10,4 +10,3 @@ core.harnesses.grok.harness::detect() { core.harnesses.harness::detect "$@"; }
 core.harnesses.grok.harness::scan() { core.harnesses.harness::scan "$@"; }
 core.harnesses.grok.harness::rows() { core.harnesses.harness::rows "$@"; }
 core.harnesses.grok.harness::destinations() { core.harnesses.harness::destinations "$@"; }
-core.harnesses.grok.harness::build() { core.harnesses.harness::build "$@"; }

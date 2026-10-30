@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-dot::use framework.helpers.date framework.helpers.frontmatter framework.helpers.fs framework.helpers.json
+dot::use framework.helpers.date framework.helpers.frontmatter framework.helpers.fs framework.helpers.json core.harnesses.transform
 
 LINK_SEPARATOR="->"
 LINK_TREE_SUFFIX="/*"
@@ -54,6 +54,10 @@ LINK_EFFECTIVE_MAP=""
 LINK_WORK=""
 LINK_DROPPED=" "
 LINK_EDIT_IN_PLACE=false
+# A preview plans what building would write, without writing it.
+LINK_PREVIEW=false
+# Destinations left as they are this run (their build failed), space-separated.
+LINK_HELD=" "
 LINK_EDITS=()
 # Set to plan one plugin's links only (plugins:link, plugins:unlink): its
 # waiting links as if active (LINK_ONLY_MODE=link), or its active links taken
@@ -289,6 +293,8 @@ core.system.link.service::prepare_map() {
       case "$LINK_ONLY_MODE:$group" in
         link:"$LINK_ONLY_GROUP") group="+$LINK_ONLY_GROUP" ;;
         unlink:"+$LINK_ONLY_GROUP") kind=skip ;;
+        # The user's skips hold for a plugin's links too.
+        link:.) [ "$kind" = skip ] || continue ;;
         *) continue ;;
       esac
       kept="$kept$group$LINK_TAB$kind$LINK_TAB$origin$LINK_TAB$destination"$'\n'
@@ -598,19 +604,6 @@ core.system.link.service::is_inside_any() {
   return 1
 }
 
-# Rebuilds what the harnesses set up (setup.harnesses) link from dotdot, so
-# renamed and rendered files follow the agents and skills they come from.
-core.system.link.service::build_harnesses() {
-  local list id
-  list=$(dot::setting setup.harnesses "[]" 2>/dev/null) || return 0
-  dot::use core.harnesses.harness
-  for id in $(framework.helpers.json::values "$list" '.[]'); do
-    core.harnesses.harness::valid "$id" || continue
-    core.harnesses.harness::call "$id" build \
-      || core.system.link.service::fail "Couldn't rebuild what $(core.harnesses.harness::data "$id" .name) reads from dotdot."
-  done
-}
-
 # dotdot's former place, after a move: its links there count as dotdot's own,
 # so they are relinked (or pruned) rather than left as someone else's.
 core.system.link.service::relink_from() {
@@ -734,7 +727,8 @@ core.system.link.service::plan_mapping() {
     || { core.system.link.service::fail "Skipped $origin_path: it's outside $DOTDOT_NAME/."; return; }
   guards::link_destination "$destination_absolute" \
     || { core.system.link.service::fail "Skipped $destination: it's a protected place ($DOTDOT_NAME/, .git/, the dot entry point, or .env)."; return; }
-  if [ ! -e "$origin_absolute" ] && ! { $LINK_SEED_USER && [ "$origin_absolute" = "$USER_FILE" ]; }; then
+  if [ ! -e "$origin_absolute" ] && ! { $LINK_SEED_USER && [ "$origin_absolute" = "$USER_FILE" ]; } \
+    && ! core.harnesses.transform::is_kept "${origin_absolute#"$DOTDOT_ROOT"/}"; then
     core.system.link.service::fail "Skipped $origin_path: it doesn't exist."
     return
   fi
@@ -756,6 +750,63 @@ core.system.link.service::plan_mapping() {
     [ "$name" != "$KEEP_FILE" ] || continue
     core.system.link.service::plan_link "$child" "$destination_absolute/$name" "${destination%/}/$name" "$override"
   done < <(find "$origin_absolute" -mindepth 1 -maxdepth 1 -print0 | sort -z)
+}
+
+# One mapping, through the transform: agents linked into a folder a harness
+# reads in another format are built in it and linked from the build; the rest
+# is planned as it is.
+core.system.link.service::plan_transformed() {
+  local entry="$1" override="$2" origin destination folder id status=0 child path name built
+  origin="${entry%%"$LINK_SEPARATOR"*}"
+  destination="${entry#*"$LINK_SEPARATOR"}"
+  if framework.helpers.fs::is_contents_pattern "$origin"; then
+    folder="${destination%/}"
+  elif core.harnesses.transform::is_agent "$origin"; then
+    folder="${destination%/*}"
+  else
+    core.system.link.service::plan_mapping "$entry" "$override"
+    return
+  fi
+  core.harnesses.transform::harness_of "$folder" || status=$?
+  id="$TRANSFORM_HARNESS"
+  case "$status" in
+    1) core.system.link.service::plan_mapping "$entry" "$override"; return ;;
+    2) core.system.link.service::fail "Didn't link agents into $folder/: $TRANSFORM_CLAIMS read it in different formats." "Please give one of them its own folder in $(dot::relative "$CORE_DIR")/harnesses/."; return ;;
+  esac
+  if framework.helpers.fs::is_contents_pattern "$origin"; then
+    path="${origin%"$LINK_TREE_SUFFIX"}"
+    guards::stays_inside "$path" && [ -d "$DOTDOT_ROOT/$path" ] || { core.system.link.service::plan_mapping "$entry" "$override"; return; }
+    while IFS= read -r -d '' child; do
+      name="${child##*/}"
+      [ "$name" != "$KEEP_FILE" ] || continue
+      if core.harnesses.transform::is_agent "$path/$name"; then
+        core.system.link.service::plan_agent "$id" "$path/$name" "$folder" "$override"
+      else
+        core.system.link.service::plan_mapping "$path/$name$LINK_SEPARATOR$folder/$name" "$override"
+      fi
+    done < <(find "$DOTDOT_ROOT/$path" -mindepth 1 -maxdepth 1 -print0 | sort -z)
+    return
+  fi
+  core.system.link.service::plan_agent "$id" "$origin" "$folder" "$override"
+}
+
+# One agent at <source> (dotdot-relative), built for harness <id> and linked
+# into <folder>; when building fails, what is there stays as it is.
+core.system.link.service::plan_agent() {
+  local id="$1" source="$2" folder="$3" override="$4" name built destination
+  guards::stays_inside "$source" && [ -f "$DOTDOT_ROOT/$source" ] || { core.system.link.service::plan_mapping "$source$LINK_SEPARATOR$folder/${source##*/}" "$override"; return; }
+  name="${source##*/}"
+  name="${name%.md}"
+  built=$(core.harnesses.transform::built "$id" "$name")
+  destination="$folder/${built##*/}"
+  if ! $LINK_PREVIEW && ! core.harnesses.transform::build "$id" "$name" "$source" "$built"; then
+    LINK_HELD="$LINK_HELD$BASE/$destination "
+    [ ! -e "$DOTDOT_ROOT/$built" ] || core.harnesses.transform::keep "$built"
+    core.system.link.service::fail "Couldn't build $destination from $DOTDOT_NAME/$source, so it stays as it was."
+    return
+  fi
+  core.harnesses.transform::keep "$built"
+  core.system.link.service::plan_mapping "$built$LINK_SEPARATOR$destination" "$override"
 }
 
 # How a destination's appended regions are marked: html comments in Markdown,
@@ -881,7 +932,7 @@ core.system.link.service::plan_append() {
 }
 
 # Every append, removals first so they win, then what removed plugins
-# appended.
+# appended, then dotdot's sections no row wants in the files harnesses read.
 core.system.link.service::plan_appends() {
   local group origin destination
   while IFS="$LINK_TAB" read -r _ _ origin destination; do
@@ -892,6 +943,19 @@ core.system.link.service::plan_appends() {
     core.system.link.service::plan_append "$origin" "$destination" false
   done < <(core.system.link.service::rows append)
   core.system.link.service::plan_swept_appends
+  [ -n "$LINK_ONLY_GROUP" ] || core.system.link.service::plan_unwanted_appends
+}
+
+# dotdot's section in each instructions file a harness reads, taken out when
+# no row appends it any more.
+core.system.link.service::plan_unwanted_appends() {
+  local id path
+  while IFS= read -r id; do
+    while IFS= read -r path; do
+      [ -n "$path" ] && core.harnesses.harness::project_path "$path" > /dev/null || continue
+      core.system.link.service::plan_append "" "$path" true "$LINK_DOTDOT_LABEL"
+    done < <(core.harnesses.harness::data "$id" '.instructions.existing[]'; core.harnesses.harness::data "$id" .instructions.create)
+  done < <(core.harnesses.harness::ids)
 }
 
 core.system.link.service::plan_swept_appends() {
@@ -901,8 +965,11 @@ core.system.link.service::plan_swept_appends() {
   done
 }
 
+# The folders pruning looks in: those of the planned links; with "all",
+# also every place a harness reads and the project's root, so what a row
+# no longer wants is found there too.
 core.system.link.service::swept_directories() {
-  local destination directory
+  local destination directory id path
   {
     for destination in ${LINK_DESTINATIONS[@]+"${LINK_DESTINATIONS[@]}"}; do
       printf '%s\0' "${destination%/*}"
@@ -910,13 +977,30 @@ core.system.link.service::swept_directories() {
     for directory in ${LINK_TREE_DIRS[@]+"${LINK_TREE_DIRS[@]}"}; do
       printf '%s\0' "$directory"
     done
+    if [ "${1-}" = all ]; then
+      printf '%s\0' "$BASE"
+      while IFS= read -r id; do
+        while IFS= read -r destination; do
+          path=$(core.harnesses.harness::project_path "$destination") || continue
+          [ "${destination%/}" != "$destination" ] || path="${path%/*}"
+          printf '%s\0' "$path"
+        done < <(core.harnesses.harness::destinations "$id")
+      done < <(core.harnesses.harness::ids)
+    fi
   } | sort -zu
 }
 
+# Whether <target>, where a link leads, is dotdot's: inside it, or in one of
+# the places it counts as its own.
+core.system.link.service::is_dotdots() {
+  framework.helpers.fs::is_inside "$1" "$DOTDOT_ROOT" || core.system.link.service::is_managed "$1"
+}
+
 # Prunes dotdot's broken links, and its links into a module a feature flag
-# turns off.
+# turns off; with "all", every link of dotdot's no row plans (a removed
+# row's), but what a failed build left as it is.
 core.system.link.service::plan_pruning() {
-  local directory link target module off=()
+  local scope="${1-}" directory link target module off=()
   while IFS= read -r module; do
     framework.helpers.fs::resolve_to directory "$MODULES_DIR/$module" && off+=("$directory")
   done < <(paths::disabled_modules)
@@ -924,12 +1008,18 @@ core.system.link.service::plan_pruning() {
     [ -d "$directory" ] && [ ! -L "$directory" ] || continue
     while IFS= read -r -d '' link; do
       [ "$link" != "$ENTRY_LINK" ] || continue
-      framework.helpers.fs::resolve_to target "$link" && core.system.link.service::is_managed "$target" || continue
-      [ ! -e "$link" ] || core.system.link.service::is_inside_any "$target" ${off[@]+"${off[@]}"} || continue
+      [[ "$LINK_HELD" != *" $link "* ]] || continue
+      framework.helpers.fs::resolve_to target "$link" || continue
+      if [ "$scope" = all ]; then
+        core.system.link.service::is_dotdots "$target" || continue
+      else
+        core.system.link.service::is_managed "$target" || continue
+        [ ! -e "$link" ] || core.system.link.service::is_inside_any "$target" ${off[@]+"${off[@]}"} || continue
+      fi
       ! core.system.link.service::is_planned "$link" || continue
       core.system.link.service::add "" "$link" "$(dot::relative "$link")" prune
     done < <(find "$directory" -mindepth 1 -maxdepth 1 -type l -print0 | sort -z)
-  done < <(core.system.link.service::swept_directories)
+  done < <(core.system.link.service::swept_directories "$scope")
 }
 
 core.system.link.service::plan() {
@@ -945,11 +1035,14 @@ core.system.link.service::plan() {
     [ "$LINK_GROUP" != "?" ] || { LINK_NOTICES+=("$entry"); continue; }
     case "$entry" in
       '!'*) core.system.link.service::fail "${entry#!}" ;;
-      *) core.system.link.service::plan_mapping "$entry" "$override" ;;
+      *) core.system.link.service::plan_transformed "$entry" "$override" ;;
     esac
   done < <(core.system.link.service::mappings)
   LINK_GROUP=""
-  [ -n "$LINK_ONLY_GROUP" ] || core.system.link.service::plan_pruning
+  if [ -z "$LINK_ONLY_GROUP" ]; then
+    $LINK_PREVIEW || core.harnesses.transform::clean || core.system.link.service::fail "Couldn't remove the agents no link uses any more from $DOTDOT_NAME/$TRANSFORM_BUILD_DIR/."
+    core.system.link.service::plan_pruning all
+  fi
   core.system.link.service::plan_appends
 }
 

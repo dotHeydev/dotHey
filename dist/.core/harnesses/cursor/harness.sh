@@ -10,4 +10,3 @@ core.harnesses.cursor.harness::detect() { core.harnesses.harness::detect "$@"; }
 core.harnesses.cursor.harness::scan() { core.harnesses.harness::scan "$@"; }
 core.harnesses.cursor.harness::rows() { core.harnesses.harness::rows "$@"; }
 core.harnesses.cursor.harness::destinations() { core.harnesses.harness::destinations "$@"; }
-core.harnesses.cursor.harness::build() { core.harnesses.harness::build "$@"; }

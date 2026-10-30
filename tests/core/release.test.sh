@@ -143,3 +143,33 @@ test_release_commits_and_tags_as_its_author_whatever_the_environment_says() {
   assert_equal "$(git -C "$SANDBOX/build" for-each-ref --format='%(taggername) %(taggeremail)' refs/tags/v1.0.0)" "Rel Author <rel@x.test>"
 }
 
+
+test_release_writes_its_version_into_the_files_it_names() {
+  local destination="$SANDBOX/export"
+  mkdir -p "$destination/dist"
+  printf '{\n  "state": {\n    "version": "",\n    "commit": ""\n  }\n}\n' > "$destination/dist/dot.json"
+  sandbox::settings '"release": {"versionFiles": {"dist/dot.json": "state.version"}}'
+  core "dot::use core.modules.release.service; RELEASE_DESTINATION='$destination'; core.modules.release.service::stamp_version 1.2.0"
+  assert_success
+  assert_equal "$(json_value "$(cat "$destination/dist/dot.json")" .state.version)" "1.2.0"
+  assert_equal "$(json_value "$(cat "$destination/dist/dot.json")" .state.commit)" ""
+}
+
+test_release_stops_when_a_version_file_isnt_in_the_release() {
+  local destination="$SANDBOX/export"
+  mkdir -p "$destination"
+  sandbox::settings '"release": {"versionFiles": {"dist/dot.json": "state.version"}}'
+  core "dot::use core.modules.release.service; RELEASE_DESTINATION='$destination'; core.modules.release.service::stamp_version 1.2.0"
+  assert_failure
+  assert_equal "$STATUS" 1
+}
+
+test_release_never_writes_a_version_outside_the_release() {
+  local destination="$SANDBOX/export"
+  mkdir -p "$destination"
+  printf '{"state": {}}\n' > "$SANDBOX/outside.json"
+  sandbox::settings '"release": {"versionFiles": {"../outside.json": "state.version"}}'
+  core "dot::use core.modules.release.service; RELEASE_DESTINATION='$destination'; core.modules.release.service::stamp_version 1.2.0"
+  assert_failure
+  assert_equal "$(cat "$SANDBOX/outside.json")" '{"state": {}}'
+}

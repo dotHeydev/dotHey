@@ -6,7 +6,8 @@
 
 dot::use framework.helpers.fs
 
-ALIAS_SHELLS=" bash zsh fish ksh mksh tcsh csh "
+# The shells offered; mksh counts as ksh, and csh as tcsh.
+ALIAS_SHELLS=(bash zsh fish ksh tcsh)
 ALIAS_OPEN="# dotdot"
 ALIAS_CLOSE="# /dotdot"
 
@@ -14,7 +15,16 @@ ALIAS_CLOSE="# /dotdot"
 # nothing.
 core.modules.setup.alias::shell() {
   local shell="${SHELL##*/}"
-  [[ "$ALIAS_SHELLS" != *" $shell "* ]] || printf '%s\n' "$shell"
+  case "$shell" in
+    mksh) shell=ksh ;;
+    csh) shell=tcsh ;;
+  esac
+  core.modules.setup.alias::is_shell "$shell" && printf '%s\n' "$shell"
+  return 0
+}
+
+core.modules.setup.alias::is_shell() {
+  [[ " ${ALIAS_SHELLS[*]} " == *" $1 "* ]]
 }
 
 # The rc file <shell> reads as it starts.
@@ -25,10 +35,8 @@ core.modules.setup.alias::file() {
       ;;
     zsh) printf '%s\n' "${ZDOTDIR:-$HOME}/.zshrc" ;;
     fish) printf '%s\n' "${XDG_CONFIG_HOME:-$HOME/.config}/fish/config.fish" ;;
-    ksh) printf '%s\n' "$HOME/.kshrc" ;;
-    mksh) printf '%s\n' "$HOME/.mkshrc" ;;
-    tcsh) printf '%s\n' "$HOME/.tcshrc" ;;
-    csh) printf '%s\n' "$HOME/.cshrc" ;;
+    ksh) if [ "${SHELL##*/}" = mksh ]; then printf '%s\n' "$HOME/.mkshrc"; else printf '%s\n' "$HOME/.kshrc"; fi ;;
+    tcsh) if [ "${SHELL##*/}" = csh ]; then printf '%s\n' "$HOME/.cshrc"; else printf '%s\n' "$HOME/.tcshrc"; fi ;;
     *) return 1 ;;
   esac
 }
@@ -39,7 +47,7 @@ core.modules.setup.alias::line() {
   local shell="$1" entry="$2"
   case "$shell" in
     fish) printf "alias dot 'bash (test -e dot; and echo dot; or echo %s)'\n" "$entry" ;;
-    tcsh | csh) printf "alias dot 'bash \`test -e dot && echo dot || echo %s\`'\n" "$entry" ;;
+    tcsh) printf "alias dot 'bash \`test -e dot && echo dot || echo %s\`'\n" "$entry" ;;
     *) printf "alias dot='bash \$([ -e dot ] && echo dot || echo %s)'\n" "$entry" ;;
   esac
 }

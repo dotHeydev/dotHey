@@ -163,7 +163,7 @@ test_removals_only_take_back_what_their_origin_made() {
   add_plugin acme/widgets widgets
   links "link:@dot:AGENTS.md->AGENTS.md" "link:@dot:RULES.md->rules.md" "append:@plugin:acme.widgets:plugin.json->notes.conf"
   dot link -y
-  links "link:@dot:AGENTS.md->AGENTS.md" "skip:@dot:SECURITY.md->rules.md->notes.conf"
+  links "link:@dot:AGENTS.md->AGENTS.md" "link:@dot:RULES.md->rules.md" "append:@plugin:acme.widgets:plugin.json->notes.conf" "skip:@dot:SECURITY.md->rules.md->notes.conf"
   dot link -y
   assert_success
   assert_link_to "$SANDBOX/rules.md" "$DOTDOT/RULES.md"

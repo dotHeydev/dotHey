@@ -1,6 +1,7 @@
 {
   "state": {
     "version": "",
+    "commit": "",
     "isReady": false,
     "migrations": []
   }

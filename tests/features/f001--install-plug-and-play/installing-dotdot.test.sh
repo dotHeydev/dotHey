@@ -21,14 +21,14 @@ test_install_without_a_person_links_only_agents_md() {
   assert_link_to "$SANDBOX/project/dot" "$SANDBOX/project/.dot/.core/system/bin/dot"
   assert_link_to "$SANDBOX/project/AGENTS.md" "$SANDBOX/project/.dot/AGENTS.md"
   assert_no_file "$SANDBOX/project/.claude"
-  assert_equal "$(setting_value '.setup.harnesses[]' "$SANDBOX/project/.dot/dot.json")" ""
+  assert_equal "$(setting_value '.state.setup.harnesses[]' "$SANDBOX/project/.dot/dot.json")" ""
   [ -z "$(find "$SANDBOX/project" -maxdepth 1 -name '.dot-install.*')" ] || fail "the download was left in the project"
 }
 
 test_install_with_setup_flags_runs_setup() {
   installer --harness agents --type parallel --yes
   assert_success
-  assert_equal "$(setting_value '.setup.harnesses[]' "$SANDBOX/project/.dot/dot.json")" "agents"
+  assert_equal "$(setting_value '.state.setup.harnesses[]' "$SANDBOX/project/.dot/dot.json")" "agents"
   assert_link_to "$SANDBOX/project/.agents/skills/dot-onboard" "$SANDBOX/project/.dot/.core/modules/onboarding/skills/dot-onboard"
 }
 

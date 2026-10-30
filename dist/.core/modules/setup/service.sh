@@ -9,12 +9,15 @@ dot::use core.harnesses.harness core.harnesses.capabilities.agents framework.hel
 
 SETUP_TYPES=" parallel centralize "
 SETUP_DEFAULT_TYPE="parallel"
+# Setup's record, in dotdot's state (dot::state).
 SETUP_HARNESSES_SETTING="setup.harnesses"
 SETUP_TYPE_SETTING="setup.type"
-SETUP_LINKS_SETTING="setup.links"
 SETUP_PENDING_SETTING="setup.pending"
 SETUP_DONE_SETTING="setup.done"
-SETUP_READY_SETTING="state.isReady"
+# Pending while setup applies its choice, so a setup stopped halfway shows;
+# only setup clears it, once every step finished.
+SETUP_APPLY_ITEM="apply"
+SETUP_READY_SETTING="isReady"
 SETUP_SKILLS_DIR="Skills"
 SETUP_AGENTS_DIR="Agents"
 SETUP_AGENTS_HOME=".agents"
@@ -26,7 +29,6 @@ SETUP_KNOWN_DOCS=" README.md CHANGELOG.md LICENSE.md "
 
 SETUP_IDS=""
 SETUP_INVALID=()
-SETUP_WANTED=""
 SETUP_MOVES=()
 SETUP_DUPLICATES=()
 SETUP_SKIPPED=()
@@ -137,7 +139,7 @@ core.modules.setup.service::agents_home_in_use() {
 }
 
 core.modules.setup.service::state() {
-  dot::setting "$1" "$2" 2>/dev/null || printf '%s\n' "$2"
+  dot::state "$1" "$2" 2>/dev/null || printf '%s\n' "$2"
 }
 
 # The names of dotdot's own skills and agents, which an owned item may not take.
@@ -239,13 +241,6 @@ core.modules.setup.service::map_rows() {
   '
 }
 
-# The rows setup wrote last time, from setup.links.
-core.modules.setup.service::previous_rows() {
-  local document
-  document=$(core.modules.setup.service::state "$SETUP_LINKS_SETTING" "{}")
-  framework.helpers.json::leaves "$document" | awk -F '\t' -v OFS='\t' '($1 == "link" || $1 == "append") && NF == 4 { print $1, $2, $4 }'
-}
-
 # The rows the chosen harnesses need: AGENTS.md at the root (appended into
 # the project's own), then each harness's; owned items only once dotdot
 # holds some.
@@ -276,58 +271,53 @@ core.modules.setup.service::destinations() {
   done | sed 's|/$||' | sort -u
 }
 
-# The links rows after choosing <chosen> (space-separated) among <all>: the
-# wanted rows added and taken out of skip; last time's rows no longer
-# wanted, and every entry aimed at a harness not chosen, moved to skip.
-# Into SETUP_ROWS.
+# The links rows after choosing <chosen> (space-separated) among <all>: a
+# harness's rows (what a harness.json describes: dotdot's skills, agents, and
+# instructions into a place a harness reads) are setup's, the rest the
+# user's. The chosen harnesses' rows are added, unless skipped; the other
+# harnesses' rows go; every other row, skip included, stays as it is. Into
+# SETUP_ROWS.
 core.modules.setup.service::plan_map() {
-  local chosen="$1" all="$2" wanted previous current dropped id unchosen=() picked=()
+  local chosen="$1" all="$2" wanted current places id picked=()
   for id in $all; do
-    if [[ " $chosen " == *" $id "* ]]; then picked+=("$id"); else unchosen+=("$id"); fi
+    [[ " $chosen " != *" $id "* ]] || picked+=("$id")
   done
   wanted=$(core.modules.setup.service::wanted_rows ${picked[@]+"${picked[@]}"})
-  previous=$(core.modules.setup.service::previous_rows)
   current=$(core.modules.setup.service::map_rows)
-  dropped=$(comm -23 \
-    <(core.modules.setup.service::destinations ${unchosen[@]+"${unchosen[@]}"}) \
-    <(core.modules.setup.service::destinations ${picked[@]+"${picked[@]}"}))
-  SETUP_ROWS=$(awk -F '\t' -v OFS='\t' -v wanted="$wanted" -v previous="$previous" -v dropped="$dropped" '
+  # shellcheck disable=SC2086
+  places=$(core.modules.setup.service::destinations $all; for id in $all; do core.harnesses.harness::data "$id" .instructions.create; done)
+  SETUP_ROWS=$(awk -F '\t' -v OFS='\t' -v wanted="$wanted" -v places="$places" '
     function key(kind, origin, destination) { sub(/\/$/, "", destination); return kind SUBSEP origin SUBSEP destination }
+    function harness_row(origin, destination) {
+      sub(/\/$/, "", destination)
+      if (!(destination in place)) return 0
+      return origin ~ /^@dotdot(Skills|Agents)$/ || origin == "@dot:Skills/*" || origin == "@dot:Agents/*" || origin == "@dot:AGENTS.md" || origin ~ /^@harness:/
+    }
     BEGIN {
+      n = split(places, lines, "\n")
+      for (i = 1; i <= n; i++) { sub(/\/$/, "", lines[i]); if (lines[i] != "") place[lines[i]] = 1 }
       n = split(wanted, lines, "\n")
       for (i = 1; i <= n; i++) if (split(lines[i], f, "\t") == 3) want[key(f[1], f[2], f[3])] = 1
-      n = split(previous, lines, "\n")
-      for (i = 1; i <= n; i++) if (split(lines[i], f, "\t") == 3 && !(key(f[1], f[2], f[3]) in want)) gone[key(f[1], f[2], f[3])] = lines[i]
-      n = split(dropped, lines, "\n")
-      for (i = 1; i <= n; i++) if (lines[i] != "") drop[lines[i]] = 1
     }
+    $1 == "skip" { skipped[key("link", $2, $3)] = 1; skipped[key("append", $2, $3)] = 1; print; next }
     {
-      destination = $3
-      sub(/\/$/, "", destination)
-      if ($1 == "skip") {
-        if (key("link", $2, $3) in want || key("append", $2, $3) in want) next
-        print; seen["skip" SUBSEP $2 SUBSEP destination] = 1; next
-      }
-      if (key($1, $2, $3) in want) { if (!(key($1, $2, $3) in printed)) { print; printed[key($1, $2, $3)] = 1 }; next }
-      # A link where an append of the same origin is wanted (or the other way
-      # round): the destination changed kind, so the old entry just goes.
+      k = key($1, $2, $3)
+      if (k in printed) next
+      if (harness_row($2, $3) && !(k in want)) next
+      # Linked where an append of it is wanted, or the other way round: the
+      # destination changed kind, so the old entry goes.
       if (key($1 == "link" ? "append" : "link", $2, $3) in want) next
-      if (key($1, $2, $3) in gone || destination in drop) { removed[$2 SUBSEP $3] = 1; next }
-      print
+      print; printed[k] = 1
     }
     END {
       n = split(wanted, lines, "\n")
-      for (i = 1; i <= n; i++) if (split(lines[i], f, "\t") == 3 && !(key(f[1], f[2], f[3]) in printed)) { print lines[i]; printed[key(f[1], f[2], f[3])] = 1 }
-      for (k in gone) { split(gone[k], f, "\t"); removed[f[2] SUBSEP f[3]] = 1 }
-      for (k in removed) {
-        split(k, f, SUBSEP)
-        destination = f[2]
-        sub(/\/$/, "", destination)
-        if (!(("skip" SUBSEP f[1] SUBSEP destination) in seen)) print "skip", f[1], f[2]
+      for (i = 1; i <= n; i++) {
+        if (split(lines[i], f, "\t") != 3) continue
+        k = key(f[1], f[2], f[3])
+        if (!(k in printed) && !(k in skipped)) { print lines[i]; printed[k] = 1 }
       }
     }
   ' <<< "$current")
-  SETUP_WANTED="$wanted"
 }
 
 # Rows of one kind as a JSON object: {"<origin>": ["<destination>", ...]}.
@@ -355,6 +345,7 @@ core.modules.setup.service::write_map() {
   while IFS= read -r key; do
     case "$key" in
       append | skip) ;;
+      @*) ;;
       inactive | */*) kept="$kept, $(framework.helpers.json::string "$key"): $(framework.helpers.json::encoded "$links" ".[$(framework.helpers.json::string "$key")]")" ;;
     esac
   done < <(framework.helpers.json::keys "$links" .)
@@ -365,21 +356,6 @@ core.modules.setup.service::write_map() {
   document=$(framework.helpers.json::set "$document" .links "$general" --keep-format) \
     && printf '%s\n' "$document" | framework.helpers.fs::write "$SETTINGS_FILE" \
     || dot::raise "Couldn't write the links to $(dot::relative "$SETTINGS_FILE"); please check that it's writable."
-}
-
-# Builds what the given harnesses link from dotdot (renamed or rendered
-# files), and drops what was built for any other.
-core.modules.setup.service::build() {
-  local id directory
-  for id in "$@"; do
-    core.harnesses.harness::call "$id" build \
-      || { dot::raise "Couldn't build what $(core.harnesses.harness::data "$id" .name) reads from dotdot."; return 1; }
-  done
-  for directory in "$DOTDOT_ROOT/$HARNESS_BUILD_DIR"/*/; do
-    [ -d "$directory" ] || continue
-    directory="${directory%/}"
-    [[ " $* " == *" ${directory##*/} "* ]] || rm -rf -- "$directory"
-  done
 }
 
 # Centralizing: dotdot's Skills/ and Agents/ made (kept by a .gitkeep, as
@@ -452,9 +428,9 @@ core.modules.setup.service::pending() {
 core.modules.setup.service::finish() {
   local item="$1" pending
   pending=$(core.modules.setup.service::list "$SETUP_PENDING_SETTING")
-  printf '%s\n' "$pending" | grep -qxF -- "$item" || return 1
-  dot::save_setting "$SETUP_PENDING_SETTING" "$(printf '%s\n' "$pending" | grep -vxF -- "$item" | core.modules.setup.service::json_list)" \
-    && dot::save_setting "$SETUP_DONE_SETTING" "$({ core.modules.setup.service::list "$SETUP_DONE_SETTING"; printf '%s\n' "$item"; } | core.modules.setup.service::json_list)"
+  [ "$item" != "$SETUP_APPLY_ITEM" ] && printf '%s\n' "$pending" | grep -qxF -- "$item" || return 1
+  dot::save_state "$SETUP_PENDING_SETTING" "$(printf '%s\n' "$pending" | grep -vxF -- "$item" | core.modules.setup.service::json_list)" \
+    && dot::save_state "$SETUP_DONE_SETTING" "$({ core.modules.setup.service::list "$SETUP_DONE_SETTING"; printf '%s\n' "$item"; } | core.modules.setup.service::json_list)"
 }
 
 # The dot entry at the project's root, linked to dotdot's when it's missing
@@ -469,8 +445,7 @@ core.modules.setup.service::entry_link() {
 # is left for the agent.
 core.modules.setup.service::save() {
   local harnesses="$1" type="$2" pending="$3"
-  dot::save_setting "$SETUP_HARNESSES_SETTING" "$(printf '%s\n' $harnesses | core.modules.setup.service::json_list)" \
-    && dot::save_setting "$SETUP_TYPE_SETTING" "$(framework.helpers.json::string "$type")" \
-    && dot::save_setting "$SETUP_LINKS_SETTING" "{\"link\": $(core.modules.setup.service::object link "$SETUP_WANTED"), \"append\": $(core.modules.setup.service::object append "$SETUP_WANTED")}" \
-    && dot::save_setting "$SETUP_PENDING_SETTING" "$(printf '%s\n' "$pending" | core.modules.setup.service::json_list)"
+  dot::save_state "$SETUP_HARNESSES_SETTING" "$(printf '%s\n' $harnesses | core.modules.setup.service::json_list)" \
+    && dot::save_state "$SETUP_TYPE_SETTING" "$(framework.helpers.json::string "$type")" \
+    && dot::save_state "$SETUP_PENDING_SETTING" "$(printf '%s\n' "$pending" | core.modules.setup.service::json_list)"
 }

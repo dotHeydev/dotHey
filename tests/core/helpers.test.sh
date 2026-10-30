@@ -165,12 +165,12 @@ test_env_references_never_name_a_secret_or_a_json_only_setting() {
     assert_equal "$STATUS" 1
     assert_not_contains "$OUTPUT$ERRORS" "secret"
   done
-  sandbox::settings '"state": {"version": "@env:MY_STATE", "migrations": []}, "tasks": {}'
-  core "dot::setting state.version ''"
+  sandbox::settings '"state": {"commit": "@env:MY_STATE", "migrations": []}, "tasks": {}'
+  core "dot::state commit ''"
   assert_failure
   assert_equal "$STATUS" 1
   sandbox::settings '"state": {"migrations": ["@env:MY_STATE"]}'
-  core "dot::setting state.migrations '[]'"
+  core "dot::state migrations '[]'"
   assert_failure
   assert_equal "$STATUS" 1
   with_defaults general.timezone '"@env:MY_STATE"'

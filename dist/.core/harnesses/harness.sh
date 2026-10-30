@@ -12,7 +12,7 @@ HARNESS_FILE="harness.json"
 HARNESS_INTERFACE="harness.sh"
 HARNESS_ID_PATTERN='^[a-z][a-z0-9-]*$'
 # What a harness can be given, each a module in capabilities/ with the same
-# calls (rows, destinations, scan, and build where something is generated),
+# calls (rows, destinations, scan),
 # used for every harness whose data declares it.
 HARNESS_CAPABILITIES=(instructions skills agents)
 
@@ -254,12 +254,6 @@ core.harnesses.harness::rows() {
 # destinations <id>: every place it may link or append to.
 core.harnesses.harness::destinations() {
   core.harnesses.harness::each "$1" destinations
-}
-
-# build <id>: generates what its capabilities link from dotdot (renamed or
-# rendered files), before linking.
-core.harnesses.harness::build() {
-  core.harnesses.harness::each "$1" build
 }
 
 core.harnesses.harness::load

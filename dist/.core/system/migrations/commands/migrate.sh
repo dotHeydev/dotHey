@@ -61,9 +61,9 @@ handle() {
 # Adds a migration to state.migrations.
 record() {
   local applied list
-  applied=$(dot::setting state.migrations "[]") && applied=$(framework.helpers.json::values "$applied" '.[]') \
+  applied=$(dot::state migrations "[]") && applied=$(framework.helpers.json::values "$applied" '.[]') \
     || framework.console.output::fail "${1%.sh} ran, but couldn't be recorded in $(dot::relative "$SETTINGS_FILE") (state.migrations); it may run again next time."
   list=$({ [ -z "$applied" ] || printf '%s\n' "$applied"; printf '%s\n' "${1%.sh}"; } | framework.helpers.json::lines | paste -sd, -)
-  dot::save_setting state.migrations "[$list]" \
+  dot::save_state migrations "[$list]" \
     || framework.console.output::fail "${1%.sh} ran, but couldn't be recorded in $(dot::relative "$SETTINGS_FILE") (state.migrations); it may run again next time."
 }

@@ -14,7 +14,7 @@ test_migrations_run_once_and_are_recorded() {
   dot migrate -y
   assert_success
   assert_file "$DOTDOT/migrated"
-  core "dot::setting state.migrations"
+  core "dot::state migrations"
   assert_equal "$OUTPUT" '["0001-sample"]'
   rm "$DOTDOT/migrated"
   dot migrate
@@ -44,7 +44,7 @@ test_a_failing_migration_stops_the_rest_unrecorded() {
   assert_equal "$STATUS" 1
   assert_contains "$ERRORS" "0001-broken.sh"
   assert_no_file "$DOTDOT/migrated"
-  core "dot::setting state.migrations"
+  core "dot::state migrations"
   assert_equal "$OUTPUT" "[]"
 }
 

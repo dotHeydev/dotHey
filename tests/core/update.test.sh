@@ -12,7 +12,7 @@ test_update_records_the_version() {
     core.system.update.service::installed_commit"
   assert_success
   assert_equal "$OUTPUT" "0123456789012345678901234567890123456789"
-  assert_contains "$(cat "$DOTDOT/dot.json")" '"version": "0123456789012345678901234567890123456789"'
+  assert_contains "$(cat "$DOTDOT/dot.json")" '"commit": "0123456789012345678901234567890123456789"'
 }
 
 commit_tree() {
@@ -40,7 +40,7 @@ test_update_replaces_adds_and_removes_only_what_upstream_removed() {
   printf 'old\n' > "$core_dir/demo/kept.sh"
   printf 'old\n' > "$core_dir/demo/gone.sh"
   printf 'mine\n' > "$core_dir/demo/edited.sh"
-  core "dot::save_setting state.version '\"$old\"'"
+  core "dot::save_state commit '\"$old\"'"
   core "dot::use core.system.update.service
     UPDATE_REPOSITORY='$upstream'
     core.system.update.service::extract $new dist '$SANDBOX/tree'
@@ -57,6 +57,6 @@ test_update_replaces_adds_and_removes_only_what_upstream_removed() {
   assert_equal "$(cat "$core_dir/demo/edited.sh")" "mine"
   assert_contains "$OUTPUT" "edited:.core/demo/edited.sh"
   assert_file "$core_dir/system/boot.sh"
-  assert_contains "$(cat "$DOTDOT/dot.json")" "\"version\": \"$old\""
+  assert_contains "$(cat "$DOTDOT/dot.json")" "\"commit\": \"$old\""
   assert_not_contains "$OUTPUT" "dot.json"
 }

@@ -150,7 +150,7 @@ test_version_and_help_are_machine_readable() {
   assert_contains "$OUTPUT" "dotdot"
   dot version --json
   assert_success
-  assert_equal "$OUTPUT" '{"version":null}'
+  assert_contains "$OUTPUT" '"commit":null'
   dot --json
   assert_success
   assert_contains "$(json_value "$OUTPUT" '.commands[].name')" "tasks:list"
@@ -216,7 +216,7 @@ test_feature_reads_a_flag_as_on_only_when_true() {
 }
 
 test_help_links_the_docs_on_main_whatever_the_installed_version() {
-  sandbox::settings '"state": {"version": "4d342b097ba4acf1850d6caab9d63a52cea45457"}'
+  sandbox::settings '"state": {"commit": "4d342b097ba4acf1850d6caab9d63a52cea45457"}'
   dot link --help
   assert_success
   assert_contains "$OUTPUT" "https://github.com/dotdot-sh/dotdot/blob/main/docs/usage.md#linking"

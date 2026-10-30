@@ -11,7 +11,7 @@ test_setup_links_every_chosen_harness() {
   assert_contains "$(cat "$SANDBOX/CLAUDE.md")" "@AGENTS.md"
   assert_link_to "$SANDBOX/.claude/skills/dot-onboard" "$DOTDOT/.core/modules/onboarding/skills/dot-onboard"
   assert_link_to "$SANDBOX/.agents/skills/dot-onboard" "$DOTDOT/.core/modules/onboarding/skills/dot-onboard"
-  assert_equal "$(setting_value '.setup.harnesses[]' | tr '\n' ,)" "claude,agents"
+  assert_equal "$(setting_value '.state.setup.harnesses[]' | tr '\n' ,)" "claude,agents"
 }
 
 test_setup_previews_the_plan_for_the_detected_harnesses() {
@@ -47,7 +47,7 @@ test_centralize_moves_skills_into_dotdot_and_links_them_back() {
   assert_file "$DOTDOT/Skills/mine/SKILL.md"
   assert_link_to "$SANDBOX/.claude/skills/mine" "$DOTDOT/Skills/mine"
   assert_contains "$(cat "$SANDBOX/CLAUDE.md")" "@AGENTS.md"
-  assert_equal "$(setting_value '.setup.type')" "centralize"
+  assert_equal "$(setting_value '.state.setup.type')" "centralize"
 }
 
 test_centralize_links_owned_skills_into_every_chosen_harness() {
@@ -109,7 +109,7 @@ test_rerunning_setup_unlinks_harnesses_no_longer_chosen() {
   assert_not_contains "$(cat "$SANDBOX/CLAUDE.md")" "@AGENTS.md"
   assert_contains "$(cat "$SANDBOX/CLAUDE.md")" "Keep this line."
   assert_link_to "$SANDBOX/.agents/skills/dot-onboard" "$DOTDOT/.core/modules/onboarding/skills/dot-onboard"
-  assert_equal "$(setting_value '.setup.harnesses[]')" "agents"
+  assert_equal "$(setting_value '.state.setup.harnesses[]')" "agents"
 }
 
 test_rechoosing_a_harness_links_it_again() {
@@ -325,6 +325,20 @@ test_alias_add_writes_once_per_shell_and_remove_takes_it_back() {
   assert_contains "$(cat "$SANDBOX/home/.zshrc")" "keep me"
   run env HOME="$SANDBOX/home" SHELL=/bin/zsh ZDOTDIR="" DOT_INTERNAL_CALL="" AI_AGENT=1 bash -c "cd '$SANDBOX' && bash ./dot alias:add -y"
   assert_equal "$STATUS" 5
+}
+
+test_alias_add_takes_the_shells_named_and_remove_clears_them_all() {
+  mkdir -p "$SANDBOX/home"
+  run env HOME="$SANDBOX/home" SHELL=/bin/zsh ZDOTDIR="" XDG_CONFIG_HOME="" bash -c "cd '$SANDBOX' && bash ./dot alias:add --shell fish,ksh -y"
+  assert_success
+  assert_no_file "$SANDBOX/home/.zshrc"
+  assert_contains "$(cat "$SANDBOX/home/.kshrc")" "alias dot="
+  assert_contains "$(cat "$SANDBOX/home/.config/fish/config.fish")" "alias dot "
+  run env HOME="$SANDBOX/home" SHELL=/bin/zsh ZDOTDIR="" XDG_CONFIG_HOME="" bash -c "cd '$SANDBOX' && bash ./dot alias:add --shell powershell -y"
+  assert_equal "$STATUS" 2
+  run env HOME="$SANDBOX/home" SHELL=/bin/zsh ZDOTDIR="" XDG_CONFIG_HOME="" bash -c "cd '$SANDBOX' && bash ./dot alias:remove -y"
+  assert_success
+  assert_not_contains "$(cat "$SANDBOX/home/.kshrc")$(cat "$SANDBOX/home/.config/fish/config.fish")" "alias dot"
 }
 
 test_alias_add_writes_through_a_linked_rc_file() {

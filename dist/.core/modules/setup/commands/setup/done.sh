@@ -7,7 +7,7 @@ dot::use framework.console.args framework.console.output core.modules.setup.serv
 
 usage() {
   cat <<EOF
-Marks items of what bash dot setup left for the agent (setup.pending, also
+Marks items of what bash dot setup left for the agent (state.setup.pending, also
 in bash dot adopt --scan --json) as finished, so they aren't raised again,
 even after another setup.
 
@@ -32,6 +32,7 @@ handle() {
   for item in "$@"; do
     case "$item" in
       -*) framework.console.args::unexpected "$item" ;;
+      "$SETUP_APPLY_ITEM") framework.console.output::fail_as "$EXIT_NOT_FOUND" "Only bash dot setup can finish $item." "Please run: bash dot setup" ;;
     esac
     core.modules.setup.service::finish "$item" \
       || framework.console.output::fail_as "$EXIT_NOT_FOUND" "$item isn't left for the agent." "See what is: bash dot adopt --scan --json"
