@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 # Reading and writing JSON with jq when it is installed, and otherwise with a
 # portable awk reader and writer that print exactly what jq does (most Linux

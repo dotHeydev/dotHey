@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 DESCRIPTION="Change a task's title, content or status."
 DOCS="tasks"

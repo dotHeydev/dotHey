@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 # Everything dotdot does on GitHub, behind one service: each operation runs
 # through internal/route.sh (gh, then the API with DOT_GH_TOKEN), so callers

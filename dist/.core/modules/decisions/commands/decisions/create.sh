@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 DESCRIPTION="Document a new decision from the template."
 JSON=true

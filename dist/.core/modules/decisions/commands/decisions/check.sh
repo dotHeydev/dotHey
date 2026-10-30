@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 DESCRIPTION="Check that every link between decisions resolves."
 DOCS="decisions"

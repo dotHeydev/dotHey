@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 dot::use framework.helpers.fs framework.helpers.json framework.helpers.secrets framework.helpers.text
 
@@ -24,7 +24,8 @@ RELEASE_TOKEN_SERVICE="dotdot-release"
 RELEASE_KEY_LIFETIME=600
 # A line holding this is a known false positive, left out of the scan.
 RELEASE_SECRET_ALLOW="dotdot:not-a-secret"
-RELEASE_TOKEN_HELPER='!f() { [ "$1" = get ] || return 0; p=; h=; while IFS= read -r line && [ -n "$line" ]; do case $line in protocol=*) p=${line#protocol=} ;; host=*) h=${line#host=} ;; esac; done; [ "$p" = https ] && [ "$h" = "$RELEASE_TOKEN_HOST" ] || return 0; printf "username=x-access-token\npassword=%s\n" "$RELEASE_TOKEN"; }; f'
+# How long a push's own credential cache keeps the token, at most.
+RELEASE_PUSH_CACHE_SECONDS=120
 
 RELEASE_REMOTES=()
 RELEASE_REMOTE_URLS=()
@@ -110,18 +111,23 @@ core.modules.release.service::token_key() {
   return 1
 }
 
+# Saves the token for <url>. A keychain or libsecret store asks for it with
+# the system's own prompt; gpg takes <token>, asked through pinentry, and
+# asks for its passphrase itself, on the terminal (loopback). What was saved
+# must look like a token, or it is removed again.
 core.modules.release.service::save_token() {
-  local url="$1" token="$2" identifier key cipher
-  [[ "$token" =~ $RELEASE_TOKEN_PATTERN ]] || dot::abort "That doesn't look like a token (letters, digits, _ and -)."
+  local url="$1" token="${2-}" identifier key cipher store
   identifier=$(core.modules.release.service::token_id "$url")
-  case "$(core.modules.release.service::token_store)" in
+  store=$(core.modules.release.service::token_store)
+  case "$store" in
     keychain)
-      printf 'add-generic-password -U -s %s -a %s -w %s\n' "$RELEASE_TOKEN_SERVICE" "$identifier" "$token" | security -i >/dev/null
+      security add-generic-password -U -s "$RELEASE_TOKEN_SERVICE" -a "$identifier" -l "dotdot release token for $url" -w </dev/tty >/dev/null || return 1
       ;;
     libsecret)
-      printf '%s' "$token" | secret-tool store --label="dotdot release token for $url" service "$RELEASE_TOKEN_SERVICE" id "$identifier"
+      secret-tool store --label="dotdot release token for $url" service "$RELEASE_TOKEN_SERVICE" id "$identifier" </dev/tty || return 1
       ;;
     gpg)
+      [[ "$token" =~ $RELEASE_TOKEN_PATTERN ]] || dot::abort "That doesn't look like a token (letters, digits, _ and -)."
       key=$(core.modules.release.service::token_key "$url") || return 1
       cipher=$(printf '%s\n%s' "$url" "$token" | gpg --quiet --pinentry-mode loopback --no-symkey-cache \
         --symmetric --cipher-algo AES256 --s2k-mode 3 --s2k-digest-algo SHA512 --s2k-count 65011712 \
@@ -130,6 +136,10 @@ core.modules.release.service::save_token() {
       dot::save_secret "$key" "$cipher" || return 1
       ;;
   esac
+  if [ "$store" != gpg ] && ! core.modules.release.service::read_token "$url" >/dev/null; then
+    core.modules.release.service::remove_token "$url" || true
+    dot::abort "That doesn't look like a token (letters, digits, _ and -), so it wasn't kept."
+  fi
   core.modules.release.service::cache_token erase "$url" </dev/null || true
   core.modules.release.service::has_token "$url"
 }
@@ -204,23 +214,34 @@ core.modules.release.service::remove_token() {
   core.modules.release.service::cache_token erase "$url" </dev/null || true
   case "$(core.modules.release.service::token_store)" in
     keychain) security delete-generic-password -s "$RELEASE_TOKEN_SERVICE" -a "$identifier" >/dev/null 2>&1 ;;
-    libsecret) core.modules.release.service::has_token "$url" && secret-tool clear service "$RELEASE_TOKEN_SERVICE" id "$identifier" ;;
+    libsecret) secret-tool clear service "$RELEASE_TOKEN_SERVICE" id "$identifier" 2>/dev/null ;;
     gpg) core.modules.release.service::has_token "$url" && dot::remove_secret "$(core.modules.release.service::token_key "$url")" ;;
   esac
 }
 
+# Pushes to <name> at <url> with its token. The token reaches git through a
+# pipe into git's own credential cache, on a socket private to this push and
+# stopped right after it: never an argument, the environment, or a file.
 core.modules.release.service::push_with_token() {
-  local repository="$1" name="$2" url="$3" token host
+  local repository="$1" name="$2" url="$3" token rest host path socket status=0
   shift 3
   token=$(core.modules.release.service::load_token "$url") && [ -n "$token" ] \
     || { dot::raise "No token saved for $name." "Please save one: bash dot release:token $name"; return 1; }
-  host="${url#https://}"
-  host="${host%%/*}"
-  RELEASE_TOKEN=$token RELEASE_TOKEN_HOST=$host GIT_TERMINAL_PROMPT=0 GIT_TRACE_REDACT=1 \
+  rest="${url#https://}"
+  host="${rest%%/*}"
+  path="${rest#*/}"
+  framework.helpers.fs::make_temp_dir socket || { token=""; return 1; }
+  socket="$socket/credentials"
+  printf 'protocol=https\nhost=%s\npath=%s\nusername=x-access-token\npassword=%s\n\n' "$host" "$path" "$token" \
+    | git credential-cache --timeout="$RELEASE_PUSH_CACHE_SECONDS" --socket="$socket" store || { token=""; return 1; }
+  token=""
+  GIT_TERMINAL_PROMPT=0 GIT_TRACE_REDACT=1 \
     env -u GIT_ASKPASS -u SSH_ASKPASS -u GIT_SSL_NO_VERIFY \
-    git -C "$repository" -c credential.helper= -c "credential.helper=$RELEASE_TOKEN_HELPER" -c core.askPass= \
-    -c core.hooksPath=/dev/null -c http.sslVerify=true \
-    push "$name" "$@"
+    git -C "$repository" -c credential.helper= -c "credential.helper=cache --socket=$socket" -c credential.useHttpPath=true \
+    -c core.askPass= -c core.hooksPath=/dev/null -c http.sslVerify=true -c protocol.allow=never -c protocol.https.allow=always \
+    push "$name" "$@" || status=$?
+  git credential-cache --socket="$socket" exit </dev/null >/dev/null 2>&1 || true
+  return "$status"
 }
 
 core.modules.release.service::repo() {

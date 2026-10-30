@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 DESCRIPTION="Move dotdot to another place in the project."
 DOCS="relocating"

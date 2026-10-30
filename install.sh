@@ -19,6 +19,9 @@ set -euo pipefail
 REPO="dotdot-sh/dotdot"
 BRANCH="main"
 ARCHIVE_URL="https://github.com/$REPO/archive/refs/heads/$BRANCH.tar.gz"
+# A download may take this long, so a stalled connection can't hang the install.
+CONNECT_SECONDS=30
+DOWNLOAD_SECONDS=300
 SOURCE_DIR="dist"
 MIGRATIONS_DIR=".core/system/migrations"
 SETTINGS_FILE="dot.json"
@@ -216,7 +219,8 @@ download_and_unpack() {
   if [ -n "${DOT_INSTALL_ARCHIVE-}" ]; then
     [ -f "$DOT_INSTALL_ARCHIVE" ] && cp -- "$DOT_INSTALL_ARCHIVE" "$temp/dotdot.tar.gz"
   else
-    curl --proto '=https' --tlsv1.2 -fsSL -o "$temp/dotdot.tar.gz" "$ARCHIVE_URL"
+    curl --proto '=https' --proto-redir '=https' --tlsv1.2 -fsSL --connect-timeout "$CONNECT_SECONDS" --max-time "$DOWNLOAD_SECONDS" \
+      -o "$temp/dotdot.tar.gz" "$ARCHIVE_URL"
   fi
   tar -xzf "$temp/dotdot.tar.gz" -C "$temp/tree"
 }

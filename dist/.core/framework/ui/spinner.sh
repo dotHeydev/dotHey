@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 dot::use framework.ui.screen framework.helpers.fs
 

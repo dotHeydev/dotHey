@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 dot::use framework.console.output framework.ui.screen framework.ui.banner framework.ui.box framework.ui.message \
   framework.ui.list framework.ui.rule framework.ui.select framework.ui.checkbox framework.ui.confirm \
@@ -163,6 +163,7 @@ core.modules.tui.console::tour() {
   count=$(printf '%s' "$skills" | grep -c . || true)
   framework.ui.message::success "Linked $count skills to $harness." "They show up there the next time it starts."
   framework.ui.message::warning "Codex has no agents folder yet."
+  # shellcheck disable=SC2086 # skill names, one word each
   [ "$count" -eq 0 ] || framework.ui.list::show $skills
   framework.ui.rule::show
   framework.ui.box::show "NEXT" "Run bash dot tui:view select to try one alone."

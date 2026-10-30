@@ -99,10 +99,10 @@ widgets/
 
 ## Commands
 
-Each `dotdot/commands/<name>.sh` is a command; subdirectories become namespaces (`commands/db/seed.sh` runs as `bash dot acme:db:seed`; one level of subdirectories at most). A command declares a `DESCRIPTION`, a `usage` function for `--help`, and a `handle` function that receives the arguments:
+Each `dotdot/commands/<name>.sh` is a command; subdirectories become namespaces (`commands/db/seed.sh` runs as `bash dot acme:db:seed`; one level of subdirectories at most). A command declares a `DESCRIPTION`, a `usage` function for `--help`, and a `handle` function that receives the arguments. dotdot sources every file, never runs it on its own, so a file starts with `# shellcheck shell=bash` instead of a shebang and needs no executable bit:
 
 ```bash
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 DESCRIPTION="Seed the database with sample data."
 
@@ -181,6 +181,8 @@ dot::save_secret DOT_ACME_WIDGETS__TOKEN "$token"
 dot::remove_secret DOT_ACME_WIDGETS__TOKEN
 ```
 
+Leave passwords and passphrases to the system's own prompts (ssh-add, gpg, the keychain): never ask for them yourself. For a secret no system prompt takes, use `framework.console.prompt::pinentry "<description>" ["<label>"]`: gpg's pinentry asks for it on the terminal only (`pinentry-curses` or `pinentry-tty`, never a window), and you get it on stdout to pipe on, never through an argument, the environment, or a file. It fails, asking nothing, with no one at a terminal or no terminal pinentry installed.
+
 ---
 
 ## The public API
@@ -202,7 +204,7 @@ Plugin code may use this, and only this; `dot::use` refuses anything else.
 | `dot::plugin_key <name>`, `dot::plugin_name <key>` | A plugin's `<owner>/<folder>` from its name, and back |
 | `dot::call <command> [args]` | Run another `bash dot` command |
 | `dot::raise <message> [next step]...`, `dot::abort …` | Report an error (and exit) |
-| `dot::on_exit <function>` | Run cleanup when the command ends |
+| `dot::on_exit <command> [<argument>...]` | Run cleanup when the command ends; each argument stays one word, never code |
 
 **Modules:**
 

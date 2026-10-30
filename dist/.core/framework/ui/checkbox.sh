@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 dot::use framework.ui.screen
 
@@ -74,8 +74,8 @@ framework.ui.checkbox::typed() {
     framework.console.output::emit 2 "$index) ${!index}"
   done
   while :; do
-    # shellcheck disable=SC2059
     defaults=$(printf '%s' "${checked# }" | sed 's/ *$//; s/ /,/g')
+    # shellcheck disable=SC2059 # UI_HINT_CHOICES is dotdot's own format
     read -r -p "$(printf "$UI_HINT_CHOICES" "$#")${defaults:+[$defaults] }" reply || return 1
     [ -n "$reply" ] || reply="$checked"
     reply="${reply//,/ }"

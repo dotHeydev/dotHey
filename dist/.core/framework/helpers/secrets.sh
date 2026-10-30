@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 # What looks like a secret, and the same text with each one masked.
 
@@ -20,14 +20,14 @@ SECRETS_MAX_MASKS=100
 # every secret-named key likewise, then the mask: "TOKEN=pat-h2******". Runs
 # in the shell, no process spawned.
 framework.helpers.secrets::mask() {
-  local text="$1" match value replacement count=0 case_rule
+  local text="$1" match value replacement count=0 case_was=-u
   while [ "$count" -lt "$SECRETS_MAX_MASKS" ] && [[ "$text" =~ $SECRETS_TOKEN_PATTERN ]]; do
     match="${BASH_REMATCH[0]}"
     replacement="${match:0:$SECRETS_TOKEN_KEPT}$SECRETS_MASK"
     text=${text//"$match"/$replacement}
     count=$((count + 1))
   done
-  case_rule=$(shopt -p nocasematch)
+  ! shopt -q nocasematch || case_was=-s
   shopt -s nocasematch
   while [ "$count" -lt "$SECRETS_MAX_MASKS" ] && [[ "$text" =~ $SECRETS_ASSIGNMENT_PATTERN ]]; do
     match="${BASH_REMATCH[0]}"
@@ -37,6 +37,6 @@ framework.helpers.secrets::mask() {
     text=${text//"$match"/$replacement}
     count=$((count + 1))
   done
-  eval "$case_rule"
+  shopt "$case_was" nocasematch
   printf '%s' "$text"
 }

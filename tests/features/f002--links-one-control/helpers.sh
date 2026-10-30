@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 # Shared by f002's tests: the links map edited as a user does, and harnesses
 # that fail on purpose.
 

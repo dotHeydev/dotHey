@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 # dotdot's look, in one place: every icon, glyph, style, size, and label its
 # output and its UI components draw with. Change them here only.

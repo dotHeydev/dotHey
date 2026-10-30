@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 test_release_settings_are_required() {
   git -C "$SANDBOX" init -q

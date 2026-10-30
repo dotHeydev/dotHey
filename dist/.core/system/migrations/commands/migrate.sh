@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 DESCRIPTION="Upgrade dotdot's own files to this version's format."
 DOCS="updating-dotdot"

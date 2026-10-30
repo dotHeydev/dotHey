@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 test_scan_frontmatter_stays_inside_dotdot() {
   dot notes:create scanned

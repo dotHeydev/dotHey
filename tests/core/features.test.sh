@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 test_feature_is_built_from_the_template() {
   local file

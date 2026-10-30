@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 DESCRIPTION="Update dotdot's core to its latest version."
 DOCS="updating-dotdot"

@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 # Agents: dotdot's and the ones it owns (Agents/), in Claude's Markdown
 # format, ported to a harness's agents directory. Data: .agents {dir, file,

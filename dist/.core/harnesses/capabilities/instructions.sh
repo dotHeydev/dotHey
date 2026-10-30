@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 # Instructions: dotdot's AGENTS.md where a harness reads instructions. Its
 # own instructions file, when the project has one (the first listed, as the

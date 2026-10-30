@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 # Adds a pending migration to the sandbox: <name> runs <body> as migrate().
 add_migration() {

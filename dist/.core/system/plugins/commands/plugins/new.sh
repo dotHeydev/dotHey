@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 DESCRIPTION="Create a new plugin repo to build on."
 DOCS="using-plugins"

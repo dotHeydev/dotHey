@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 DESCRIPTION="Set dotdot up for the project's harnesses."
 DOCS="setting-up"

@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 dot::use framework.console.output framework.helpers.fs framework.helpers.json framework.helpers.text
 
@@ -16,7 +16,7 @@ PLUGIN_UNKNOWN_COMMIT="unknown"
 # a repository is letters, digits, ., _, and -, never . or .. alone.
 PLUGIN_GITHUB_OWNER_PATTERN='^[A-Za-z0-9]([A-Za-z0-9]|-[A-Za-z0-9])*$'
 PLUGIN_GITHUB_REPOSITORY_PATTERN='^[A-Za-z0-9._-]+$'
-PLUGIN_GITHUB_HOSTS=("https://github.com/" "http://github.com/" "https://www.github.com/" "http://www.github.com/" "github.com/" "www.github.com/" "git@github.com:" "ssh://git@github.com/")
+PLUGIN_GITHUB_HOSTS=("https://github.com/" "https://www.github.com/" "github.com/" "www.github.com/" "git@github.com:" "ssh://git@github.com/")
 PLUGIN_REPOSITORY=""
 PLUGIN_SPEC_REF=""
 # Folder names Windows refuses, whatever their case: a plugin named like one

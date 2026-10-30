@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 dot::use framework.console.args core.modules.release.service framework.console.output framework.console.prompt framework.helpers.text
 
@@ -68,7 +68,7 @@ core.modules.release.console::push() {
       framework.console.output::next "Push later with: bash dot release:push $name${force:+ --force}"
       continue
     fi
-    [ "$(core.modules.release.service::token_store)" != gpg ] || framework.console.output::info "Pushing to $name… please enter the token's passphrase if asked."
+    [ "$(core.modules.release.service::token_store)" != gpg ] || framework.console.output::info "Pushing to $name… gpg will ask for the token's passphrase if it needs it."
     if core.modules.release.service::push_with_token "$RELEASE_DESTINATION" "$name" "${RELEASE_REMOTE_URLS[$index]}" -q --atomic ${force:+"$force"} "refs/heads/$branch" --tags; then
       framework.console.output::success "Pushed to $name."
     else

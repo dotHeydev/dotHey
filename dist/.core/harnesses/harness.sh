@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 # The shared, data-driven handler behind every harness's interface: what a
 # harness is, how it is found, and where it reads dotdot all come from its

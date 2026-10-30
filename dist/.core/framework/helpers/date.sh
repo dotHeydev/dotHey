@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 DATE_TIMESTAMP_FORMAT='%Y-%m-%d %H:%M:%S'
 DATE_STAMP_FORMAT='%Y%m%d-%H%M%S'

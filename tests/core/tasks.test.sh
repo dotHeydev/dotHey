@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 use_file_tasks() {
   sandbox::settings '"tasks": {"service": "file"}'

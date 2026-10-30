@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 . "$(dirname -- "${BASH_SOURCE[0]}")/helpers.sh"
 
 # Golden
@@ -67,21 +67,21 @@ upstream_with() {
 }
 
 test_an_upgrade_records_the_release_and_commit_it_brings() {
-  local commit
-  commit=$(upstream_with '{"state": {"version": "9.8.7", "commit": ""}}')
-  core "dot::use core.system.update.service; UPDATE_REPOSITORY='$SANDBOX/upstream'; core.system.update.service::record_version $commit"
+  local shipped
+  shipped=$(upstream_with '{"state": {"version": "9.8.7", "commit": ""}}')
+  core "dot::use core.system.update.service; UPDATE_REPOSITORY='$SANDBOX/upstream'; core.system.update.service::record_version $shipped"
   assert_success
   assert_equal "$(setting_value '.state.version')" "9.8.7"
-  assert_equal "$(setting_value '.state.commit')" "$commit"
+  assert_equal "$(setting_value '.state.commit')" "$shipped"
 }
 
 test_an_upgrade_to_a_commit_shipping_no_release_records_none() {
-  local commit
-  commit=$(upstream_with '{"state": {"version": "next"}}')
-  core "dot::use core.system.update.service; UPDATE_REPOSITORY='$SANDBOX/upstream'; core.system.update.service::record_version $commit"
+  local shipped
+  shipped=$(upstream_with '{"state": {"version": "next"}}')
+  core "dot::use core.system.update.service; UPDATE_REPOSITORY='$SANDBOX/upstream'; core.system.update.service::record_version $shipped"
   assert_success
   assert_equal "$(setting_value '.state.version')" ""
-  assert_equal "$(setting_value '.state.commit')" "$commit"
+  assert_equal "$(setting_value '.state.commit')" "$shipped"
 }
 
 test_the_setup_notice_stands_apart_from_the_help() {

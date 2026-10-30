@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 create_decision() {
   dot decisions:create "$1" --statement "We $1." --explanation "Because." "${@:2}"

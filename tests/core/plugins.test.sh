@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 scaffold_plugin() {
   dot plugins:new "$1"

@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 test_note_gets_the_next_number() {
   dot notes:create

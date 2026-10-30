@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 # Fake gh and curl in the sandbox: each logs its call to $SANDBOX/calls and
 # acts as $SANDBOX/gh.mode (ok, fail, nologin) and $SANDBOX/curl.mode

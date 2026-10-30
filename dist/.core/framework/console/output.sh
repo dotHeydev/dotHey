@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 dot::use framework.helpers.secrets framework.helpers.fs framework.ui.theme
 

@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 . "$(dirname -- "${BASH_SOURCE[0]}")/helpers.sh"
 
 # An agent dotdot owns, in Claude's format.

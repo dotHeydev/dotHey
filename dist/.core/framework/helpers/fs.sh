@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 FS_MAX_LINK_HOPS=40
 # Where temporary files go when the system's temporary folder can't take
@@ -107,6 +107,11 @@ framework.helpers.fs::make_temp_file() {
   framework.helpers.fs::make_temp "$1" "" "${2-}"
 }
 
+# Removes the folder <path> when nothing is left in it; quiet otherwise.
+framework.helpers.fs::remove_if_empty() {
+  rmdir -- "$1" 2>/dev/null || true
+}
+
 framework.helpers.fs::make_temp() {
   local fs_temp_target="$1" fs_temp_kind="$2" fs_temp_fallback="${3:-$FS_TEMP_FALLBACK}" fs_temp_path fs_temp_fell_back=false
   # shellcheck disable=SC2086
@@ -117,9 +122,9 @@ framework.helpers.fs::make_temp() {
     fs_temp_path=$(mktemp $fs_temp_kind "$fs_temp_fallback/XXXXXX") || return 1
     fs_temp_fell_back=true
   fi
-  dot::on_exit "rm -rf -- $(printf '%q' "$fs_temp_path")"
+  dot::on_exit rm -rf -- "$fs_temp_path"
   # The fallback folder goes too, once nothing else is in it.
-  ! $fs_temp_fell_back || dot::on_exit "rmdir -- $(printf '%q' "$fs_temp_fallback") 2>/dev/null || true"
+  ! $fs_temp_fell_back || dot::on_exit framework.helpers.fs::remove_if_empty "$fs_temp_fallback"
   printf -v "$fs_temp_target" '%s' "$fs_temp_path"
 }
 

@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 # Codex reads agents as TOML (.codex/agents/<name>.toml: name, description,
 # developer_instructions), not Markdown: each of dotdot's is rendered into

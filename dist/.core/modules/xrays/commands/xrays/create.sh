@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 DESCRIPTION="Open a new xray to discuss a topic in a file."
 DOCS="xrays"

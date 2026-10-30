@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 # GitHub through the gh CLI: as DOT_GH_TOKEN's owner when it is set (gh then
 # takes it over its own login), else as the logged-in user. Each operation

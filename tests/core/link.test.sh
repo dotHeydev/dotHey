@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 skill_paths() {
   find "$DOTDOT"/.core/system/*/skills "$DOTDOT"/.core/modules/*/skills -mindepth 1 -maxdepth 1 -type d

@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 DESCRIPTION="Plain Markdown files in .dot/Tasks/ (t001--slug.md)."
 

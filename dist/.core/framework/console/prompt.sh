@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 dot::use framework.console.output framework.console.args
 
@@ -83,12 +83,40 @@ framework.console.prompt::ask() {
   printf '%s\n' "${reply:-$default}"
 }
 
-framework.console.prompt::secret() {
-  local question="$1" reply=""
-  framework.console.prompt::can_ask || return 1
-  read -r -s -p "$(framework.console.prompt::question "$question"): " reply || reply=""
-  printf '\n' >&2
+# Whether someone can type a secret: a terminal to ask at, even when stdin
+# and stderr are pipes, and no agent or CI running.
+framework.console.prompt::can_ask_secret() {
+  ! framework.console.output::is_unattended && { : </dev/tty; } 2>/dev/null
+}
+
+# <text> as pinentry reads it in a command: %, CR, and LF escaped.
+framework.console.prompt::assuan() {
+  local text="${1//%/%25}"
+  text="${text//$'\r'/%0D}"
+  printf '%s' "${text//$'\n'/%0A}"
+}
+
+# Asks for a secret through pinentry, gpg's secure prompt, on the terminal
+# only (pinentry-curses, else pinentry-tty: never a window), for a secret no
+# system prompt takes (a token gpg is to encrypt). dotdot never reads keys
+# itself; passwords and passphrases are left to the system's own prompts
+# (ssh-add, gpg, the keychain). Prints the secret on stdout, for the caller
+# to hand on through a pipe; fails with no terminal, no terminal pinentry,
+# or nothing typed.
+framework.console.prompt::pinentry() {
+  local description="$1" label="${2:-Secret:}" program="" candidate tty reply
+  framework.console.prompt::can_ask_secret || { dot::raise "A secret is only typed at a terminal, so nothing was asked."; return 1; }
+  for candidate in pinentry-curses pinentry-tty; do
+    command -v "$candidate" >/dev/null && { program="$candidate"; break; }
+  done
+  [ -n "$program" ] || { dot::raise "There's no terminal pinentry to ask with, so nothing was asked." "Please install pinentry-curses or pinentry-tty (gnupg's pinentry package)."; return 1; }
+  tty=$(tty </dev/tty 2>/dev/null) || { dot::raise "Couldn't find the terminal to ask at."; return 1; }
+  reply=$(printf 'OPTION ttyname=%s\nOPTION ttytype=%s\nSETTITLE dotdot\nSETDESC %s\nSETPROMPT %s\nGETPIN\nBYE\n' \
+    "$tty" "${TERM:-dumb}" "$(framework.console.prompt::assuan "$description")" "$(framework.console.prompt::assuan "$label")" \
+    | "$program" --ttyname "$tty" 2>/dev/null | sed -n 's/^D //p') || reply=""
+  [ -n "$reply" ] || { dot::raise "Nothing was typed."; return 1; }
   printf '%s' "$reply"
+  reply=""
 }
 
 # The number of the <option> picked for <question>: at a terminal that reads

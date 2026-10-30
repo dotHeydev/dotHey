@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 DESCRIPTION="Take back a plugin's links, and set them aside."
 DOCS="using-plugins"

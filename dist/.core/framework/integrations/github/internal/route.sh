@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 # The one way every GitHub operation runs: through gh first, as
 # DOT_GH_TOKEN's owner when it is set (it always takes precedence) or else

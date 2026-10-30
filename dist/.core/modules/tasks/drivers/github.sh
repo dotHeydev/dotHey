@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 DESCRIPTION="GitHub issues with the task label, through gh or DOT_GH_TOKEN."
 

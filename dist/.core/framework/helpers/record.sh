@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 RECORD_SEPARATOR="--"
 RECORD_DIGITS=3

@@ -449,6 +449,8 @@ bash dot release:push github                        # push, retry or finish a pu
 bash dot release:token:delete github                # forget a saved token
 ```
 
+Tokens live in your system's keychain (macOS) or keyring (libsecret), which ask for them with their own prompt; elsewhere they're gpg-encrypted in `.env`, the token asked through pinentry on the terminal and the passphrase by gpg, also on the terminal. dotdot never prompts for a secret itself, and a push hands the token to git through a pipe into git's own credential cache, private to that push. The signing key's passphrase is ssh-add's to ask.
+
 `--force` force-pushes, replacing a remote's history, only once you type that remote's name at a terminal. It stops on uncommitted changes in what it ships, a signing key that doesn't match, anything that looks like a secret, or a remote without a token. It runs no build or tests: do those in your own workflow first.
 
 | Setting | Meaning |

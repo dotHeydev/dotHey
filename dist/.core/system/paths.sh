@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 BIN_DIR="$SYSTEM_DIR/bin"
 DOT_BIN="$BIN_DIR/dot"

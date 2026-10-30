@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 dot::use framework.console.args core.modules.tasks.service framework.console.output framework.console.prompt framework.helpers.template framework.console.terminal framework.ui.spinner
 

@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 dot::use framework.helpers.date framework.helpers.frontmatter framework.helpers.fs framework.helpers.json core.harnesses.transform
 
@@ -344,11 +344,11 @@ core.system.link.service::prepare_map() {
 core.system.link.service::note_duplicates() {
   local steps key where
   while IFS= read -r steps; do
-    [ "${steps%%$LINK_TAB*}" = links ] && [ "$steps" != links ] || continue
-    steps="${steps#links$LINK_TAB}"
-    key="${steps##*$LINK_TAB}"
+    [ "${steps%%"$LINK_TAB"*}" = links ] && [ "$steps" != links ] || continue
+    steps="${steps#links"$LINK_TAB"}"
+    key="${steps##*"$LINK_TAB"}"
     where=""
-    [ "$key" = "$steps" ] || where=" under \"${steps%$LINK_TAB*}\""
+    [ "$key" = "$steps" ] || where=" under \"${steps%"$LINK_TAB"*}\""
     where="${where//$LINK_TAB/\" → \"}"
     LINK_NOTICES+=("\"$key\" appears twice in the links of $(dot::relative "$SETTINGS_FILE")$where, so only the last one counts. Please merge them into one list: \"$key\": [\"<first>\", \"<second>\"]")
   done < <(framework.helpers.json::duplicate_keys "$(cat -- "$SETTINGS_FILE")")
@@ -969,13 +969,13 @@ core.system.link.service::plan_swept_appends() {
 # also every place a harness reads and the project's root, so what a row
 # no longer wants is found there too.
 core.system.link.service::swept_directories() {
-  local destination directory id path
+  local destination tree id path
   {
     for destination in ${LINK_DESTINATIONS[@]+"${LINK_DESTINATIONS[@]}"}; do
       printf '%s\0' "${destination%/*}"
     done
-    for directory in ${LINK_TREE_DIRS[@]+"${LINK_TREE_DIRS[@]}"}; do
-      printf '%s\0' "$directory"
+    for tree in ${LINK_TREE_DIRS[@]+"${LINK_TREE_DIRS[@]}"}; do
+      printf '%s\0' "$tree"
     done
     if [ "${1-}" = all ]; then
       printf '%s\0' "$BASE"
@@ -1166,6 +1166,7 @@ core.system.link.service::append() {
       printf -- '---\nname: %s\ndescription: %s\n---\n' "${path##*/}" "$(framework.helpers.frontmatter::field "$origin" description)" > "$path" || return 1
     fi
   fi
+  # shellcheck disable=SC2094 # tail reads the last line before anything is appended
   {
     [ ! -s "$path" ] || [ -z "$(tail -n 1 -- "$path")" ] || printf '\n'
     core.system.link.service::marker "$style" "$opening" "$label"

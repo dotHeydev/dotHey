@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 test_update_needs_a_terminal() {
   dot upgrade -y

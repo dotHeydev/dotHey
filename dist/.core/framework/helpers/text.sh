@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 TEXT_UTF8_LOCALES=(C.UTF-8 en_US.UTF-8 UTF-8)
 TEXT_ZERO_WIDTH_RANGES=(
@@ -103,6 +103,7 @@ framework.helpers.text::utf8_escape() {
 
 framework.helpers.text::character() {
   local character
+  # shellcheck disable=SC2059 # the format is the escape, decoded on purpose
   printf -v character "$(framework.helpers.text::utf8_escape "$1")"
   printf '%s' "$character"
 }

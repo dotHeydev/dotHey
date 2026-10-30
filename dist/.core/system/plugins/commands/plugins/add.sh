@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 DESCRIPTION="Add a plugin from a GitHub repo you trust."
 DOCS="using-plugins"

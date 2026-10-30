@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 # dotdot's guards: the policy every action dotdot takes is checked against.
 # Each is a predicate (0 allowed, 1 refused) that never prints, prompts, or

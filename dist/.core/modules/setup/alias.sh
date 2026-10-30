@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 # The dot alias: one line in the user's shell rc file, so typing dot runs
 # ./dot, or dotdot's own entry when that link is missing. It sits between

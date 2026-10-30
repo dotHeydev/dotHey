@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 DESCRIPTION="Scan the project for harnesses and what they already hold."
 DOCS="setting-up"

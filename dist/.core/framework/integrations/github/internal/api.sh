@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 # GitHub through its REST and GraphQL APIs as DOT_GH_TOKEN's owner, for when
 # gh is missing or fails; the same operations as internal/cli.sh, printing

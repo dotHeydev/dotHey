@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 DESCRIPTION="Choose where the project keeps its tasks."
 DOCS="tasks"

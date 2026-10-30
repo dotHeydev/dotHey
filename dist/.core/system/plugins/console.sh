@@ -1,8 +1,11 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 dot::use framework.console.output framework.console.prompt core.system.plugins.manifest core.system.plugins.service
 
 core.system.plugins.console::plugin() {
+  case "$1" in
+    http://*) framework.console.output::fail_as "$EXIT_USAGE" "dotdot only fetches plugins over https, so it refused $1." "Please give it as https://${1#http://}, or as <owner>/<name>." ;;
+  esac
   core.system.plugins.manifest::id "$1" \
     || framework.console.output::fail "\"$1\" isn't a plugin dotdot can use." "Please give it as <owner>/<name>, or its GitHub URL; its name needs a letter or digit first."
 }

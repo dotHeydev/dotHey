@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 DESCRIPTION="Take the dot alias back out of your shell."
 DOCS="setting-up"

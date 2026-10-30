@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 DESCRIPTION="Link a plugin's waiting links, and make them active."
 DOCS="using-plugins"

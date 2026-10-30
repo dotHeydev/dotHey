@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 # Skills: dotdot's and the ones it owns (Skills/), linked as they are into a
 # harness's skills directory. Data: .skills, the directory.

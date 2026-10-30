@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 DESCRIPTION="Remove a plugin and everything it linked."
 DOCS="using-plugins"

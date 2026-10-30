@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 # What every UI component draws with: how this run can draw (detect), and
 # the frame a component redraws in place as the person answers.
@@ -176,6 +176,8 @@ framework.ui.screen::begin() {
 # The terminal as it was before begin.
 framework.ui.screen::end() {
   trap - INT TERM
+  # Safe: trap -p prints the traps set before, each quoted by bash itself, so
+  # this sets them again and runs nothing.
   [ -z "$UI_TRAPS" ] || eval "$UI_TRAPS"
   [ -z "$UI_TTY" ] || stty "$UI_TTY" 2>/dev/null || true
   printf '\033[?25h' >&2

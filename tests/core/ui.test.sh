@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 # Keys as a terminal sends them, piped into a component drawn as at a terminal.
 rich() {

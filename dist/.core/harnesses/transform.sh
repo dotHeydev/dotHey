@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 # Transforms: what a harness reads in another format than dotdot's. A format
 # belongs to the folder a harness reads, not to the harness: every harness's

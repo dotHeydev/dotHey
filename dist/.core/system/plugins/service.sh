@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 dot::use core.system.plugins.manifest framework.helpers.fs framework.helpers.kv framework.integrations.github.service
 

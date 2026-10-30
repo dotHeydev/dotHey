@@ -16,7 +16,12 @@ USAGE="Usage: bash tests/run.sh [--file <name>] [--case <test>] [--jobs <n>] [--
   -v, -vv         a dot per test, or each test's name"
 GNU_ONLY_COMMANDS=(realpath)
 BASH4_ONLY_BUILTINS=(mapfile readarray)
-LINT_EXCLUSIONS="SC1090,SC1091,SC2034,SC2154"
+# Off for every file: SC1090 and SC1091, as dot::use loads modules by name,
+# not by a path shellcheck could follow; SC2034, as globals are set in one
+# module and read in another; SC2015 and SC2016, the A && B || C and
+# literal-'$' idioms dotdot writes on purpose. Everything else, notes
+# included, fails the suite.
+LINT_EXCLUSIONS="SC1090,SC1091,SC2034,SC2015,SC2016"
 
 if [ "${1-}" != --run ]; then
   GREEN=""
@@ -56,13 +61,13 @@ restrict_environment() {
 # per file, cached outside the repo), so an unchanged tree lints in no time.
 lint() {
   local cache="${XDG_CACHE_HOME:-$HOME/.cache}/dotdot-tests/lint" sums="$WORK_DIR/sums" changed="$WORK_DIR/changed"
-  command -v shellcheck >/dev/null || { printf '%s! shellcheck not installed; lint skipped.%s\n' "$BOLD$YELLOW" "$RESET" > "$WORK_DIR/lint"; return 0; }
+  command -v shellcheck >/dev/null || { printf '%s✗%s shellcheck isn'"'"'t installed, so nothing was linted. Please install it, or run with --no-lint.\n' "$BOLD$RED" "$RESET" > "$WORK_DIR/lint"; return 1; }
   mkdir -p "$(dirname -- "$cache")" && touch "$cache"
-  find "$SOURCE_DIR" "$REPOSITORY_DIR/install.sh" "$TESTS_DIR" -type f \( -name '*.sh' -o -path '*/bin/dot' \) -print0 \
+  find "$SOURCE_DIR" "$REPOSITORY_DIR/install.sh" "$TESTS_DIR" -type f \( -name '*.sh' -o -path '*/bin/*' \) -print0 \
     | xargs -0 cksum > "$sums"
   grep -vxF -f "$cache" "$sums" | cut -d' ' -f3- > "$changed"
   [ -s "$changed" ] || return 0
-  tr '\n' '\0' < "$changed" | xargs -0 -n 8 -P "$JOBS" shellcheck -x -s bash -S warning -e "$LINT_EXCLUSIONS" > "$WORK_DIR/lint" 2>&1 || return 1
+  tr '\n' '\0' < "$changed" | xargs -0 -n 8 -P "$JOBS" shellcheck -x -s bash -S info -e "$LINT_EXCLUSIONS" > "$WORK_DIR/lint" 2>&1 || return 1
   cp "$sums" "$cache"
 }
 

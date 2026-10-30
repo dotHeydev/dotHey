@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 # Setting dotdot up for a project: which harnesses it has and holds, and the
 # links map entries that put dotdot where the chosen ones read it. Links are
@@ -445,6 +445,7 @@ core.modules.setup.service::entry_link() {
 # is left for the agent.
 core.modules.setup.service::save() {
   local harnesses="$1" type="$2" pending="$3"
+  # shellcheck disable=SC2086 # harness ids, one word each (^[a-z][a-z0-9-]*$)
   dot::save_state "$SETUP_HARNESSES_SETTING" "$(printf '%s\n' $harnesses | core.modules.setup.service::json_list)" \
     && dot::save_state "$SETUP_TYPE_SETTING" "$(framework.helpers.json::string "$type")" \
     && dot::save_state "$SETUP_PENDING_SETTING" "$(printf '%s\n' "$pending" | core.modules.setup.service::json_list)"

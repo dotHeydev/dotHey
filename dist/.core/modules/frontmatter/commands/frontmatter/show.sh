@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 DESCRIPTION="Print just the frontmatter of dotdot's docs."
 JSON=true

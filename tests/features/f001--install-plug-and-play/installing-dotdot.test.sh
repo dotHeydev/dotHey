@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 . "$(dirname -- "${BASH_SOURCE[0]}")/helpers.sh"
 
 # A local archive shaped like GitHub's, and an empty project to install into.

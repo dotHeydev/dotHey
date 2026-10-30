@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 DOT_LOADED_MODULES=" "
 DOT_PACKAGES=" framework core plugins "
@@ -549,8 +549,12 @@ dot::call() {
   DOT_INTERNAL_CALL="$internal" bash "$DOT_BIN" "$@"
 }
 
+# dot::on_exit <command> [<argument>...]: runs it when the command ends. Each
+# word is kept shell-quoted (printf %q), so whatever an argument holds (a
+# path, text from a file or a person) stays one word and never runs as code.
 dot::on_exit() {
-  DOT_EXIT_TASKS+=("$1")
+  [ $# -gt 0 ] || return 0
+  DOT_EXIT_TASKS+=("$(printf '%q ' "$@")")
 }
 
 # <message>, then each further argument as a next step under it (as is when
@@ -614,6 +618,7 @@ dot::finish() {
   [ "$status" -eq 0 ] || dot::report_errors "$status"
   rm -f -- "$DOT_ERROR_FILE"
   for task in ${DOT_EXIT_TASKS[@]+"${DOT_EXIT_TASKS[@]}"}; do
+    # Safe: dot::on_exit quoted every word, so this only splits them back.
     eval "$task" || true
   done
   return "$status"

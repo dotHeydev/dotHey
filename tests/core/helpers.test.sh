@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 physical() {
   (cd -P -- "$1" && pwd)
@@ -81,6 +81,7 @@ test_kv_writes_reads_and_removes() {
 SECOND
 THIRD"
   assert_contains "$(cat "$file")" "# comment"
+  # shellcheck disable=SC2012 # one known file; stat's flags differ on macOS and Linux
   assert_equal "$(ls -l "$file" | cut -c1-10)" "-rw-------"
 }
 
@@ -312,6 +313,7 @@ test_secrets_are_saved_privately_and_only_while_git_ignores_them() {
   core "export GIT_CONFIG_GLOBAL=/dev/null XDG_CONFIG_HOME='$SANDBOX/none'; dot::save_secret DOT_RELEASE_TOKEN_SAMPLE 'a value' && dot::secret DOT_RELEASE_TOKEN_SAMPLE"
   assert_success
   assert_equal "$OUTPUT" "a value"
+  # shellcheck disable=SC2012 # one known file; stat's flags differ on macOS and Linux
   assert_equal "$(ls -l "$SANDBOX/.env" | cut -c1-10)" "-rw-------"
 }
 
@@ -532,4 +534,23 @@ test_a_temporary_file_takes_the_fallback_it_is_given() {
   assert_success
   assert_contains "$OUTPUT" "$SANDBOX/elsewhere/"
   assert_no_file "$SANDBOX/elsewhere"
+}
+
+test_an_exit_task_runs_its_arguments_as_words_never_as_code() {
+  core "dot::on_exit printf '%s\n' '\$(touch \"$SANDBOX/pwned\"); touch \"$SANDBOX/pwned\"'"
+  assert_success
+  assert_no_file "$SANDBOX/pwned"
+  assert_contains "$OUTPUT" '$(touch'
+}
+
+test_pinentry_commands_escape_what_would_end_them() {
+  core "dot::use framework.console.prompt; framework.console.prompt::assuan \$'100% sure\nBYE'"
+  assert_success
+  assert_equal "$OUTPUT" "100%25 sure%0ABYE"
+}
+
+test_pinentry_asks_nothing_for_an_agent() {
+  core "dot::use framework.console.prompt; AI_AGENT=1 framework.console.prompt::pinentry 'The token.'"
+  assert_failure
+  assert_equal "$OUTPUT" ""
 }

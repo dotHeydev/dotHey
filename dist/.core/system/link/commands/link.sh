@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 DESCRIPTION="Link dotdot and its plugins where your agents read them."
 DOCS="linking"

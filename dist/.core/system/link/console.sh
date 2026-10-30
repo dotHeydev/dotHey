@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 dot::use framework.console.args framework.console.output framework.console.prompt framework.helpers.json framework.helpers.text core.system.link.service
 
@@ -79,8 +79,8 @@ core.system.link.console::print_notices() {
 core.system.link.console::print_errors() {
   local message
   for message in ${LINK_ERRORS[@]+"${LINK_ERRORS[@]}"}; do
-    if [ "${message#*$LINK_TAB}" != "$message" ]; then
-      framework.console.output::error "${message%%$LINK_TAB*}" "${message#*$LINK_TAB}"
+    if [ "${message#*"$LINK_TAB"}" != "$message" ]; then
+      framework.console.output::error "${message%%"$LINK_TAB"*}" "${message#*"$LINK_TAB"}"
     else
       framework.console.output::error "$message"
     fi

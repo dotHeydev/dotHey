@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 DESCRIPTION="Save the token a release remote pushes with."
 DOCS="releases"
@@ -31,7 +31,7 @@ EOF
 }
 
 handle() {
-  local name="" url token
+  local name="" url token=""
   while [ $# -gt 0 ]; do
     case "$1" in
       -*) framework.console.args::invalid "Unknown argument: $1" ;;
@@ -43,11 +43,15 @@ handle() {
   core.modules.release.service::load_remotes
   url=$(core.modules.release.service::remote_url "$name")
   framework.console.prompt::can_ask || framework.console.output::fail_as "$EXIT_PRECONDITION" "Tokens are only entered in a terminal." "$OUTPUT_MANUAL_RUN bash dot release:token $name"
-  token=$(framework.console.prompt::secret "Token for $name ($url)")
-  [ -n "$token" ] || framework.console.output::fail "No token entered, so nothing was saved."
-  [ "$(core.modules.release.service::token_store)" != gpg ] \
-    || framework.console.output::info "Please choose a passphrase for the $name token, then repeat it; pushes will ask for it."
-  core.modules.release.service::save_token "$url" "$token" || framework.console.output::fail "Couldn't save the token for $name."
+  if [ "$(core.modules.release.service::token_store)" = gpg ]; then
+    # gpg takes no secret itself, so pinentry asks for the token; gpg then
+    # asks for the passphrase on the terminal.
+    token=$(framework.console.prompt::pinentry "The token for $name ($url)." "Token:") || framework.console.output::fail "No token entered, so nothing was saved."
+    framework.console.output::info "gpg will now ask you to choose a passphrase for the $name token; pushes will ask for it."
+  else
+    framework.console.output::info "Your system will now ask for the token for $name ($url)."
+  fi
+  core.modules.release.service::save_token "$url" "$token" || { token=""; framework.console.output::fail "Couldn't save the token for $name."; }
   token=""
   framework.console.output::success "Saved the $name token in $(core.modules.release.service::token_store)."
 }

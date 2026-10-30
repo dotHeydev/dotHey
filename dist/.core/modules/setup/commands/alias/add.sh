@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 DESCRIPTION="Add the dot alias to your shell, to type dot instead of bash dot."
 DOCS="setting-up"

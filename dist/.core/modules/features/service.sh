@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 dot::use framework.helpers.fs framework.helpers.record framework.helpers.template framework.helpers.text
 

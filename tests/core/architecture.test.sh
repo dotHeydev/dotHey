@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 FRAMEWORK_VARIABLES_PATTERN='\$\{?(BASE|DOTDOT_ROOT|DOTDOT_NAME|CORE_DIR|FRAMEWORK_DIR|BIN_DIR|DOT_BIN|PLUGINS_DIR|PLUGINS_LOCK|SETTINGS_FILE|SETTINGS_DEFAULTS|HOST_ENV_FILE|USER_FILE|USER_EXAMPLE_FILE|ENTRY_LINK)\b'
 
@@ -62,7 +62,7 @@ test_function_names_match_their_module_path() {
   local found
   local module
   found="$(misnamed_functions "$(core_dir)/framework" "framework." ! -path '*/commands/*')"
-  for module in $(core_dir)/system/*/ $(core_dir)/modules/*/; do
+  for module in "$(core_dir)"/system/*/ "$(core_dir)"/modules/*/; do
     [ "$module" != "$(core_dir)/system/bin/" ] || continue
     module="${module%/}"
     found="$found$(misnamed_functions "$module" "core.$(basename -- "$(dirname -- "$module")").$(basename -- "$module")." ! -path '*/commands/*' ! -path '*/stubs/*' ! -path '*/migrations/*')"

@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 DESCRIPTION="Mark what setup left for the agent as finished."
 DOCS="setting-up"

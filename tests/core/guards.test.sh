@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 test_guards_and_the_runtime_are_sealed() {
   local name

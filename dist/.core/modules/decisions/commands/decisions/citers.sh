@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 
 DESCRIPTION="List the decisions that point at a decision."
 DOCS="decisions"

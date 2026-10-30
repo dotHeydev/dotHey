@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck shell=bash
 # Shared by f003's tests.
 
 . "$(dirname -- "${BASH_SOURCE[0]}")/../f001--install-plug-and-play/helpers.sh"
