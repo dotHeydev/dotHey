@@ -57,7 +57,7 @@ core.modules.release.console::confirm_force() {
 }
 
 core.modules.release.console::push() {
-  local branch="$1" tag="$2" index name failures=0 force=""
+  local branch="$1" tag="$2" index name failures=0 tried=0 force=""
   ! $RELEASE_FORCE || force=--force
   core.modules.release.service::point_remotes
   framework.console.output::newline
@@ -68,16 +68,25 @@ core.modules.release.console::push() {
       framework.console.output::next "Push later with: bash dot release:push $name${force:+ --force}"
       continue
     fi
-    [ "$(core.modules.release.service::token_store)" != gpg ] || framework.console.output::info "Pushing to $name… gpg will ask for the token's passphrase if it needs it."
+    tried=$((tried + 1))
+    framework.console.output::line "Pushing to $name…"
     if core.modules.release.service::push_with_token "$RELEASE_DESTINATION" "$name" "${RELEASE_REMOTE_URLS[$index]}" -q --atomic ${force:+"$force"} "refs/heads/$branch" --tags; then
       framework.console.output::success "Pushed to $name."
     else
-      framework.console.output::error "Couldn't push to $name." "Retry with: bash dot release:push $name${force:+ --force}"
+      if [ -s "$DOT_ERROR_FILE" ]; then
+        dot::flush_errors
+      else
+        framework.console.output::error "Couldn't push to $name."
+      fi
+      framework.console.output::next "Retry with: bash dot release:push $name${force:+ --force}" >&2
       failures=$((failures + 1))
     fi
   done
+  [ "$failures" -gt 0 ] || { framework.console.output::newline; return 0; }
+  # One remote's failure says it all; several get a summary.
+  [ "$tried" -gt 1 ] || exit "$EXIT_FAILURE"
   framework.console.output::newline
-  [ "$failures" -eq 0 ] || framework.console.output::fail "$(framework.helpers.text::plural "$failures" push) didn't go through; the release commit and tag are kept."
+  framework.console.output::fail "$failures of $tried pushes didn't go through; the release commit and tag are kept."
 }
 
 core.modules.release.console::print_warnings() {

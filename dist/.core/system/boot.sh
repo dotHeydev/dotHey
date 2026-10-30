@@ -613,6 +613,13 @@ dot::report_errors() {
   done < "$DOT_ERROR_FILE"
 }
 
+# Shows the errors raised so far, as the end of the command would, and
+# clears them: for a command that goes on after one step failed.
+dot::flush_errors() {
+  dot::report_errors "${1:-1}"
+  : > "$DOT_ERROR_FILE"
+}
+
 dot::finish() {
   local status=$? task
   [ "$status" -eq 0 ] || dot::report_errors "$status"

@@ -100,6 +100,15 @@ core.modules.release.service::token_id() {
   printf '%s' "$1" | git hash-object --stdin
 }
 
+# The name release.remotes gives <url>.
+core.modules.release.service::remote_name() {
+  local index
+  for index in "${!RELEASE_REMOTE_URLS[@]}"; do
+    [ "${RELEASE_REMOTE_URLS[$index]}" != "$1" ] || { printf '%s\n' "${RELEASE_REMOTES[$index]}"; return 0; }
+  done
+  printf '%s\n' "$1"
+}
+
 core.modules.release.service::token_key() {
   local index
   for index in "${!RELEASE_REMOTE_URLS[@]}"; do
@@ -145,21 +154,31 @@ core.modules.release.service::save_token() {
 }
 
 core.modules.release.service::decrypt_token() {
-  local url="$1" key cipher plain status
+  local url="$1" key cipher plain status name
   key=$(core.modules.release.service::token_key "$url") && cipher=$(dot::secret "$key") || return 1
   [[ "$cipher" =~ $RELEASE_CIPHER_PATTERN ]] || return 1
+  name=$(core.modules.release.service::remote_name "$url")
   framework.helpers.fs::make_temp_file status || return 1
-  plain=$(printf '%s' "$cipher" | base64 --decode | gpg --quiet --pinentry-mode loopback --no-symkey-cache \
-    --status-file "$status" --decrypt) || { rm -f -- "$status"; return 1; }
+  # gpg's own messages stay out of the output; its status says what happened.
+  if ! plain=$(printf '%s' "$cipher" | base64 --decode | gpg --quiet --pinentry-mode loopback --no-symkey-cache \
+    --status-file "$status" --decrypt 2>/dev/null); then
+    if grep -q '^\[GNUPG:\] DECRYPTION_FAILED' "$status"; then
+      dot::raise "The $name token's passphrase is wrong, so nothing was pushed."
+    else
+      dot::raise "Couldn't read the $name token, so nothing was pushed." "If it keeps failing, save it again: bash dot release:token $name"
+    fi
+    rm -f -- "$status"
+    return 1
+  fi
   if ! grep -q '^\[GNUPG:\] NEED_PASSPHRASE_SYM ' "$status" || ! grep -q '^\[GNUPG:\] DECRYPTION_OKAY' "$status" \
     || grep -q '^\[GNUPG:\] ENC_TO ' "$status"; then
     rm -f -- "$status"
-    dot::raise "$key in $(dot::relative "$HOST_ENV_FILE") can't be read as a token." "Please save it again: bash dot release:token <remote>"
+    dot::raise "$key in $(dot::relative "$HOST_ENV_FILE") can't be read as a token." "Please save it again: bash dot release:token $name"
     return 1
   fi
   rm -f -- "$status"
   if [ "${plain%%$'\n'*}" != "$url" ]; then
-    dot::raise "$key in $(dot::relative "$HOST_ENV_FILE") was saved for another url." "Please save it again: bash dot release:token <remote>"
+    dot::raise "$key in $(dot::relative "$HOST_ENV_FILE") was saved for another url." "Please save it again: bash dot release:token $name"
     return 1
   fi
   printf '%s' "${plain#*$'\n'}"
@@ -225,8 +244,9 @@ core.modules.release.service::remove_token() {
 core.modules.release.service::push_with_token() {
   local repository="$1" name="$2" url="$3" token rest host path socket status=0
   shift 3
-  token=$(core.modules.release.service::load_token "$url") && [ -n "$token" ] \
-    || { dot::raise "No token saved for $name." "Please save one: bash dot release:token $name"; return 1; }
+  core.modules.release.service::has_token "$url" \
+    || { dot::raise "There's no token saved for $name, so nothing was pushed." "Please save one: bash dot release:token $name"; return 1; }
+  token=$(core.modules.release.service::load_token "$url") && [ -n "$token" ] || return 1
   rest="${url#https://}"
   host="${rest%%/*}"
   path="${rest#*/}"
