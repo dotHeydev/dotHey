@@ -15,7 +15,7 @@ An xray is the project's place to discuss a topic at length: the chat is for sho
 ## Chat, question tool, or xray
 
 - **Chat:** a quick clarification, a suggestion, a short back-and-forth.
-- **Question tool** (the harness's, e.g. AskUserQuestion): a few quick questions with clear options. When you ask two or more, make the first one "Move this to an xray?", with "No, answer here" first and "Yes, open an xray" second.
+- **Question tool** (your harness's tool for structured questions): a few quick questions with clear options. When you ask two or more, make the first one "Move this to an xray?", with "No, answer here" first and "Yes, open an xray" second.
 - **Xray:** anything longer, or anything the user wants kept.
 
 ## Open one

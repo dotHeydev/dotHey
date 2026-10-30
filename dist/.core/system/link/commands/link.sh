@@ -1,7 +1,7 @@
 # shellcheck shell=bash
 
 DESCRIPTION="Link dotHey and its plugins where your agents read them."
-DOCS="linking"
+DOCS="configuration/linking"
 JSON=true
 
 hey::use framework.console.args framework.console.output framework.console.prompt framework.helpers.fs framework.helpers.json framework.helpers.text core.system.link.service core.system.link.console

@@ -63,7 +63,7 @@ Sort every hit:
 No hits is an answer, not a failed search.
 
 ### 5. Fill the gaps
-Draft every part of the template, marking each **confident**, **best guess**, or **blank**. Collapse the blanks into one Interview Tool round (the harness's interactive-question capability — e.g. Claude Code's `AskUserQuestion`). A second round only if an answer opens a genuinely new question.
+Draft every part of the template, marking each **confident**, **best guess**, or **blank**. Collapse the blanks into one Interview Tool round (your harness's tool for asking the user structured questions, or plain chat when it has none). A second round only if an answer opens a genuinely new question.
 
 ### 6. Write
 ```sh

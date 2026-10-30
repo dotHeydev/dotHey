@@ -19,10 +19,12 @@ test_the_agent_marks_what_it_finished_under_state() {
 }
 
 test_migrations_are_recorded_under_state() {
-  printf '#!/usr/bin/env bash\n\nDESCRIPTION="Sample."\n\nmigrate() {\n  :\n}\n' > "$DOTHEY/.core/system/migrations/0001-sample.sh"
+  local applied
+  applied=$(setting_value '.state.migrations[]')
+  printf '#!/usr/bin/env bash\n\nDESCRIPTION="Sample."\n\nmigrate() {\n  :\n}\n' > "$DOTHEY/.core/system/migrations/0000-sample.sh"
   hey migrate -y
   assert_success
-  assert_equal "$(setting_value '.state.migrations[]')" "0001-sample"
+  assert_equal "$(setting_value '.state.migrations[]' | sort)" "$(printf '%s\n' "0000-sample" ${applied:+"$applied"} | sort)"
 }
 
 test_dotheys_defaults_hold_no_state() {

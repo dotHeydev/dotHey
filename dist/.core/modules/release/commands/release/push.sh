@@ -1,7 +1,7 @@
 # shellcheck shell=bash
 
 DESCRIPTION="Push the release to its remotes."
-DOCS="releases"
+DOCS="maintenance/releases"
 
 hey::use framework.console.args core.modules.release.console core.modules.release.service framework.console.output framework.console.prompt
 

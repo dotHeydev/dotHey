@@ -1,8 +1,9 @@
 # dotHey
 
-**The context, rules, and tools your coding agents work by.** Small, lean, any model, any harness.
+A small and lean agentic coding distro, any model, any harness.
+A model-agnostic distro for AI coding agents.
 
-AI coding agents are only as good as what they're told. Without a shared baseline, each session starts from scratch: the agent guesses your conventions, forgets last week's decisions, and drifts a little further from how your team works. dotHey gives your project that baseline: a lean set of instructions, records, skills, and commands that turns a capable agent into a consistent teammate.
+AI coding agents are only as good as thir harness and their context. Without a shared baseline, each session starts from scratch: the agent guesses your conventions, forgets decisions, and drifts a little further from your standards. dotHey gives you that baseline: a lean set of context, tools, and workflows that turns a capable agent into a consistent teammate.
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/dotHeydev/dotHey/main/install.sh | bash
@@ -53,42 +54,22 @@ Every command answers `--help` with its usage, options, and examples.
 
 ## Documentation
 
-**[Using dotHey](docs/usage.md)**: building with it.
+The [documentation](docs/index.md) goes from what dotHey is to extending it, in the order you meet it:
 
-- [Concepts](docs/usage.md#concepts): context, tools, and work; rules precedence; who owns what
-- [Working with agents](docs/usage.md#working-with-agents): the workflow, skills, and reply flags
-- [Records](docs/usage.md#records): features, decisions, notes, xrays, and tasks
-- [The `hey` command](docs/usage.md#the-hey-command)
-- [Linking](docs/usage.md#linking): what goes where your harness reads
-- [Using plugins](docs/usage.md#using-plugins)
-- [Settings](docs/usage.md#settings), [values from `.env`](docs/usage.md#values-from-env), and [secrets](docs/usage.md#secrets)
-- [GitHub access](docs/usage.md#github-access)
-- [Releases](docs/usage.md#releases)
-- [Updating dotHey](docs/usage.md#updating-dothey)
-- [Project layout](docs/usage.md#project-layout)
-
-**[Extending dotHey](docs/plugins.md)**: writing plugins.
-
-- [What a plugin is](docs/plugins.md#what-a-plugin-is)
-- [Creating a plugin](docs/plugins.md#creating-a-plugin)
-- [`plugin.json`](docs/plugins.md#pluginjson)
-- [Commands](docs/plugins.md#commands)
-- [Context, skills, agents, and stubs](docs/plugins.md#context-skills-agents-and-stubs)
-- [Settings and secrets](docs/plugins.md#settings-and-secrets)
-- [The public API](docs/plugins.md#the-public-api)
-- [Output conventions](docs/plugins.md#output-conventions)
-- [Architecture](docs/plugins.md#architecture) and [the security model](docs/plugins.md#security-model)
-- [Publishing](docs/plugins.md#publishing)
+- [Prologue](docs/prologue/introduction.md): introduction, release notes, upgrade guide, contributing
+- [Concepts](docs/concepts/context-tools-and-work.md): context, tools, and work; rules precedence; who owns what
+- [Getting started](docs/getting-started/installation.md): installation, setup, preparing the context, your first feature
+- [Configuration](docs/configuration/settings.md): settings, linking, `.env` and secrets, plugins
+- [Working with agents](docs/work/workflow.md): the workflow, skills, reply flags, records, xrays
+- [Extending](docs/extending/plugins.md): writing plugins, the public API, publishing
+- [Maintenance](docs/maintenance/updating.md): updating, migrations, relocating, releases
+- [Reference](docs/reference/hey.md): every command
 
 ## Supported harnesses
 
-dotHey is model-agnostic: the context is plain Markdown, and a harness plugin wires it into a specific agent.
+dotHey is model-agnostic: the context is plain Markdown, the skills follow the open `SKILL.md` format, and the root `AGENTS.md` is read by most agents. Out of the box, `bash hey setup` links it where each of these reads it: Amp, Antigravity, Claude Code, Codex, Cursor, Factory Droid, GitHub Copilot, Grok Build, Junie, Kiro, OpenCode, Pi, Zed, and `.agents/`.
 
-- [x] Claude Code: `bash hey plugins:add dotHeydev/claude-code`
-- [ ] OpenCode
-- [ ] Codex
-- [ ] Copilot
-- [ ] Cursor
+What is specific to one harness or one tech stack (its tooling, its conventions, its skills) comes as a [plugin](docs/extending/plugins.md), such as `bash hey plugins:add dotHeydev/claude-code`.
 
 ## Principles
 

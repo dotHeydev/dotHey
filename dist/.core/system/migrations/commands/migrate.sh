@@ -1,7 +1,7 @@
 # shellcheck shell=bash
 
 DESCRIPTION="Upgrade dotHey's own files to this version's format."
-DOCS="updating-dothey"
+DOCS="maintenance/migrations"
 
 hey::use framework.console.args framework.console.output framework.console.prompt framework.helpers.json framework.helpers.text
 

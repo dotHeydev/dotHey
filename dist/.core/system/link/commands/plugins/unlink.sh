@@ -1,7 +1,7 @@
 # shellcheck shell=bash
 
 DESCRIPTION="Take back a plugin's links, and set them aside."
-DOCS="using-plugins"
+DOCS="configuration/plugins"
 
 hey::use core.system.link.console
 

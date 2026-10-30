@@ -1,7 +1,7 @@
 # shellcheck shell=bash
 
 DESCRIPTION="List the decisions that point at a decision."
-DOCS="decisions"
+DOCS="work/records#decisions"
 
 hey::use framework.console.args core.modules.decisions.service framework.helpers.frontmatter framework.console.output
 

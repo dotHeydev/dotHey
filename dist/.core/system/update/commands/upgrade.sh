@@ -1,7 +1,7 @@
 # shellcheck shell=bash
 
 DESCRIPTION="Update dotHey's core to its latest version."
-DOCS="updating-dothey"
+DOCS="maintenance/updating"
 
 hey::use framework.console.args framework.helpers.fs framework.helpers.json framework.console.output framework.console.prompt framework.ui.spinner core.system.update.service
 

@@ -18,9 +18,9 @@ Output exactly: 🧭🧭🧭 GETTING DOTHEY READY
 ## Scope
 What setup left (`setup.pending`), and the Markdown files at the top of `.hey/`. Survey them with `bash hey frontmatter:show .hey`: `ignore: true` marks a file still to fill. Read a file in full only once something goes into it.
 
-- `RULES.md`, `SECURITY.md`, and `STANDARDS.md` ship with defaults: keep them, only extend them and replace placeholders.
+- `GUIDELINES.md`, `RULES.md`, `SECURITY.md`, and `STANDARDS.md` ship as dotHey's opinionated defaults, active from the start: keep them, only extend them and replace placeholders. A user who wants one off sets `ignore: true` in its frontmatter.
 - `USER.md` holds the user's personal preferences: fill it only with what they say about how they like to work.
-- Out of scope: `AGENTS.md`, `SCHEMA.md` (generated), and plugin regions (between `<!-- <owner>/<name> -->` markers).
+- Out of scope: `AGENTS.md` and `.core/KERNEL.md` (dotHey's), `SCHEMA.md` (generated), and plugin regions (between `<!-- <owner>/<name> -->` markers).
 
 ## 0. Pick up where setup left off
 Run `bash hey adopt --scan --json` once (reuse it if onboarding just ran it). Its `setup` holds the user's choices and `setup.pending` what is left for you, in order.
@@ -56,7 +56,7 @@ If the user named one file, ask about that file's topics only.
 Sorting is your job, not theirs: place each piece of what they shared into the section it belongs to, in whichever file.
 
 - `COMPANY.md`, `PRODUCT.md`, `DESIGN.md`: one to three short declarative sentences per section, no bullets, no marketing language.
-- Every other file: short bullets, one fact or rule each.
+- Every other file: short bullets, one fact or rule each. `TECHSTACK.md` → Commands lists the exact commands, read from the manifests and scripts.
 - Never invent. A section nothing fits keeps its placeholder; a topic no section fits gets a new section.
 - A fact drawn from the project's files rather than the user's words is marked *(inferred)* until the user confirms it.
 - The project's own instruction files (`CLAUDE.md`, `.cursor/rules/`, `.github/copilot-instructions.md`, ...): propose where each part belongs (RULES, STANDARDS, TECHSTACK, ...) instead of copying them verbatim, and move it only once the user agrees. Flag every conflict with dotHey's rules or another file; never resolve one silently.
@@ -69,7 +69,7 @@ The Interview Tool stays available whenever a choice is genuinely clearer as opt
 Then set `state.isReady` to `true` in `.hey/hey.json`, changing nothing else in the file, and run `bash hey setup:done context` if it is pending.
 
 ## 3. Report
-Tell the user, in the Reporting template of `AGENTS.md`, that the context is ready based on what they shared:
+Tell the user, in the reply format of `GUIDELINES.md`, that the context is ready based on what they shared:
 
 - ✅ The files prepared.
 - ⚠️ Only the gaps that would weaken the work — a file still empty, or a section too thin to guide decisions (e.g. no tech stack, no audience for the product) — each with what would make it sound. Don't list every empty section, and don't ask questions for their own sake; they can add more anytime by just telling you.

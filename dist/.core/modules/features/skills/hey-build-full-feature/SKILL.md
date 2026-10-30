@@ -46,7 +46,7 @@ The feature doc is the handoff between them — each stage reads what the last o
 
    These are the calls that aren't yours to make. Resume once the user answers.
 
-5. **Report at the end** per the Reporting template in `AGENTS.md`: ✅ the feature doc path, plus anything flagged or deferred.
+5. **Report at the end** per the reply format in `GUIDELINES.md`: ✅ the feature doc path, plus anything flagged or deferred.
 
 ## Scope
 One feature per run. If the request covers several, document them separately and confirm which to build first — a chain carrying two features loses the thread of which test drives which code. Work the user wants tracked for later rather than built now goes to `hey-create-task`.

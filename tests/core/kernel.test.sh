@@ -160,10 +160,10 @@ test_version_and_help_are_machine_readable() {
   assert_success
   assert_equal "$(json_value "$OUTPUT" .name)" tasks:list
   assert_contains "$(json_value "$OUTPUT" '.options[].name')" "-l, --limit <n>"
-  assert_contains "$(json_value "$OUTPUT" .docs)" "/docs/usage.md#tasks"
+  assert_contains "$(json_value "$OUTPUT" .docs)" "/docs/work/records.md#tasks"
   hey tasks:list --help
   assert_contains "$OUTPUT" "Docs:"
-  assert_contains "$OUTPUT" "blob/main/docs/usage.md#tasks"
+  assert_contains "$OUTPUT" "blob/main/docs/work/records.md#tasks"
 }
 
 test_old_names_still_run_but_are_never_listed() {
@@ -220,8 +220,19 @@ test_help_links_the_docs_on_main_whatever_the_installed_version() {
   sandbox::settings "\"state\": {\"commit\": \"4d342b097ba4acf1850d6caab9d63a52cea45457\", \"migrations\": [$(sandbox::migrations)]}"
   hey link --help
   assert_success
-  assert_contains "$OUTPUT" "https://github.com/dotHeydev/dotHey/blob/main/docs/usage.md#linking"
+  assert_contains "$OUTPUT" "https://github.com/dotHeydev/dotHey/blob/main/docs/configuration/linking.md"
   assert_not_contains "$OUTPUT" "4d342b0"
+}
+
+test_every_help_links_a_docs_page_that_exists() {
+  local url page anchor
+  while read -r url; do
+    page="${url#*/blob/main/docs/}"
+    anchor="${page#*#}"
+    page="${page%%#*}"
+    assert_file "$REPOSITORY_DIR/docs/$page"
+    [ "$anchor" = "$page" ] || grep -qi "^#\{2,\} $(printf '%s' "$anchor" | tr '-' '.')\$" "$REPOSITORY_DIR/docs/$page" || fail "$url has no #$anchor heading"
+  done < <(core 'while IFS="|" read -r name file; do kernel::docs "$file"; done < <(kernel::core_commands); kernel::docs_link; kernel::docs_link "$KERNEL_FEATURE_FLAGS_DOCS"'; printf '%s\n' "$OUTPUT" | sort -u)
 }
 
 test_json_help_says_what_the_help_page_says() {

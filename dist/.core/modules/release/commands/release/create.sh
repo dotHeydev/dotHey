@@ -1,7 +1,7 @@
 # shellcheck shell=bash
 
 DESCRIPTION="Make a signed release commit in the release repo."
-DOCS="releases"
+DOCS="maintenance/releases"
 
 hey::use framework.console.args core.modules.release.console core.modules.release.service framework.console.output framework.console.prompt
 

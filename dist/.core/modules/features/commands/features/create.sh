@@ -1,7 +1,7 @@
 # shellcheck shell=bash
 
 DESCRIPTION="Document a new feature from the template."
-DOCS="features"
+DOCS="work/records#features"
 JSON=true
 
 hey::use framework.console.args core.modules.features.service framework.helpers.fs framework.console.output framework.helpers.template framework.helpers.text framework.console.prompt

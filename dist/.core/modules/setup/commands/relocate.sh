@@ -1,7 +1,7 @@
 # shellcheck shell=bash
 
 DESCRIPTION="Move dotHey to another place in the project."
-DOCS="relocating"
+DOCS="maintenance/relocating"
 
 hey::use framework.console.args framework.console.output framework.console.prompt framework.helpers.fs framework.helpers.text
 

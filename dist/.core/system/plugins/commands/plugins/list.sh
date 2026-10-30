@@ -1,7 +1,7 @@
 # shellcheck shell=bash
 
 DESCRIPTION="List the installed plugins."
-DOCS="using-plugins"
+DOCS="configuration/plugins"
 JSON=true
 
 hey::use framework.console.args framework.console.output core.system.plugins.manifest framework.helpers.json

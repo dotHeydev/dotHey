@@ -17,3 +17,9 @@ _What major third-party services or libraries is this built on?_
 
 ## Environments
 _What environments exist (dev/staging/prod), and how do they differ?_
+
+## Commands
+_Which exact commands install, build, run, test, lint, format, analyze, and migrate this project?_
+
+- Prefer the project's own entry points (its scripts, task runner, or Makefile) over calling tools directly.
+- Each command is listed once, ready to run, with the filters that target a run: by file, by case, by directory.

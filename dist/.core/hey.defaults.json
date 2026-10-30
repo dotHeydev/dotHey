@@ -9,7 +9,7 @@
   "plugins": {
     "unprefixedCommandOwners": [],
     "denyLinkOrigin": [],
-    "denyLinkDestination": ["@hey:AGENTS.md", "@hey:RULES.md", "@hey:SECURITY.md", "@hey:USER.md", "AGENTS.md"]
+    "denyLinkDestination": ["@hey:AGENTS.md", "@hey:GUIDELINES.md", "@hey:RULES.md", "@hey:SECURITY.md", "@hey:USER.md", "AGENTS.md"]
   },
   "links": {
     "@hey:AGENTS.md": ["AGENTS.md"],

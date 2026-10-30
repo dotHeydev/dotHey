@@ -1,7 +1,7 @@
 # shellcheck shell=bash
 
 DESCRIPTION="Create a task."
-DOCS="tasks"
+DOCS="work/records#tasks"
 JSON=true
 
 hey::use framework.console.args framework.helpers.fs framework.console.output framework.console.prompt core.modules.tasks.console core.modules.tasks.service framework.helpers.text framework.helpers.json

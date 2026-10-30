@@ -1,7 +1,7 @@
 # shellcheck shell=bash
 
 DESCRIPTION="Change a decision's status."
-DOCS="decisions"
+DOCS="work/records#decisions"
 
 hey::use framework.console.args core.modules.decisions.console core.modules.decisions.service framework.helpers.frontmatter framework.console.output
 

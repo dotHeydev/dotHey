@@ -1,7 +1,7 @@
 # shellcheck shell=bash
 
 DESCRIPTION="Create a new plugin repo to build on."
-DOCS="using-plugins"
+DOCS="extending/creating"
 
 hey::use framework.console.args framework.console.output core.system.plugins.console core.system.plugins.manifest core.system.plugins.service framework.helpers.fs
 

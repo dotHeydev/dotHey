@@ -1,7 +1,7 @@
 # shellcheck shell=bash
 
 DESCRIPTION="Add a plugin from a GitHub repo you trust."
-DOCS="using-plugins"
+DOCS="configuration/plugins"
 
 hey::use framework.console.args framework.console.output core.system.plugins.console core.system.plugins.manifest
 

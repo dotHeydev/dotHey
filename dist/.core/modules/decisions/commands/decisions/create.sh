@@ -2,7 +2,7 @@
 
 DESCRIPTION="Document a new decision from the template."
 JSON=true
-DOCS="decisions"
+DOCS="work/records#decisions"
 
 hey::use framework.console.args core.modules.decisions.console core.modules.decisions.service framework.helpers.fs framework.console.output framework.console.prompt framework.helpers.template framework.helpers.text
 

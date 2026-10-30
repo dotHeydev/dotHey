@@ -1,7 +1,7 @@
 # shellcheck shell=bash
 
 DESCRIPTION="Show a task."
-DOCS="tasks"
+DOCS="work/records#tasks"
 JSON=true
 
 hey::use framework.console.args framework.helpers.fs framework.console.output core.modules.tasks.console core.modules.tasks.service framework.console.terminal framework.helpers.json

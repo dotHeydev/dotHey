@@ -1,7 +1,7 @@
 # shellcheck shell=bash
 
 DESCRIPTION="Change a task's title, content or status."
-DOCS="tasks"
+DOCS="work/records#tasks"
 
 hey::use framework.console.args framework.helpers.fs framework.console.output core.modules.tasks.console core.modules.tasks.service
 

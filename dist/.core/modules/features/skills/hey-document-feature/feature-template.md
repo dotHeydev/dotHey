@@ -23,7 +23,7 @@ Filenames only, one per line, of existing decisions (.hey/Decisions/) that shape
 Consequential choices scoped to this feature alone — an approach or tradeoff that constrains implementation — not general enough to be a standalone Decision. Never restate what the Specification scenarios already define: branches, error paths, and validation rules are not decisions. `None` if there are none.
 
 ## Data Model
-What it needs and touches on the database. Tables, columns, relations. `None` if it touches none.
+What it needs and touches in persisted data: entities, attributes, relations. `None` if it touches none.
 
 ## File Map
 `None` until implemented. Then three lists:

@@ -1,7 +1,7 @@
 # shellcheck shell=bash
 
 DESCRIPTION="Choose where the project keeps its tasks."
-DOCS="tasks"
+DOCS="work/records#tasks"
 
 hey::use framework.console.args framework.console.output framework.console.prompt core.modules.tasks.service
 

@@ -1,7 +1,7 @@
 # shellcheck shell=bash
 
 DESCRIPTION="Find what a decision touches."
-DOCS="decisions"
+DOCS="work/records#decisions"
 JSON=true
 
 hey::use framework.console.args core.modules.decisions.service framework.helpers.frontmatter framework.helpers.fs framework.console.output framework.helpers.record framework.helpers.text framework.helpers.json

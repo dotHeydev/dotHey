@@ -1,7 +1,7 @@
 # shellcheck shell=bash
 
 DESCRIPTION="Check that every link between decisions resolves."
-DOCS="decisions"
+DOCS="work/records#decisions"
 JSON=true
 
 hey::use framework.console.args core.modules.decisions.service framework.console.output framework.helpers.text framework.helpers.json

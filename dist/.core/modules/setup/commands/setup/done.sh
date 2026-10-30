@@ -1,7 +1,7 @@
 # shellcheck shell=bash
 
 DESCRIPTION="Mark what setup left for the agent as finished."
-DOCS="setting-up"
+DOCS="getting-started/setup"
 
 hey::use framework.console.args framework.console.output core.modules.setup.service
 

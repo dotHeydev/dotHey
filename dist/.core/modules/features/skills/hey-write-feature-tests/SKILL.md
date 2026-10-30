@@ -41,12 +41,12 @@ Output exactly: 🧪🧪🧪 BEGIN WRITING TESTS
 
 7. **Verify each one can fail.** Break the behaviour a test covers and confirm that test goes red. A test whose setup guarantees its own assertion proves nothing.
 
-8. **Report** per the Reporting template in `AGENTS.md`: the Edge and Adversarial tests you invented beyond the Specification, and any scenario you could not test and why.
+8. **Report** per the reply format in `GUIDELINES.md`: the Edge and Adversarial tests you invented beyond the Specification, and any scenario you could not test and why.
 
 ## What makes a test meaningful
 
 - **One test, one behavior.** The name states that behavior — "rejects a reset link after 30 minutes", not "tests reset". If you need "and" in the name, it's two tests.
-- **Assert the actual consequence.** The failure mode to avoid is a test that would pass against a stub: asserting only a 200, that no exception was thrown, or that a method got called. Assert the state or output the user would notice — the row is gone, the token is rejected, the response carries the right value.
+- **Assert the actual consequence.** The failure mode to avoid is a test that would pass against a stub: asserting only a success status, that no exception was thrown, or that a method got called. Assert the state or output the user would notice — the row is gone, the token is rejected, the response carries the right value.
 - **Test observable behavior, not internals.** Private methods, call counts, and mocks of code you own bind tests to one implementation and break on refactors that changed nothing real.
 - **Arrange, act, assert — no branching.** No `if`, loops, or try/catch in a test body. A test that needs control flow is testing more than one thing; split it. Use the framework's data-driven tests for the same assertion over varying input.
 - **Minimal setup.** Only what the behavior needs. Reach for the suite's existing fixtures or factories rather than hand-building data. Sprawling setup usually means the test is aimed too wide.

@@ -1,7 +1,7 @@
 # shellcheck shell=bash
 
 DESCRIPTION="Scan the project for harnesses and what they already hold."
-DOCS="setting-up"
+DOCS="getting-started/setup"
 JSON=true
 
 hey::use framework.console.args framework.console.output framework.helpers.json core.modules.setup.service core.modules.setup.console

@@ -10,9 +10,10 @@ HEY_COMMAND_MAX_DEPTH=2
 # plugin's take their owner as the first part.
 HEY_CORE_COMMAND_MAX_DEPTH=3
 HEY_RESERVED_COMMANDS=(help list version)
-# Where each core command's help points for more: HEY_DOCS_URL#<DOCS>.
-HEY_DOCS_URL="https://github.com/dotHeydev/dotHey/blob/%s/docs/usage.md"
-HEY_DOCS_DEFAULT="the-hey-command"
+# Where each core command's help points for more: its DOCS page in HEY_DOCS_URL,
+# as <section>/<page>[#<anchor>].
+HEY_DOCS_URL="https://github.com/dotHeydev/dotHey/blob/%s/docs/%s"
+HEY_DOCS_DEFAULT="getting-started/cli"
 # Was --json given (before --)? Set by the kernel; errors then print as JSON.
 HEY_JSON=false
 # Exit statuses, part of every command's contract: 0 is success, an empty

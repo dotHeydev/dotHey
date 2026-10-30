@@ -1,7 +1,7 @@
 # shellcheck shell=bash
 
 DESCRIPTION="Remove a plugin and everything it linked."
-DOCS="using-plugins"
+DOCS="configuration/plugins"
 
 hey::use framework.console.args framework.console.output framework.console.prompt core.system.plugins.console core.system.plugins.manifest core.system.plugins.service
 

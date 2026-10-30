@@ -1,7 +1,7 @@
 # shellcheck shell=bash
 
 DESCRIPTION="Add the hey alias to your shell, to type hey instead of bash hey."
-DOCS="setting-up"
+DOCS="getting-started/setup"
 
 hey::use framework.console.args framework.console.output framework.console.prompt framework.ui.checkbox core.modules.setup.alias
 

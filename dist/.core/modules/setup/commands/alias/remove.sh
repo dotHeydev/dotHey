@@ -1,7 +1,7 @@
 # shellcheck shell=bash
 
 DESCRIPTION="Take the hey alias back out of your shell."
-DOCS="setting-up"
+DOCS="getting-started/setup"
 
 hey::use framework.console.args framework.console.output framework.console.prompt core.modules.setup.alias
 

@@ -1,7 +1,7 @@
 # shellcheck shell=bash
 
 DESCRIPTION="Update a plugin, after a review."
-DOCS="using-plugins"
+DOCS="configuration/plugins"
 
 hey::use framework.console.args framework.console.output core.system.plugins.console core.system.plugins.manifest
 

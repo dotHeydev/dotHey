@@ -1,7 +1,7 @@
 # shellcheck shell=bash
 
 DESCRIPTION="Remove the token a release remote pushes with."
-DOCS="releases"
+DOCS="maintenance/releases"
 
 hey::use framework.console.args core.modules.release.service framework.console.output
 

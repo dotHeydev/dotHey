@@ -1,7 +1,7 @@
 # shellcheck shell=bash
 
 DESCRIPTION="Create a new, numbered note."
-DOCS="notes"
+DOCS="work/records#notes"
 JSON=true
 
 hey::use framework.console.args core.modules.notes.service framework.console.output framework.helpers.text

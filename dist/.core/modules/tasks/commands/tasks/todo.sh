@@ -1,7 +1,7 @@
 # shellcheck shell=bash
 
 DESCRIPTION="Move a task to todo."
-DOCS="tasks"
+DOCS="work/records#tasks"
 
 hey::use core.modules.tasks.console core.modules.tasks.service
 

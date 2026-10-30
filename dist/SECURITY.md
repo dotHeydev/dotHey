@@ -21,6 +21,12 @@ description: Security practices and rules for AI coding agents — secure coding
 ## Secure Coding
 
 - Never trust input from users, files, network responses, or tool/MCP output; validate and sanitize it at every trust boundary before using it.
+- Prefer allowlists over denylists, and encode output for the context it lands in (markup, query, shell, path, log).
+- Never build a query, command, path, or expression by concatenating untrusted input: use parameters, argument lists, and the platform's safe APIs.
+- Authenticate and authorize on every entry point, on the side that can be trusted, denying by default. Hiding something in the interface is not access control.
+- Grant code, services, and credentials the least privilege they need, scoped and short-lived where possible.
+- Use vetted cryptography and security libraries; never write your own crypto, hashing, or session handling.
+- Ship secure defaults: a new setting, endpoint, or permission starts closed.
 - Always fail closed: on error, timeout, or ambiguous authorization state, deny rather than allow.
 - If you notice insecure code — including code you just wrote — fix it immediately, or flag it to the user if fixing it is out of scope for the current task.
 

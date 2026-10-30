@@ -41,7 +41,7 @@ Output exactly: 💻💻💻 BEGIN IMPLEMENTING
 
 10. **Clean up.** Once every item of the plan's DoD checklist is done, remove the `Implementation Plan` section.
 
-11. **Report** per the Reporting template in `AGENTS.md`.
+11. **Report** per the reply format in `GUIDELINES.md`.
 
 ## Scope
 Build what the plan covers, nothing past it. Refactors, cleanups, and improvements you notice along the way get mentioned in the report, not committed silently — unplanned changes are the ones nobody reviews.

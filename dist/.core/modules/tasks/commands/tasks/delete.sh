@@ -1,7 +1,7 @@
 # shellcheck shell=bash
 
 DESCRIPTION="Delete a task for good."
-DOCS="tasks"
+DOCS="work/records#tasks"
 
 hey::use framework.console.args framework.helpers.fs framework.console.output framework.console.prompt core.modules.tasks.console core.modules.tasks.service
 

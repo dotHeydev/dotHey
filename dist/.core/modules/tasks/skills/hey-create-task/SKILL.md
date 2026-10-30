@@ -22,9 +22,9 @@ Inform the user of your invocation of this skill by outputting exactly: 📌📌
 1. **Confirm intent.** Unless the user asked for a task (or named this skill), ask whether they want this tracked as a task. If not, stop.
 2. **Duplicate check.** Run `bash hey tasks:list --status todo,doing,paused`. If an open task already covers it, show it with `bash hey tasks:get <id>` and ask whether to update that one instead (`bash hey tasks:update <id> --<section> "..."`) or create a new one.
 3. **Gather context.** Use the context already in your window. For related records, survey with `bash hey frontmatter:show .hey/Features/` (and `Decisions/`, `Notes/`) rather than reading files.
-4. **Draft** the title and every template section from the request and that context. Ask only what you can't reasonably infer, in **one** Interview Tool round (e.g. Claude Code's `AskUserQuestion`), proposing your best guess in each question. Usually nothing needs asking.
+4. **Draft** the title and every template section from the request and that context. Ask only what you can't reasonably infer, in **one** Interview Tool round (your harness's tool for asking the user structured questions, or plain chat when it has none), proposing your best guess in each question. Usually nothing needs asking.
 5. **Create** it with `bash hey tasks:create "<title>" --<section> "..."` (run `bash hey tasks:create --help` for the template-derived flags). Never write a task file or call the service yourself.
-6. **Confirm.** Run `bash hey tasks:get <id>` rather than pasting it, then report per the Reporting template in `AGENTS.md`: ✅ the task id, and ask whether it is right.
+6. **Confirm.** Run `bash hey tasks:get <id>` rather than pasting it, then report per the reply format in `GUIDELINES.md`: ✅ the task id, and ask whether it is right.
 
 ## Template
 The task's shape lives in `task-template.md`, in this skill's directory; `bash hey tasks:create` builds the body from it.

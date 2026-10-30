@@ -7,7 +7,7 @@ KERNEL_COLUMN_WIDTH=20
 KERNEL_UNRELEASED="(unreleased)"
 KERNEL_FILE=""
 KERNEL_UNPREFIXED_SETTING="plugins.unprefixedCommandOwners"
-KERNEL_FEATURE_FLAGS_DOCS="feature-flags"
+KERNEL_FEATURE_FLAGS_DOCS="configuration/feature-flags"
 KERNEL_UNPREFIXED=""
 KERNEL_UNPREFIXED_READ=false
 # Old names that still run a command, never listed: "<old>=<new>".
@@ -168,10 +168,13 @@ kernel::print_version() {
   fi
 }
 
-# The docs at <anchor>, on the main branch: the docs aren't versioned.
+# The docs at <section>/<page>[#<anchor>], on the main branch: the docs aren't
+# versioned.
 kernel::docs_link() {
+  local page="${1:-$HEY_DOCS_DEFAULT}" anchor=""
+  case "$page" in *'#'*) anchor="#${page#*#}"; page="${page%%#*}" ;; esac
   # shellcheck disable=SC2059
-  printf "$HEY_DOCS_URL#%s\n" main "${1:-$HEY_DOCS_DEFAULT}"
+  printf "$HEY_DOCS_URL%s\n" main "$page.md" "$anchor"
 }
 
 # The docs a core command's help ends with: its DOCS anchor (a full URL for a

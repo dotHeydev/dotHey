@@ -28,10 +28,10 @@ Inform the user of your invocation of this skill by outputting exactly: 🧮🧮
 4. **Gather remaining context.** Read the related context files (`.hey/*.md`) from your context memory/window (only reload them if they aren't present in your context window). Find the decisions that bind the feature: `bash hey decisions:impact --term "<nouns the feature touches>" --scope decisions`, then `bash hey frontmatter:show .hey/Decisions/` for any the terms missed. The accepted ones that apply go in `Related Project Decisions` (`--related-project-decisions`). A new rule that would bind more than this feature is a decision, not a feature detail: offer `hey-document-decision` for it.
 5. **Draft a first pass** at every section of `feature-template.md` using only the request + context gathered. Mark each section **confident**, **best guess**, or **blank/unknown**.
 6. **Collapse gaps into questions** — the smallest set that resolves the "best guess"/"blank" sections. See Interviewing Guidelines.
-7. If there's anything to ask, run **one** Interview Tool round (the harness's interactive-question capability — e.g. Claude Code's `AskUserQuestion`). Only run a second round if an answer opens up a genuinely new, material question; don't chain rounds by default.
+7. If there's anything to ask, run **one** Interview Tool round (your harness's tool for asking the user structured questions, or plain chat when it has none). Only run a second round if an answer opens up a genuinely new, material question; don't chain rounds by default.
 8. Fold answers into the draft.
 9. **Create or update the file.** See Output section below to know how.
-10. **Confirm.** Run a command to dump its content (e.g. `cat <path>`) rather than pasting it into your response. Then report per the Reporting template in `AGENTS.md`: ✅ the filepath, 👉 ask whether the documentation is correct. Proceeding on an unchallenged draft counts as acceptance, but the user must see it first.
+10. **Confirm.** Run a command to dump its content (e.g. `cat <path>`) rather than pasting it into your response. Then report per the reply format in `GUIDELINES.md`: ✅ the filepath, 👉 ask whether the documentation is correct. Proceeding on an unchallenged draft counts as acceptance, but the user must see it first.
 
 ## Interviewing Guidelines
 - Never ask about anything explicitly or clearly told by the user.
@@ -43,13 +43,13 @@ Inform the user of your invocation of this skill by outputting exactly: 🧮🧮
 
 Cover these dimensions as relevant:
 - **Scope:** What exactly is included and excluded?
-- **User types:** Which user types interact with this feature (Guest, User, Admin)?
+- **Actors:** Who or what uses this feature — people in which roles, other systems, scheduled work?
 - **Authorization:** Who can do what? What happens on unauthorized access?
 - **Behavior:** Golden path, edge cases (honest mistakes and failures), adversarial cases (malicious use), error states.
-- **UI/UX:** Where does this appear? What components are involved?
-- **Routes:** URL structure and naming.
-- **Data model:** New models, relationships, schema changes, attributes.
-- **Validation:** Input rules and error messages.
+- **Interfaces:** Where does it surface (UI, API, command line, events, files), and through which components?
+- **Entry points:** The routes, endpoints, commands, or messages that reach it, and their naming.
+- **Data model:** New entities, relations, persisted attributes, migrations.
+- **Validation:** Input rules, and how errors reach the caller.
 - **Side effects:** Notifications, events, jobs, logging.
 
 ## Template

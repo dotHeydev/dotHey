@@ -1,7 +1,7 @@
 # shellcheck shell=bash
 
 DESCRIPTION="Set dotHey up for the project's harnesses."
-DOCS="setting-up"
+DOCS="getting-started/setup"
 
 hey::use framework.console.args framework.console.output framework.console.prompt framework.helpers.fs framework.helpers.json \
   framework.ui.checkbox framework.ui.select framework.ui.confirm framework.ui.spinner framework.ui.steps framework.ui.message \

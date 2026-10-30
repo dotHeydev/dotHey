@@ -48,7 +48,7 @@ Survey the records first (`bash hey frontmatter:show` on `.hey/`, `.hey/Features
   - unused dependencies.
 - **Duplication:** constants restating config defaults, copied patterns or formats, repeated methods across classes.
 - **Stale docs:**
-  - old paths and namespaces;
+  - old paths and module names;
   - historical plan steps;
   - "out of scope" lists contradicting what was built;
   - lifecycle lists missing states;
@@ -59,14 +59,14 @@ Confirm code is "dead" with a plugin's references command when one is installed 
 
 ### 3. Fix the code
 - Every behaviour change is test-first: a failing test, then the fix.
-- Keep a branch the static analyser needs, and add a standard comment above it; for this occasion is ok to add code comments.
-- Run the full suite, static analysis, and the formatter after each batch.
+- Keep a branch the compiler or static analysis requires, with a comment saying why.
+- After each batch, run the tests covering it, static analysis, and the formatter; the full suite runs once, in Verify.
 
 ### 4. Fix the tests
 - **Profile** the suite: anything slow usually means a real sleep or a real wait.
 - **Find tests that cannot fail:**
   - a fake implementing the very behaviour under test;
-  - dataset closures that are never executed (a parameter typed `Closure` receives the wrapper, not its result);
+  - data-driven cases whose inputs never reach the code under test (a lazily built value passed on unevaluated);
   - assertions with slack (`<=`, `not empty`) where an exact value is known.
 - **Drop duplicates;** merge near-identical tests into datasets.
 - **Add missing edges:** failure handlers, cleanup of child records, inputs with no declaration, crash and redelivery paths.
@@ -83,7 +83,7 @@ Ensure each section fits its respective template.
 **File Map** in three lists:
 - **Owns:** directories the feature introduced, code and tests. Single files only when their directory is shared.
 - **Touches:** `file@method` in other features' code that this feature changed.
-- **Used by:** `file@method` outside Owns that use its code. Generate it from real references (imports plus same-namespace use, mapped to the enclosing method), then drop import-only, constructor-injection, and docblock-only hits. One line per file: `file@a, @b`.
+- **Used by:** `file@method` outside Owns that use its code. Generate it from real references (imports and direct uses, mapped to the enclosing function), then drop hits that only import, inject, or mention it in documentation. One line per file: `file@a, @b`.
 - Verify every listed path and method exists.
 
 Add decision backlinks to the features each decision affects: `bash hey decisions:impact <NNN>` shows which already cite it, `--term` which should.
@@ -94,13 +94,13 @@ Add decision backlinks to the features each decision affects: `bash hey decision
 - **Never built:** `bash hey decisions:update <NNN> --status draft`.
 - **Replaced by another:** `bash hey decisions:update <NNN> --status superseded --by <newer NNN>`.
 - **Missing:** record cross-cutting rules settled during the cleanup with `hey-document-decision`, then backlink them from the features.
-- **Unrun gates:** a test matrix or real-infrastructure test a decision requires is either run or turned into a test.
+- **Unrun gates:** a test matrix or a test against real infrastructure a decision requires is either run or turned into a test.
 
 ### 7. Verify
 Full suite, static analysis, and formatter check all pass.
 
 ## Report
-Per the Reporting template in `AGENTS.md`:
+Per the reply format in `GUIDELINES.md`:
 - `✅ <area>: <what was fixed>` — one line per area.
 - `⚠️ Critical Path: <what changed>` — every Critical Path change, always listed.
 - `🌀 <item>: <why it needs the user>` — only items still open; offer to track them with `hey-create-task`.

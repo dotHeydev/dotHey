@@ -1,7 +1,7 @@
 # shellcheck shell=bash
 
 DESCRIPTION="Open a new xray to discuss a topic in a file."
-DOCS="xrays"
+DOCS="work/xrays"
 JSON=true
 
 hey::use framework.console.args core.modules.xrays.service framework.console.output framework.helpers.record framework.helpers.text framework.console.prompt

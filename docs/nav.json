@@ -1,0 +1,12 @@
+{
+  "sections": [
+    { "title": "Prologue", "dir": "prologue", "pages": ["introduction", "release-notes", "upgrade-guide", "contributing", "docs-style-guide"] },
+    { "title": "Concepts", "dir": "concepts", "pages": ["context-tools-and-work", "rules-precedence", "ownership", "agent-mode"] },
+    { "title": "Getting started", "dir": "getting-started", "pages": ["installation", "setup", "preparing-the-context", "your-first-feature", "cli", "project-layout"] },
+    { "title": "Configuration", "dir": "configuration", "pages": ["settings", "feature-flags", "linking", "env-and-secrets", "github-access", "plugins"] },
+    { "title": "Working with agents", "dir": "work", "pages": ["workflow", "skills", "reply-flags", "records", "xrays"] },
+    { "title": "Extending", "dir": "extending", "pages": ["plugins", "creating", "plugin-json", "commands", "context-and-skills", "settings-and-secrets", "public-api", "output-conventions", "ui-components", "architecture", "security-model", "publishing", "harness-plugins", "stack-plugins"] },
+    { "title": "Maintenance", "dir": "maintenance", "pages": ["updating", "migrations", "relocating", "releases"] },
+    { "title": "Reference", "dir": "reference", "pages": ["hey", "setup", "alias", "decisions", "features", "frontmatter", "notes", "plugins", "release", "tasks", "xrays"] }
+  ]
+}

@@ -32,22 +32,26 @@ Format:
 
 The rules describe patterns, not specific methods. Examples show a pattern and may go stale as the code changes; the rule does not.
 
-### Methods
+### Casing
 
-- Methods are a single verb or noun when that is clear.
-- Getters are plain nouns, without `get`.
-- Methods with a verb and a noun say what they do and to what (`sendInvoice`, `archivePosts`).
+Each kind of name follows the language's casing convention, the same way across the codebase. Examples below use one casing; the rule holds in any.
+
+### Functions and Methods
+
+- A single verb or noun when that is clear.
+- Accessors are plain nouns (`total`), without `get`, unless the language's convention requires it.
+- A verb and a noun say what it does and to what (`sendInvoice`, `archivePosts`).
 - Booleans start with `is`, `has`, `can`, or `should`.
 
 Generic words never stand alone in any name: data, info, item, manager, helper, util, handler, process.
 
-### Functions and Variables
+### Variables
 
-Variables are full-word nouns, plural for lists, never abbreviated: `invoice` and `lineItems`, never `inv` or `arr`.
+Variables are full-word nouns, plural for collections, never abbreviated: `invoice` and `lineItems`, never `inv` or `arr`.
 
 ### Constants
 
-Constants are SCREAMING_SNAKE_CASE.
+Constants are named for what they mean, not their value (`MAX_RETRIES`, never `THREE`), in the language's constant casing.
 
 ## Exceptions to the Rules
 
