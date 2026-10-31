@@ -1,82 +1,67 @@
 # dotHey
 
-A small and lean agentic coding distro, any model, any harness.
-A model-agnostic distro for AI coding agents.
+dotHey is a lean kit that turns AI coding agents into consistent teammates. It gives every agent the same project context, the same tools, and the same workflow, with any model and any harness.
 
-AI coding agents are only as good as thir harness and their context. Without a shared baseline, each session starts from scratch: the agent guesses your conventions, forgets decisions, and drifts a little further from your standards. dotHey gives you that baseline: a lean set of context, tools, and workflows that turns a capable agent into a consistent teammate.
+dotHey is plain Markdown and Bash. A single install copies it into your project, and from then on your project owns it. No background process, no account, no vendor lock-in.
 
-```sh
-curl -fsSL https://raw.githubusercontent.com/dotHeydev/dotHey/main/install.sh | bash
-```
+## Install
 
-Then tell your agent *"I'm using dotHey"*. It interviews you about the project and writes the context itself.
-
-## Why dotHey
-
-- **Consistent behavior, across sessions and models.** Product, rules, security, standards, and stack are written down once, in plain Markdown, and every agent reads them the same way.
-- **A workflow agents actually follow.** Feature → plan → tests → code, each stage written down before the next begins, with a skill for every step.
-- **Records that outlive the chat.** Features, decisions, notes, tasks, and *xrays* (discussions held in a file) keep what was agreed where the next session will find it.
-- **Yours from day one.** A one-time install copies everything into `.hey/` in your project. There's no runtime, no service, no lock-in: edit, extend, or delete anything.
-- **Safe by design.** Every change is previewed and confirmed, plugins are opt-in and reviewed, secrets never leave `.env`, and agents can't approve on your behalf.
-- **Bash and Markdown, nothing else.** It runs on bash 3.2+ with standard Unix tools, macOS included.
-
-## Quick start
-
-1. **Install** from your project's root:
+1. From your project's root, run the installer:
 
    ```sh
    curl -fsSL https://raw.githubusercontent.com/dotHeydev/dotHey/main/install.sh | bash
    ```
 
-   This creates `.hey/` and the `hey` command at the root, then sets dotHey up for your harnesses, asking a few questions first. Rather read it first? Download `install.sh`, read it, then run `bash install.sh`.
+2. Select your harnesses from the list.
 
-2. **Set it up.** The installer runs `bash hey setup` for you (run it again any time): it finds the harnesses the project uses (Amp, Antigravity, Claude Code, Codex, Cursor, Factory Droid, GitHub Copilot, Grok Build, Junie, Kiro, OpenCode, Pi, Zed, `.agents/`) and what they already hold, asks which to link, shows the plan, and links. No plugin needed.
+3. Tell your agent "Hey!". The agent onboards itself to your project, helps you define the context, and finishes the remaining setup.
 
-3. **Define.** Tell your agent "set up dotHey". The `hey-ready` skill reads what the project already says, asks about the rest, and fills `.hey/PRODUCT.md`, `RULES.md`, `TECHSTACK.md`, and the rest.
-
-4. **Build.** Describe a feature and let the agent take it from specification to tested code.
-
-> [!TIP]
-> Add `hey() { bash hey "$@"; }` to your shell profile to type `hey` instead of `bash hey`.
-
-## A taste of it
-
-```sh
-bash hey                                           # every command, at a glance
-bash hey features:create "Password reset" --description "Reset a password by email."
-bash hey decisions:impact 002 --term session,jwt   # what a decision would touch
-bash hey tasks:list --status todo,doing
-bash hey xrays:create "Caching" --description "Where and how we cache."
-bash hey upgrade                                   # the latest dotHey, after a review
-```
-
-Every command answers `--help` with its usage, options, and examples.
-
-## Documentation
-
-The [documentation](docs/index.md) goes from what dotHey is to extending it, in the order you meet it:
-
-- [Prologue](docs/prologue/introduction.md): introduction, release notes, upgrade guide, contributing
-- [Concepts](docs/concepts/context-tools-and-work.md): context, tools, and work; rules precedence; who owns what
-- [Getting started](docs/getting-started/installation.md): installation, setup, preparing the context, your first feature
-- [Configuration](docs/configuration/settings.md): settings, linking, `.env` and secrets, plugins
-- [Working with agents](docs/work/workflow.md): the workflow, skills, reply flags, records, xrays
-- [Extending](docs/extending/plugins.md): writing plugins, the public API, publishing
-- [Maintenance](docs/maintenance/updating.md): updating, migrations, relocating, releases
-- [Reference](docs/reference/hey.md): every command
+From there, describe a feature and let the agent build it.
 
 ## Supported harnesses
 
-dotHey is model-agnostic: the context is plain Markdown, the skills follow the open `SKILL.md` format, and the root `AGENTS.md` is read by most agents. Out of the box, `bash hey setup` links it where each of these reads it: Amp, Antigravity, Claude Code, Codex, Cursor, Factory Droid, GitHub Copilot, Grok Build, Junie, Kiro, OpenCode, Pi, Zed, and `.agents/`.
+| | | |
+|---|---|---|
+| Amp | Factory Droid | Kiro |
+| Antigravity | GitHub Copilot | OpenCode |
+| Claude Code | Grok Build | Pi |
+| Codex | Junie | Zed |
+| Cursor | `.agents/` | |
 
-What is specific to one harness or one tech stack (its tooling, its conventions, its skills) comes as a [plugin](docs/extending/plugins.md), such as `bash hey plugins:add dotHeydev/claude-code`.
+One copy of dotHey serves all of them. The setup links each file into the location every harness reads, and the root `AGENTS.md` covers most other agents.
 
-## Principles
+## Why dotHey
 
-1. **Simplicity.** The smallest set of instructions that achieves the goal.
-2. **Reliability.** Instructions that produce the same behavior across sessions and models.
-3. **Efficiency.** The least context, tokens, and steps an agent needs to do the right thing.
+dotHey gives agents a lasting memory of your project. Your product, rules, security policy, coding standards, and tech stack each live in their own Markdown file, and every agent reads them at the start of every session. Agents apply your conventions from the first prompt and keep applying them across sessions, models, and harnesses.
+
+The decisions made by your team and the specifications of your features live in the repository as records. Agents consult them before they change anything, so the reasoning behind your project survives every chat, every model switch, and every new team member.
+
+Agents also follow one workflow: specification, implementation plan, failing tests, then code. Each stage produces a document before the next one begins, so every feature arrives tested against its own specification.
+
+Your team reviews, versions, and edits all of it like any other code.
+
+## How it works
+
+dotHey organizes its content in three layers:
+
+- **Context:** one Markdown file per concern in `.hey/`. Each file declares in its frontmatter when an agent needs it, so agents load only the files a task requires and spend fewer tokens.
+- **Tools:** the `hey` command and a set of agent skills. The command creates and numbers records, links files into each harness, and reports which features a decision affects. The skills guide agents through onboarding, planning, testing, and implementation.
+- **Work:** records for features, decisions, notes, and tasks, plus xrays, which hold longer design discussions in a file instead of the chat.
+
+Plugins add support for a specific harness or tech stack. `bash hey upgrade` previews every change of a new version before applying it. dotHey keeps secrets in an untracked `.env` file, sends no data anywhere, and runs on Bash 3.2 or later with standard Unix tools, macOS included.
+
+## Documentation
+
+Read the full [documentation](docs/index.md).
+
+## Contributing
+
+Report bugs and share ideas in [GitHub issues](https://github.com/dotHeydev/dotHey/issues). Before you open a pull request, read the [contributing guide](docs/prologue/contributing.md).
+
+## Release notes
+
+Read the [release notes](docs/prologue/release-notes.md) or browse the [GitHub releases](https://github.com/dotHeydev/dotHey/releases).
 
 ## License
 
-[MIT](LICENSE)
+dotHey is released under the [MIT License](LICENSE).

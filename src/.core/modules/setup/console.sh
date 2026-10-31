@@ -179,11 +179,11 @@ core.modules.setup.console::finish() {
   framework.console.output::newline
   framework.console.output::line "$(framework.console.output::paint "$UI_STYLE_SUCCESS" "$UI_ICON_SUCCESS dotHey is set up for the selected harnesses.")"
   if [ -n "$pending" ] && framework.console.output::is_agent; then
-    framework.console.output::next "Finish what's left (setup.pending in bash hey adopt --scan --json) with the hey-ready skill."
+    framework.console.output::next "Finish what's left (setup.pending in bash hey adopt --scan --json) with the hey-context skill."
   elif [ -n "$pending" ]; then
-    framework.console.output::next "Now open your coding agent and tell it you're using dotHey; it finishes the rest."
+    framework.console.output::next "Now just say 'hey' to your agent and it'll finish the rest."
   else
-    framework.console.output::next "Now open your coding agent; dotHey is ready for it."
+    framework.console.output::next "Just say 'hey' to your agent to start building."
   fi
   if ! framework.console.output::is_unattended; then
     framework.console.output::newline

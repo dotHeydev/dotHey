@@ -8,8 +8,8 @@ description: The non-negotiable engineering practices for this codebase, indepen
 These hold for any language, framework, and platform. The stack's own conventions (`TECHSTACK.md`, and the standards plugins add) refine them, and win where they are stricter.
 
 ## Principles
-- Weigh every tradeoff in this order: correct, secure, clear, simple, efficient. Never trade an earlier one for a later one without saying so.
-- Build the simplest thing that meets today's requirements. No speculative generality, no abstraction without a second real use.
+- Weigh every tradeoff in this order: secure, correct, efficient, simple, clear. Never trade an earlier one for a later one without saying so.
+- Build the simplest thing that meets today's requirements without compromising the state or the architect of the project. No speculative generality, no abstraction without a second real use.
 - One source of truth for every piece of knowledge: a rule, a value, or a format is defined once and referenced everywhere else. Code that only looks alike is not duplication.
 - Separate concerns: each module, type, and function has one responsibility and one reason to change. High cohesion inside, low coupling between.
 - Explicit over implicit: no hidden side effects, no magic behavior, no surprises for the next reader.
@@ -29,14 +29,15 @@ These hold for any language, framework, and platform. The stack's own convention
 - Names reveal intent; follow `NOMENCLATURE.md`.
 - Code explains itself through names and structure. A comment says why (a constraint, a tradeoff, a non-obvious consequence), never what; no commented-out code.
 - Avoid hard-coded, repeated values, magic strings, and magic numbers. Instead: declare constants or configuration values.
-- Avoid repeated logic. Instead: if the same knowledge appears more than once, abstract it.
-- Avoid deeply nested conditionals and control structures. Instead: use guard clauses (early return, early continue), flatten logic, and extract complex branches into well-named functions.
-- Avoid intertwined validation and execution. Instead: validate early, fail fast, and keep execution paths linear and predictable.
-- Avoid dense one-liners and compressed expressions. Instead: break logic into readable steps with clear intermediate names and explicit intent.
-- Avoid god objects, god modules, and multipurpose functions. Instead: split them into focused units that each do one thing well, at one level of abstraction.
+- If the same logic appears more than once, abstract it. Avoid repeated logic.
+- Use guard clauses (early return, early continue), flatten logic, and extract complex branches into well-named functions. Avoid deeply nested conditionals and control structures.
+- Validate early, fail fast, and keep execution paths linear and predictable. Avoid intertwined validation and execution.
+- Break logic into readable steps with clear intermediate names and explicit intent. Avoid dense one-liners and compressed expressions.
+- Split modules, objects, classes, and functions into focused units that each do one thing well, at one level of abstraction. Avoid god objects, god modules, and multipurpose functions.
 - Prefer pure functions and immutable data; isolate mutation and side effects where they are easy to see.
-- Avoid reinventing what the language, the standard library, or the framework already provides. Instead: use the built-in capability and its established patterns.
-- Delete dead code, unused parameters, and leftovers from a change; version control remembers them.
+- Use the built-in capability and its established patterns. Avoid reinventing what the language, the standard library, or the framework already provides.
+- Delete dead code, unused parameters, and leftovers from a change.
+- Always leave the code you touch better than you found it.
 
 ## Error Handling
 - Fail fast, where the problem is detected, with an error that says what went wrong and what to do about it.
@@ -77,25 +78,30 @@ These hold for any language, framework, and platform. The stack's own convention
 - Wrap a third-party API that much of the code would touch behind an interface the project owns.
 
 ## Code Review
-_What must happen before code merges?_
 
 - One concern per change, small enough to review in one sitting; no unrelated edits riding along.
 - Review your own diff before handing it over: correctness, security, tests, naming, and leftovers.
 - A reviewer's question is answered in the code (a clearer name, a test, a comment on why), not only in the conversation.
 
 ## Testing
-_What level of testing is expected for new work?_
 
-- Every behavior change ships with tests, and every bug fix with a test that reproduces the bug first.
-- Most tests are fast unit tests of logic; integration tests cover the boundaries (storage, network, other services); end-to-end tests cover only the critical journeys.
-- Tests are deterministic: no real network, clock, randomness, or sleep. Inject them, and fake only what crosses a boundary.
-- Avoid hard-coded values in tests. Instead: derive expectations programmatically, detached from incidental values and contexts.
-- Run tests only when executable code changed; a change to docs, comments, help text, or other prose needs no run.
-- Target every run: check the test runner's options (its `--help`, the suite's scripts) for filters by case, file, and directory, and run only the tests that cover the code you changed. Record what you find in `TECHSTACK.md` → Commands.
+- Only write tests for code changes and run the test suite only when you worked with code in your task. Do not wirte tests neither run the test suite for content nor context changes.
 - The full suite is rare: run it once, at the end of a coding round, never after each change.
+- Target every run: check the test runner's options (its `--help`, the suite's scripts) for filters by case, file, and directory, and run only the tests that cover the code you changed. Record what you find in `TECHSTACK.md` → Commands.
+- Run tests only when executable code changed; a change to docs, comments, help text, or other prose needs no run.
+- Every behavior change ships with tests, and every bug fix with a test that reproduces the bug first.
+- Write and verify:
+  - Golden-path tests: Verify that expected user journeys and core workflows succeed.
+  - Edge-case tests: Probe boundary conditions and unusual but valid inputs.
+  - Adversarial tests: Check that the system withstands deliberately hostile or manipulative inputs.
+  - Negative tests: Confirm that invalid inputs and expected failure conditions are handled safely and correctly.
 - A test can always be improved, never weakened: no looser assertion, removed case, or skip to make it pass.
-- Test functionality, not content: status and exit codes, state, files, and the structure of output. An expected failure asserts its exact code, never just that it failed.
-- Text is no proof of an outcome: a message can say "all went ok" when it didn't, and its wording changes, so a test asserting it fails for nothing or passes for the wrong reason. Assert a value only when it is a keyed part of the functionality: an `errors` key in its place in a JSON proves errors were reported, while which error is proven by its code, not its message. Text is asserted only when it is the contract itself (a help page's sections, an API's field names).
+- Most tests are fast unit tests of logic; integration tests cover the boundaries (storage, network, other services); end-to-end tests cover only the critical journeys.
+- Tests are deterministic: no real network, clock, randomness, or sleep. Inject them, and mock only what crosses a boundary.
+- Avoid hard-coded values in tests. Instead: derive expectations programmatically, detached from incidental values and contexts.
+- Test functionality, not content: status and exit codes, state, files, and the structure of output. Assertions test exact codes, statuses, and outcomes, never one of them.
+  - Text is no proof of an outcome: a message can be misleading, and its wording changes, so a test asserting it fails for nothing or passes for the wrong reason. 
+  - Assert a value only when it is a keyed part of the functionality: an `errors` key in its place in a JSON proves errors were reported, while which error is proven by its code, not its message. 
 - Tests depend only on the project and its own fixtures and stubs, never on ignored or external files.
 
 ## Critical Paths
@@ -106,8 +112,8 @@ Until the project names its own, these are critical: authentication and authoriz
 ## Style & Conventions
 _Where do language/style conventions live, and what's the general philosophy?_
 
-- The project's formatter and linter are the authority on style: run them, never hand-format against them.
-- Follow the stack's community conventions (`TECHSTACK.md`, the standards plugins add); consistency with the surrounding code beats personal preference.
+- The project's formatter and linter are the authority on style: run them as soon as you're done with the coding part and before the test suite, never hand-format against them.
+- Follow the tech stack's conventions (`TECHSTACK.md`, the standards plugins add); consistency with the surrounding code beats personal preference.
 
 ## Data Handling
 _What rules govern how user data is logged, stored, or passed around in code?_
